@@ -13,9 +13,9 @@ try {
 }
 
 /**
- * Classe Database para compatibilidade com o Autoload e POO
+ * Classe Conexao para compatibilidade com o Autoload e POO
  */
-class Database {
+class Conexao {
     private static $host = 'localhost';
     private static $dbname = 'jogo_pokemon';
     private static $username = 'root';
@@ -34,3 +34,6 @@ class Database {
         return self::$pdo;
     }
 }
+
+// Alias para caso ainda seja chamado como Database
+class_alias('Conexao', 'Database');
