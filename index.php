@@ -11,6 +11,42 @@ switch ($rota) {
         (new TimeController())->salvarTime();
         break;
 
+    case 'usuarios':
+        (new UsuarioController())->listar();
+        break;
+
+    case 'usuario':
+        (new UsuarioController())->buscar($_GET['id'] ?? 0);
+        break;
+
+    case 'criar-usuario':
+        (new UsuarioController())->criar();
+        break;
+
+    case 'loja-itens':
+        (new LojaController())->listarItens();
+        break;
+
+    case 'comprar':
+        (new LojaController())->comprar();
+        break;
+
+    case 'historico-loja':
+        (new LojaController())->historico($_GET['usuario_id'] ?? 0);
+        break;
+
+    case 'lutar':
+        (new BatalhaController())->lutar();
+        break;
+
+    case 'historico-batalha':
+        (new BatalhaController())->historico($_GET['usuario_id'] ?? 0);
+        break;
+
+    case 'curar':
+        (new CentroPokemonController())->curarTodos();
+        break;
+
     // Views
     case 'builder':
     case 'time':

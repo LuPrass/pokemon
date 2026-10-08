@@ -36,7 +36,8 @@ class PokeApiService {
             'ataque'     => $dados['stats'][1]['base_stat'],
             'defesa'     => $dados['stats'][2]['base_stat'],
             'velocidade' => $dados['stats'][5]['base_stat'],
-            'imagem'     => $dados['sprites']['front_default']
+            'imagem'     => $dados['sprites']['front_default'],
+            'imagemCostas' => $dados['sprites']['back_default']
         ];
 
         return $pokemon;
