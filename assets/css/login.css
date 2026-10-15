@@ -1,0 +1,75 @@
+.login-container {
+    max-width: 360px;
+    margin: 60px auto;
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+}
+
+.login-container h2 {
+    margin-top: 0;
+    text-align: center;
+}
+
+.login-container label {
+    font-weight: bold;
+    display: block;
+    margin-top: 12px;
+}
+
+.login-container input[type="text"],
+.login-container input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.login-container button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    background: #e3350d;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.login-container button:hover {
+    background: #b82a09;
+}
+
+.erro-msg {
+    color: red;
+    background: #ffe6e6;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.dica-login {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #666;
+    background: #f9f9f9;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.aviso-conta {
+    text-align: center;
+    font-weight: bold;
+}
+
+.link-secundario {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+}

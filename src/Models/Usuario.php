@@ -101,4 +101,21 @@ class Usuario {
         $stmt = $pdo->query("SELECT * FROM usuario");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // Busca um usuário (com o hash da senha) pelo nome. Retorna false se não existir.
+    public static function buscarPorNome(PDO $pdo, $nome) {
+        $stmt = $pdo->prepare("SELECT id, nome, senha FROM usuario WHERE nome = :nome");
+        $stmt->execute([':nome' => $nome]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Cria uma conta nova guardando a senha com hash. Retorna o id criado.
+    public static function criarConta(PDO $pdo, $nome, $senha) {
+        $stmt = $pdo->prepare("INSERT INTO usuario (nome, senha) VALUES (:nome, :senha)");
+        $stmt->execute([
+            ':nome' => $nome,
+            ':senha' => password_hash($senha, PASSWORD_DEFAULT)
+        ]);
+        return (int)$pdo->lastInsertId();
+    }
 }

@@ -1,0 +1,40 @@
+.menu-container {
+    max-width: 420px;
+    margin: 60px auto;
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+.menu-opcao {
+    display: block;
+    margin-top: 14px;
+    padding: 14px;
+    background: #e3350d;
+    color: #fff;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.menu-opcao:hover {
+    background: #b82a09;
+}
+
+.menu-sair {
+    display: inline-block;
+    margin-top: 24px;
+    color: #666;
+}
+
+.pokemon-card {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    text-align: left;
+}

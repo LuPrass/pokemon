@@ -16,9 +16,11 @@ USE jogo_pokemon;
 CREATE TABLE usuario (
     id INT NOT NULL AUTO_INCREMENT,
     nome VARCHAR(50) NOT NULL,
+    senha VARCHAR(255) NOT NULL DEFAULT '',
     dinheiro INT NOT NULL DEFAULT 1000,
     data_criacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_usuario_nome (nome)
 ) ENGINE=InnoDB;
 
 -- Tabela de Pokémons de cada Treinador
@@ -135,10 +137,11 @@ INSERT INTO loja (nome, descricao, preco, tipo) VALUES
 ('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 2100, 'evolucao');
 
 -- Inserção de Treinadores (Controle de Usuários / Perfis)
-INSERT INTO usuario (nome, dinheiro) VALUES
-('Ash', 1000),
-('Misty', 1000),
-('Brock', 1000);
+-- Senha de todos os treinadores iniciais: 123456 (armazenada com password_hash)
+INSERT INTO usuario (nome, senha, dinheiro) VALUES
+('Ash', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 1000),
+('Misty', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 1000),
+('Brock', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 1000);
 
 -- Inserção dos Pokémons Iniciais (compatíveis com as classes PHP do projeto)
 -- 10 variáveis: nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao

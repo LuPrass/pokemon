@@ -1,3 +1,6 @@
+<?php
+require_once __DIR__ . '/../../../verifica_login.php';
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,6 +9,11 @@
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+        <h2>Bem-vindo, <?php echo htmlspecialchars($_SESSION['usuario'] ?? 'Treinador'); ?>!</h2>
+        <a href="logout.php" style="color: #e3350d; font-weight: bold; text-decoration: none;">Sair (Logout)</a>
+    </div>
 
     <h1>Montar Time Pokémon</h1>
 
@@ -26,7 +34,7 @@
     <script>
         var pokemonAtual = null;
         var time = [];
-        var usuarioId = 1; // Ash
+        var usuarioId = <?php echo (int)($_SESSION['usuario_id'] ?? 1); ?>;
 
         async function buscar() {
             var nome = document.getElementById("campoBusca").value;

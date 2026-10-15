@@ -2,10 +2,23 @@
 
 require_once __DIR__ . '/Autoload.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Roteador simples da aplicação
-$rota = $_GET['rota'] ?? 'builder';
+$rota = $_GET['rota'] ?? (isset($_SESSION['logado']) && $_SESSION['logado'] === true ? 'menu' : 'login');
 
 switch ($rota) {
+    // Autenticação
+    case 'login':
+        require_once __DIR__ . '/login.php';
+        break;
+
+    case 'logout':
+        require_once __DIR__ . '/logout.php';
+        break;
+
     // API Endpoints
     case 'salvar-time':
         (new TimeController())->salvarTime();
@@ -48,6 +61,14 @@ switch ($rota) {
         break;
 
     // Views
+    case 'menu':
+        require_once __DIR__ . '/src/Views/menu/menu.php';
+        break;
+
+    case 'pokemons':
+        require_once __DIR__ . '/src/Views/pokemons/pokemons.php';
+        break;
+
     case 'builder':
     case 'time':
         require_once __DIR__ . '/src/Views/time/builder.php';

@@ -15,15 +15,16 @@ class TimeController {
         try {
             $dados = json_decode(file_get_contents('php://input'), true);
 
-            if (!$dados || empty($dados['usuario_id']) || !isset($dados['time'])) {
+            $usuarioId = !empty($dados['usuario_id']) ? (int)$dados['usuario_id'] : (int)($_SESSION['usuario_id'] ?? 0);
+
+            if (!$dados || empty($usuarioId) || !isset($dados['time'])) {
                 throw new Exception("Dados da requisição inválidos ou usuário não informado.");
             }
 
-            $usuarioId = (int)$dados['usuario_id'];
             $pokemons = (array)$dados['time'];
 
-            // Validação de limite máximo de 6 Pokémons
-            if (count($pokemons) > 4) {
+            // Validação de limite máximo de 3 Pokémons
+            if (count($pokemons) > 3) {
                 throw new TimeCheioException();
             }
 
