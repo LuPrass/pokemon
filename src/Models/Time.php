@@ -54,8 +54,8 @@ class Time {
                 ':id' => $this->id
             ]);
         } else {
-            // O time só pode ter 6 pokémons
-            if (Time::contar($this->pdo, $this->usuarioId) >= 6) {
+            // O time só pode ter 3 pokémons
+            if (Time::contar($this->pdo, $this->usuarioId) >= 3) {
                 throw new TimeCheioException();
             }
 

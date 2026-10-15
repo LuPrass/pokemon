@@ -23,7 +23,7 @@ class TimeController {
             $pokemons = (array)$dados['time'];
 
             // Validação de limite máximo de 6 Pokémons
-            if (count($pokemons) > 6) {
+            if (count($pokemons) > 4) {
                 throw new TimeCheioException();
             }
 
@@ -67,7 +67,7 @@ class TimeController {
 
                 $pokemonId = $pdo->lastInsertId();
 
-                // Insere na tabela 'time' com a posição (1 a 6)
+                // Insere na tabela 'time' com a posição (1 a 3)
                 $stmtTime = $pdo->prepare("
                     INSERT INTO time (usuario_id, pokemon_id, posicao)
                     VALUES (:usuario_id, :pokemon_id, :posicao)
