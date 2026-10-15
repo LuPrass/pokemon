@@ -1,39 +1,28 @@
 <?php
 
-$host = 'localhost';
-$dbname = 'jogo_pokemon'; // Nome do banco do seu projeto (conforme script_pokemon.sql)
-$username = 'root';
-$password = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    echo "Erro na conexão: " . $e->getMessage();
-}
-
 /**
- * Classe Conexao para compatibilidade com o Autoload e POO
+ * Classe Conexao (Singleton de PDO).
+ * Em caso de falha, lança PDOException para quem chamou tratar
+ * (assim nenhuma mensagem de erro é impressa no meio das páginas/JSON).
  */
 class Conexao {
     private static $host = 'localhost';
-    private static $dbname = 'jogo_pokemon';
+    private static $dbname = 'jogo_pokemon'; 
     private static $username = 'root';
     private static $password = '';
     private static $pdo = null;
 
     public static function getConnection() {
         if (self::$pdo === null) {
-            try {
-                self::$pdo = new PDO("mysql:host=" . self::$host . ";dbname=" . self::$dbname . ";charset=utf8mb4", self::$username, self::$password);
-                self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            } catch (PDOException $e) {
-                echo "Erro na conexão: " . $e->getMessage();
-            }
+            self::$pdo = new PDO(
+                "mysql:host=" . self::$host . ";dbname=" . self::$dbname . ";charset=utf8mb4",
+                self::$username,
+                self::$password
+            );
+            self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
         return self::$pdo;
     }
 }
 
-// Alias para caso ainda seja chamado como Database
 class_alias('Conexao', 'Database');

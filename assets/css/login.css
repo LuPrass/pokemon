@@ -1,10 +1,30 @@
+html {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background-image: url('../img/Tela_login.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+
+    /* Centraliza a caixa na tela */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .login-container {
+    width: 100%;
     max-width: 360px;
-    margin: 60px auto;
+    margin: 24px;
     padding: 24px;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.75); /* meio transparente */
     border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     font-family: Arial, sans-serif;
 }
 
@@ -33,7 +53,7 @@
     width: 100%;
     margin-top: 20px;
     padding: 10px;
-    background: #e3350d;
+    background: #8259af;
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -43,7 +63,7 @@
 }
 
 .login-container button:hover {
-    background: #b82a09;
+    background: #8259af;
 }
 
 .erro-msg {
@@ -73,3 +93,4 @@
     margin-top: 16px;
     font-size: 14px;
 }
+

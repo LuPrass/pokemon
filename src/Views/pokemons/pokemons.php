@@ -16,6 +16,16 @@ $pokemons = Pokemon::porUsuario(Conexao::getConnection(), $_SESSION['usuario_id'
     <div class="menu-container">
         <h1>Menu de Pokémons</h1>
 
+        <!-- Consulta na PokéAPI (apenas informação) -->
+        <h2>Pesquisar Pokémon</h2>
+        <input type="text" id="campoBusca" placeholder="Nome ou número (ex: pikachu)">
+        <button onclick="buscar()">Buscar</button>
+
+        <div id="resultado"></div>
+
+        <!-- Pokémons do usuário -->
+        <h2>Meus Pokémons</h2>
+
         <?php if (count($pokemons) === 0): ?>
             <p>Você ainda não tem pokémons. Monte seu time em <b>Batalha</b>.</p>
         <?php endif; ?>
@@ -31,6 +41,30 @@ $pokemons = Pokemon::porUsuario(Conexao::getConnection(), $_SESSION['usuario_id'
 
         <a class="menu-sair" href="index.php?rota=menu">Voltar ao Menu</a>
     </div>
+
+    <script src="assets/js/ApiClient.js"></script>
+    <script>
+        async function buscar() {
+            var nome = document.getElementById("campoBusca").value;
+
+            try {
+                var pokemon = await buscarPokemon(nome);
+                mostrarPokemon(pokemon);
+            } catch (erro) {
+                alert(erro.message);
+            }
+        }
+
+        function mostrarPokemon(pokemon) {
+            document.getElementById("resultado").innerHTML =
+                "<img src='" + pokemon.imagemArtwork + "' width='150'><br>" +
+                "<b>" + pokemon.nome + "</b> (" + pokemon.tipo + ")<br>" +
+                "HP: " + pokemon.hpMaximo + "<br>" +
+                "Ataque: " + pokemon.ataque + "<br>" +
+                "Defesa: " + pokemon.defesa + "<br>" +
+                "Velocidade: " + pokemon.velocidade;
+        }
+    </script>
 
 </body>
 </html>

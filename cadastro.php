@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: index.php?rota=menu');
                 exit;
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $erro = 'Não foi possível criar a conta. Tente novamente.';
         }
     }

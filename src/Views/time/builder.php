@@ -17,12 +17,7 @@ require_once __DIR__ . '/../../../verifica_login.php';
 
     <h1>Montar Time Pokémon</h1>
 
-    <!-- Busca -->
-    <input type="text" id="campoBusca" placeholder="Nome ou número (ex: pikachu)">
-    <button onclick="buscar()">Buscar</button>
-
-    <!-- Pokémon encontrado -->
-    <div id="resultado"></div>
+    <!-- Aqui entrarão os pokémons pré-definidos para escolher -->
 
     <!-- Time -->
     <h2>Seu time (<span id="contador">0</span>/3)</h2>
@@ -32,39 +27,17 @@ require_once __DIR__ . '/../../../verifica_login.php';
 
     <script src="assets/js/ApiClient.js"></script>
     <script>
-        var pokemonAtual = null;
         var time = [];
         var usuarioId = <?php echo (int)($_SESSION['usuario_id'] ?? 1); ?>;
 
-        async function buscar() {
-            var nome = document.getElementById("campoBusca").value;
-
-            try {
-                var pokemon = await buscarPokemon(nome);
-                pokemonAtual = pokemon;
-                mostrarPokemon(pokemon);
-            } catch (erro) {
-                alert(erro.message);
-            }
-        }
-
-        function mostrarPokemon(pokemon) {
-            document.getElementById("resultado").innerHTML =
-                "<img src='" + pokemon.imagemArtwork + "' width='150'><br>" +
-                "<b>" + pokemon.nome + "</b> (" + pokemon.tipo + ")<br>" +
-                "HP: " + pokemon.hpMaximo + "<br>" +
-                "Ataque: " + pokemon.ataque + "<br>" +
-                "Defesa: " + pokemon.defesa + "<br>" +
-                "Velocidade: " + pokemon.velocidade + "<br>" +
-                "<button onclick='adicionar()'>Adicionar ao time</button>";
-        }
-
-        function adicionar() {
+        // Recebe um pokémon (objeto) e coloca no time.
+        // Os pokémons pré-definidos serão ligados a esta função depois.
+        function adicionar(pokemon) {
             if (time.length >= 3) {
                 alert("O time já tem 3 pokémons!");
                 return;
             }
-            time.push(pokemonAtual);
+            time.push(pokemon);
             mostrarTime();
         }
 
