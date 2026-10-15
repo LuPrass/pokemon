@@ -10,22 +10,16 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-
-    /* Centraliza a caixa na tela */
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
-
 .login-container {
-    width: 100%;
     max-width: 360px;
-    margin: 24px;
+    margin: 60px auto;
     padding: 24px;
-    background: rgba(255, 255, 255, 0.75); /* meio transparente */
+    background: #fff;
     border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     font-family: Arial, sans-serif;
+    
 }
 
 .login-container h2 {
