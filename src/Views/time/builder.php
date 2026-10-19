@@ -56,7 +56,7 @@ if (!empty($timeAtual)) {
         <div class="topo-bar">
             <div>
                 <h2>Olá, <?php echo htmlspecialchars($usuarioNome); ?>!</h2>
-                <small>Escolha até 3 Pokémons para o seu time clicando nas imagens abaixo.</small>
+                <small>Escolha até 3 Pokémons para o seu time clicando no botão "Adicionar ao Time" abaixo.</small>
             </div>
             <div class="acoes-topo">
                 <a href="index.php?rota=menu" class="botao">Voltar ao Menu</a>
@@ -64,37 +64,32 @@ if (!empty($timeAtual)) {
             </div>
         </div>
 
-        <!-- Painel do Time Selecionado (Exibe até 3 vagas) -->
+        <!-- Seção "Seu Time" (Apenas o título e as caixinhas dos Pokémons selecionados) -->
         <div class="painel-time">
             <div class="painel-time-header">
-                <div>
-                    <h2>Seu Time <span class="contador-badge"><span id="contador">0</span>/3</span></h2>
-                    <small style="color: #718096;">Remova integrantes clicando no botão "✕ Remover" antes de fechar o time.</small>
-                </div>
+                <h2>Seu Time <span class="contador-badge"><span id="contador">0</span>/3</span></h2>
                 <button type="button" class="btn-fechar-time" id="btnFecharTime" onclick="fecharTime()">
                     ✓ Fechar Time
                 </button>
             </div>
 
-            <!-- As 3 Vagas do Time -->
+            <!-- Área onde aparecem as caixinhas dos Pokémons selecionados -->
             <div class="slots-container" id="slotsTime">
-                <!-- Preenchido dinamicamente pelo TimeManager.js -->
+                <!-- Preenchido dinamicamente pelo TimeManager.js com a mesma caixinha -->
             </div>
         </div>
 
         <!-- Título do Catálogo -->
         <div class="TituloCatalogo">
             <h2>Pokémons Disponíveis (20)</h2>
-            <p>Clique na imagem para adicionar ao seu time. A remoção é feita exclusivamente clicando no botão Remover.</p>
+            <p>Analise os atributos e golpes. Para adicionar um Pokémon à equipe, clique no botão <b>"Adicionar ao Time"</b>.</p>
         </div>
 
-        <!-- Grade de 20 Caixas com os Pokémons -->
+        <!-- Grade de 20 Caixas com os Pokémons do Catálogo -->
         <div class="catalogoPokemon" id="catalogoPokemon">
             <?php foreach ($catalogo as $p): ?>
                 <?php $nomeSeguro = htmlspecialchars($p['nome']); ?>
                 <div class="poke-card" id="card-<?php echo $nomeSeguro; ?>">
-                    <!-- Selo de Selecionado quando estiver no time -->
-                    <span class="badge-selecionado">No Time</span>
 
                     <!-- Topo da Caixa: Número, Nome e Tipo -->
                     <div class="titulo-cartao">
@@ -107,8 +102,8 @@ if (!empty($timeAtual)) {
                         </span>
                     </div>
 
-                    <!-- Imagem do Pokémon: Ao ser clicada, adiciona ao time -->
-                    <div class="imagem-poke" title="Clique na imagem para adicionar <?php echo $nomeSeguro; ?> ao time" onclick="adicionarAoTime(window.catalogoPokemons['<?php echo $nomeSeguro; ?>'])">
+                    <!-- Imagem do Pokémon (Apenas visualização - não adiciona) -->
+                    <div class="imagem-poke">
                         <img src="<?php echo htmlspecialchars($p['imagemArtwork']); ?>" alt="<?php echo $nomeSeguro; ?>">
                     </div>
 
@@ -144,7 +139,7 @@ if (!empty($timeAtual)) {
                         </div>
                     </div>
 
-                    <!-- Botão de Ação: Adicionar ao Time (a remoção ocorre apenas ao clicar no botão Remover) -->
+                    <!-- Botão de Ação: O Pokémon é adicionado APENAS clicando neste botão -->
                     <button type="button" class="btn-acao-card adicionar" id="btn-<?php echo $nomeSeguro; ?>" data-nome="<?php echo $nomeSeguro; ?>" onclick="adicionarAoTime(window.catalogoPokemons['<?php echo $nomeSeguro; ?>'])">
                         + Adicionar ao Time
                     </button>
