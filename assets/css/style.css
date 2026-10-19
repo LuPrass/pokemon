@@ -1,8 +1,10 @@
 /* ==========================================================================
-   STYLE.CSS - POKÉMON TEAM BUILDER & ESTILOS GERAIS
+   STYLE.CSS - POKÉMON TEAM BUILDER & ESTILOS COM FONTE DE JOGO
    ========================================================================== */
 
-/* Reset básico e tipografia */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap');
+
+/* Reset básico e tipografia de jogo */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -10,11 +12,11 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5;
+    font-family: 'Chakra Petch', 'Press Start 2P', monospace, sans-serif;
+    background-color: #eef2f7;
     color: #2d3748;
     line-height: 1.5;
-    padding-bottom: 50px;
+    padding-bottom: 60px;
 }
 
 /* Container Principal */
@@ -30,23 +32,27 @@ body {
     justify-content: space-between;
     align-items: center;
     background: #ffffff;
-    padding: 16px 24px;
+    padding: 18px 24px;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     margin-bottom: 24px;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
+    border-bottom: 3px solid #cbd5e0;
 }
 
 .topo-bar h2 {
-    font-size: 22px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 15px;
     color: #1a202c;
-    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
 }
 
 .topo-bar small {
-    color: #718096;
-    font-size: 14px;
+    color: #4a5568;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .acoes-topo {
@@ -56,31 +62,31 @@ body {
 
 .botao {
     display: inline-block;
-    padding: 8px 16px;
-    background-color: #e2e8f0;
-    color: #4a5568;
+    padding: 10px 14px;
+    background-color: #edf2f7;
+    color: #2d3748;
     text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
-    border-radius: 8px;
-    transition: background-color 0.2s, color 0.2s;
-    border: none;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    border-radius: 6px;
+    transition: background-color 0.2s, transform 0.1s;
+    border: 2px solid #cbd5e0;
     cursor: pointer;
 }
 
 .botao:hover {
-    background-color: #cbd5e0;
-    color: #1a202c;
+    background-color: #e2e8f0;
+    transform: translateY(-2px);
 }
 
 .botao-sair {
-    background-color: #fed7d7;
+    background-color: #fff5f5;
     color: #c53030;
+    border-color: #feb2b2;
 }
 
 .botao-sair:hover {
-    background-color: #feb2b2;
-    color: #9b2c2c;
+    background-color: #fed7d7;
 }
 
 /* ==========================================================================
@@ -88,7 +94,6 @@ body {
    ========================================================================== */
 .painel-time {
     margin-bottom: 36px;
-    /* Sem fundo branco, sem borda e sem caixa delimitadora */
 }
 
 .painel-time-header {
@@ -101,34 +106,36 @@ body {
 }
 
 .painel-time-header h2 {
-    font-size: 24px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 17px;
     color: #1a202c;
-    font-weight: 700;
+    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
 .contador-badge {
-    background: #4a5568;
+    background: #2d3748;
     color: #ffffff;
-    font-size: 14px;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-weight: 700;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 2px solid #4a5568;
 }
 
 /* Botão Fechar Time */
 .btn-fechar-time {
     background: linear-gradient(135deg, #28a745 0%, #218838 100%);
     color: #ffffff;
-    font-size: 15px;
-    font-weight: 700;
-    padding: 10px 22px;
-    border: none;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 12px 20px;
+    border: 2px solid #1e7e34;
     border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 3px 8px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.35);
     transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
     display: inline-flex;
     align-items: center;
@@ -137,8 +144,8 @@ body {
 
 .btn-fechar-time:hover {
     background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.45);
-    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(40, 167, 69, 0.5);
+    transform: translateY(-2px);
 }
 
 .btn-fechar-time:active {
@@ -168,34 +175,45 @@ body {
 /* Mensagem amigável quando nenhum Pokémon está no time */
 .time-vazio-aviso {
     grid-column: 1 / -1;
-    background: #edf2f7;
+    background: #ffffff;
     border: 2px dashed #cbd5e0;
     border-radius: 12px;
-    padding: 30px;
+    padding: 34px 20px;
     text-align: center;
-    color: #718096;
-    font-size: 15px;
+    color: #4a5568;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.time-vazio-aviso b {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    display: block;
+    margin-bottom: 8px;
+    color: #2d3748;
 }
 
 /* ==========================================================================
    TÍTULO DO CATÁLOGO DE 20 POKÉMONS
    ========================================================================== */
 .TituloCatalogo {
-    margin-bottom: 20px;
-    border-top: 2px solid #e2e8f0;
+    margin-bottom: 22px;
+    border-top: 3px solid #cbd5e0;
     padding-top: 28px;
 }
 
 .TituloCatalogo h2 {
-    font-size: 22px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
     color: #1a202c;
-    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .TituloCatalogo p {
-    color: #718096;
+    color: #4a5568;
     font-size: 14px;
-    margin-top: 4px;
+    font-weight: 600;
+    margin-top: 8px;
 }
 
 /* ==========================================================================
@@ -226,28 +244,28 @@ body {
 }
 
 /* ==========================================================================
-   CAIXA INDIVIDUAL DE POKÉMON (CARD)
+   CAIXA INDIVIDUAL DE POKÉMON (CARD DE JOGO)
    ========================================================================== */
 .poke-card {
     background: #ffffff;
-    border: 2px solid #e2e8f0;
-    border-radius: 14px;
+    border: 2px solid #cbd5e0;
+    border-radius: 12px;
     padding: 16px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
 }
 
 .poke-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    border-color: #a0aec0;
 }
 
-/* Quando no time: SEM destaque roxo! Borda suave neutra */
 .poke-card.no-time {
-    border-color: #cbd5e0;
+    border-color: #a0aec0;
     background: #ffffff;
 }
 
@@ -256,32 +274,41 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .numero-poke {
-    font-size: 12px;
-    font-weight: 700;
-    color: #a0aec0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #718096;
 }
 
 .nome-poke {
-    font-size: 17px;
-    font-weight: 700;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
     color: #1a202c;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
 }
 
-/* Imagem Central (Apenas visualização - clique não adiciona) */
+/* Imagem Central (GIF Animado do Pokémon) */
 .imagem-poke {
     text-align: center;
-    padding: 10px 0;
+    padding: 12px 0;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .imagem-poke img {
-    width: 120px;
-    height: 120px;
+    max-width: 90px;
+    max-height: 90px;
     object-fit: contain;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.08));
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.12));
 }
 
 /* Grade de 4 Atributos (HP, ATK, DEF, SPD) */
@@ -292,7 +319,7 @@ body {
     background: #f7fafc;
     padding: 10px;
     border-radius: 8px;
-    margin: 10px 0;
+    margin: 8px 0;
     border: 1px solid #edf2f7;
 }
 
@@ -301,27 +328,33 @@ body {
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
+    font-weight: 700;
 }
 
 .stat-rotulo {
-    color: #718096;
-    font-weight: 600;
+    font-family: 'Press Start 2P', monospace;
+    color: #4a5568;
+    font-size: 8px;
 }
 
 .stat-valor {
+    font-family: 'Chakra Petch', monospace;
+    font-size: 14px;
     font-weight: 700;
 }
 
 /* Golpes do Pokémon */
 .poke-golpes-box {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     font-size: 12px;
 }
 
 .poke-golpes-box b {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
     color: #4a5568;
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .golpes-chips {
@@ -332,66 +365,69 @@ body {
 
 .golpe-chip {
     background: #edf2f7;
-    color: #4a5568;
+    color: #2d3748;
     font-size: 11px;
-    padding: 2px 7px;
+    padding: 3px 6px;
     border-radius: 4px;
-    font-weight: 500;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
 }
 
 /* Botões de Ação do Card */
 .btn-acao-card {
     width: 100%;
     padding: 10px;
-    border: none;
+    border: 2px solid transparent;
     border-radius: 8px;
-    font-weight: 700;
-    font-size: 14px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s, box-shadow 0.2s;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 6px;
+    letter-spacing: 0.5px;
 }
 
 /* Botão Adicionar ao Time */
 .btn-acao-card.adicionar {
     background-color: #ebf8ff;
     color: #2b6cb0;
-    border: 1px solid #bee3f8;
+    border-color: #bee3f8;
 }
 
 .btn-acao-card.adicionar:hover {
     background-color: #3182ce;
     color: #ffffff;
-    border-color: #3182ce;
-    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.25);
+    border-color: #2b6cb0;
+    box-shadow: 0 4px 10px rgba(49, 130, 206, 0.3);
+    transform: translateY(-1px);
 }
 
 /* Botão Remover do Time */
 .btn-acao-card.remover-card {
     background-color: #fff5f5;
     color: #e53e3e;
-    border: 1px solid #fed7d7;
+    border-color: #fed7d7;
 }
 
 .btn-acao-card.remover-card:hover {
     background-color: #e53e3e;
     color: #ffffff;
-    border-color: #e53e3e;
-    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.25);
+    border-color: #c53030;
+    box-shadow: 0 4px 10px rgba(229, 62, 62, 0.3);
+    transform: translateY(-1px);
 }
 
 /* ==========================================================================
-   BADGES DE TIPO POKÉMON
+   BADGES DE TIPO POKÉMON (Estilo Jogo)
    ========================================================================== */
 [class^="tipo-"], [class*=" tipo-"] {
     display: inline-block;
-    padding: 3px 9px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #ffffff;
@@ -411,12 +447,12 @@ body {
 
 .tipo-eletrico {
     background-color: #f8d030;
-    color: #4a5568 !important;
+    color: #2d3748 !important;
 }
 
 .tipo-terra {
     background-color: #e0c068;
-    color: #4a5568 !important;
+    color: #2d3748 !important;
 }
 
 .tipo-normal {

@@ -7,7 +7,7 @@
 class PokemonCatalogo {
 
     public static function listar(): array {
-        return [
+        $lista = [
             [
                 'id_pokedex' => 1,
                 'nome' => 'Bulbasaur',
@@ -429,6 +429,13 @@ class PokemonCatalogo {
                 ]
             ]
         ];
+
+        // Adiciona a URL do GIF animado oficial de cada Pokémon
+        foreach ($lista as &$p) {
+            $p['gif'] = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/' . $p['id_pokedex'] . '.gif';
+        }
+
+        return $lista;
     }
 
     public static function buscarPorNome(string $nome): ?array {

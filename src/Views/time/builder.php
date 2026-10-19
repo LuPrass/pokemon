@@ -47,6 +47,9 @@ if (!empty($timeAtual)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monte seu Time Pokémon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -102,9 +105,9 @@ if (!empty($timeAtual)) {
                         </span>
                     </div>
 
-                    <!-- Imagem do Pokémon (Apenas visualização - não adiciona) -->
+                    <!-- GIF Animado do Pokémon -->
                     <div class="imagem-poke">
-                        <img src="<?php echo htmlspecialchars($p['imagemArtwork']); ?>" alt="<?php echo $nomeSeguro; ?>">
+                        <img src="<?php echo htmlspecialchars($p['gif']); ?>" alt="<?php echo $nomeSeguro; ?>" loading="lazy" onerror="this.src='<?php echo htmlspecialchars($p['imagemArtwork']); ?>'">
                     </div>
 
                     <!-- Atributos do Pokémon (HP, ATK, DEF, SPD) -->

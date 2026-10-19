@@ -128,7 +128,8 @@ function desenharCaixinhasSeuTime() {
     // Para cada Pokémon selecionado, gera a mesma estrutura de caixinha
     time.forEach(function(pokemon, index) {
         var numFormatado = String(pokemon.id_pokedex || "").padStart(3, "0");
-        var imgUrl = pokemon.imagemArtwork || pokemon.imagemFrente || "";
+        var gifUrl = pokemon.gif || (pokemon.id_pokedex ? 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/' + pokemon.id_pokedex + '.gif' : (pokemon.imagemArtwork || pokemon.imagemFrente || ''));
+        var fallbackUrl = pokemon.imagemArtwork || pokemon.imagemFrente || '';
 
         // Monta a lista de ataques/golpes
         var golpesHtml = "";
@@ -149,7 +150,7 @@ function desenharCaixinhasSeuTime() {
                 '</div>' +
 
                 '<div class="imagem-poke">' +
-                    '<img src="' + imgUrl + '" alt="' + pokemon.nome + '">' +
+                    '<img src="' + gifUrl + '" alt="' + pokemon.nome + '" loading="lazy" onerror="this.src=\'' + fallbackUrl + '\'">' +
                 '</div>' +
 
                 '<div class="poke-stats-grid">' +
