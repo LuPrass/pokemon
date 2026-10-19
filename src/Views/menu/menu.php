@@ -6,7 +6,6 @@ require_once __DIR__ . '/../../../verifica_login.php';
 <head>
     <meta charset="UTF-8">
     <title>Menu</title>
-    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/menu.css">
 </head>
 <body>
@@ -18,6 +17,11 @@ require_once __DIR__ . '/../../../verifica_login.php';
         <a class="menu-opcao" href="index.php?rota=builder">Batalha</a>
         <a class="menu-opcao" href="index.php?rota=pokemons">Menu de Pokémons</a>
         <a class="menu-opcao" href="index.php?rota=loja">PokéMart</a>
+        <?php
+        if($_SESSION['usuario_id'] == 1){
+            echo '<a class="menu-opcao" href="logs/historico.php">Ver Logs</a>';
+        }
+        ?>
 
         <a class="menu-sair" href="logout.php">Sair</a>
     </div>

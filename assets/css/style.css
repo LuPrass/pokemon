@@ -1,0 +1,539 @@
+/* ==========================================================================
+   STYLE.CSS - POKÉMON TEAM BUILDER & ESTILOS GERAIS
+   ========================================================================== */
+
+/* Reset básico e tipografia */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    color: #2d3748;
+    line-height: 1.5;
+    padding-bottom: 50px;
+}
+
+/* Container Principal */
+.container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Barra Superior de Boas-Vindas */
+.topo-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.topo-bar h2 {
+    font-size: 22px;
+    color: #1a202c;
+    font-weight: 700;
+}
+
+.topo-bar small {
+    color: #718096;
+    font-size: 14px;
+}
+
+.acoes-topo {
+    display: flex;
+    gap: 10px;
+}
+
+.botao {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #e2e8f0;
+    color: #4a5568;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.botao:hover {
+    background-color: #cbd5e0;
+    color: #1a202c;
+}
+
+.botao-sair {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.botao-sair:hover {
+    background-color: #feb2b2;
+    color: #9b2c2c;
+}
+
+/* ==========================================================================
+   PAINEL DO TIME (3 VAGAS)
+   ========================================================================== */
+.painel-time {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+    border: 2px solid #e2e8f0;
+}
+
+.painel-time-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #edf2f7;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.painel-time-header h2 {
+    font-size: 20px;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.contador-badge {
+    background: #8259af;
+    color: #ffffff;
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: bold;
+}
+
+/* Botão Fechar Time (Salvar) */
+.btn-fechar-time {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(40, 167, 69, 0.3);
+    transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-fechar-time:hover {
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.45);
+    transform: translateY(-1px);
+}
+
+.btn-fechar-time:active {
+    transform: translateY(1px);
+}
+
+/* Grade com as 3 Vagas do Time */
+.slots-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+@media (max-width: 850px) {
+    .slots-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Estilo do Slot Vazio */
+.slot-card.vazio {
+    background: #f8fafc;
+    border: 2px dashed #cbd5e0;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 120px;
+    color: #a0aec0;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.slot-card.vazio .slot-icone-add {
+    font-size: 28px;
+    margin-bottom: 4px;
+    color: #a0aec0;
+}
+
+.slot-card.vazio:hover {
+    border-color: #8259af;
+    background-color: #f7fafc;
+}
+
+/* Estilo do Slot Ocupado (Pokémon escalado) */
+.slot-card.ocupado {
+    background: #ffffff;
+    border: 2px solid #8259af;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 4px 10px rgba(130, 89, 175, 0.12);
+    position: relative;
+    animation: fadeInSlot 0.25s ease-in-out;
+}
+
+@keyframes fadeInSlot {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.slot-card.ocupado img {
+    width: 65px;
+    height: 65px;
+    object-fit: contain;
+    background: #edf2f7;
+    border-radius: 50%;
+    padding: 4px;
+}
+
+.slot-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.slot-info-topo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.slot-info b {
+    font-size: 15px;
+    color: #1a202c;
+}
+
+.slot-stats-resumo {
+    font-size: 12px;
+    color: #4a5568;
+    line-height: 1.3;
+}
+
+/* Botão de Remover do Slot */
+.btn-remover-slot {
+    background-color: #fff5f5;
+    color: #e53e3e;
+    border: 1px solid #feb2b2;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.btn-remover-slot:hover {
+    background-color: #e53e3e;
+    color: #ffffff;
+    border-color: #e53e3e;
+}
+
+/* ==========================================================================
+   TÍTULO DO CATÁLOGO DE 20 POKÉMONS
+   ========================================================================== */
+.TituloCatalogo {
+    margin-bottom: 20px;
+}
+
+.TituloCatalogo h2 {
+    font-size: 22px;
+    color: #1a202c;
+    font-weight: 700;
+}
+
+.TituloCatalogo p {
+    color: #718096;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+/* ==========================================================================
+   GRADE DAS 20 CAIXAS (4 colunas no desktop = 5 linhas exatas)
+   ========================================================================== */
+.catalogoPokemon {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 1100px) {
+    .catalogoPokemon {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 780px) {
+    .catalogoPokemon {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .catalogoPokemon {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   CAIXA INDIVIDUAL DE POKÉMON (CARD)
+   ========================================================================== */
+.poke-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.poke-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e0;
+}
+
+/* Estado selecionado (quando já está no time) */
+.poke-card.no-time {
+    border-color: #8259af;
+    background: #faf7ff;
+    box-shadow: 0 4px 14px rgba(130, 89, 175, 0.18);
+}
+
+.badge-selecionado {
+    display: none;
+    position: absolute;
+    top: -10px;
+    right: 14px;
+    background: #8259af;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.poke-card.no-time .badge-selecionado {
+    display: block;
+}
+
+/* Topo do Card */
+.titulo-cartao {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.numero-poke {
+    font-size: 12px;
+    font-weight: 700;
+    color: #a0aec0;
+}
+
+.nome-poke {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a202c;
+}
+
+/* Imagem Central Clicável */
+.imagem-poke {
+    text-align: center;
+    padding: 10px 0;
+    cursor: pointer;
+    position: relative;
+}
+
+.imagem-poke img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    transition: transform 0.25s ease;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.imagem-poke:hover img {
+    transform: scale(1.12);
+}
+
+/* Grade de 4 Atributos (HP, ATK, DEF, SPD) */
+.poke-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    background: #f7fafc;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border: 1px solid #edf2f7;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.stat-rotulo {
+    color: #718096;
+    font-weight: 600;
+}
+
+.stat-valor {
+    font-weight: 700;
+}
+
+/* Golpes do Pokémon */
+.poke-golpes-box {
+    margin-bottom: 14px;
+    font-size: 12px;
+}
+
+.poke-golpes-box b {
+    color: #4a5568;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.golpes-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.golpe-chip {
+    background: #edf2f7;
+    color: #4a5568;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Botões de Ação do Card */
+.btn-acao-card {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-acao-card.adicionar {
+    background-color: #ebf8ff;
+    color: #2b6cb0;
+    border: 1px solid #bee3f8;
+}
+
+.btn-acao-card.adicionar:hover {
+    background-color: #3182ce;
+    color: #ffffff;
+    border-color: #3182ce;
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.3);
+}
+
+.btn-acao-card.remover-card {
+    background-color: #fff5f5;
+    color: #e53e3e;
+    border: 1px solid #fed7d7;
+}
+
+.btn-acao-card.remover-card:hover {
+    background-color: #e53e3e;
+    color: #ffffff;
+    border-color: #e53e3e;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+}
+
+/* ==========================================================================
+   BADGES DE TIPO POKÉMON
+   ========================================================================== */
+[class^="tipo-"], [class*=" tipo-"] {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+}
+
+.tipo-fogo {
+    background-color: #f08030;
+}
+
+.tipo-agua {
+    background-color: #6890f0;
+}
+
+.tipo-planta {
+    background-color: #78c850;
+}
+
+.tipo-eletrico {
+    background-color: #f8d030;
+    color: #4a5568 !important;
+}
+
+.tipo-terra {
+    background-color: #e0c068;
+    color: #4a5568 !important;
+}
+
+.tipo-normal {
+    background-color: #a8a878;
+}

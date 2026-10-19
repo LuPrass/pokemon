@@ -13,7 +13,7 @@
     display: block;
     margin-top: 14px;
     padding: 14px;
-    background: #e3350d;
+    background: #8259af;
     color: #fff;
     border-radius: 4px;
     text-decoration: none;
@@ -22,7 +22,7 @@
 }
 
 .menu-opcao:hover {
-    background: #b82a09;
+    background: #8259af;
 }
 
 .menu-sair {
