@@ -1,5 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
 
 // Verifica se a sessão 'logado' existe e é verdadeira
 if (!isset($_SESSION['logado']) || $_SESSION['logado'] !== true) {

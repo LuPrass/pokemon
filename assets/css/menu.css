@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 .menu-container {
     max-width: 420px;
     margin: 60px auto;
@@ -7,6 +9,21 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     font-family: Arial, sans-serif;
     text-align: center;
+}
+
+.titulo-jogo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    color: #5c358e;
+    margin: 0 0 16px 0;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.menu-container h2 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    color: #444;
 }
 
 .menu-opcao {

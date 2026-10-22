@@ -40,9 +40,23 @@ button {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
+.titulo-jogo,
+.titulo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    color: #5c358e;
+    text-align: center;
+    margin: 0 0 16px 0;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
+}
+
 .login-container h2 {
     margin-top: 0;
+    margin-bottom: 16px;
     text-align: center;
+    color: #333;
+    font-size: 20px;
 }
 
 .login-container label {
