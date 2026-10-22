@@ -58,12 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PokeArena - Login</title>
+    <title>Login</title>
     <link rel="stylesheet" href="assets/css/login.css">
 </head>
 <body>
+
     <div class="login-container">
-        <h1 class="titulo-jogo">PokeArena</h1>
         <h2>Login</h2>
         <?php if ($erro):?>
             <p style="color: red;"><?php echo $erro;?></p>
