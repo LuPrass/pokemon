@@ -1,46 +1,56 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
     session_start();
-}
 
 require_once __DIR__ . '/Autoload.php';
 
-// Já logado: vai direto para o menu
-if (isset($_SESSION['logado']) && $_SESSION['logado'] === true) {
-    header('Location: index.php?rota=menu');
-    exit;
-}
+$usuario_validos = [
+    'adm' => '123456',
+];    
 
 $erro = '';
-$semConta = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login = trim($_POST['login'] ?? '');
     $senha = $_POST['senha'] ?? '';
 
+    $autenticado = false;
+    $usuarioId = null;
+    $usuarioNome = null;
+
+    // 1. Busca e autentica pelo Banco de Dados (tabela usuario)
     try {
-        $usuario = Usuario::buscarPorNome(Conexao::getConnection(), $login);
+        $pdo = Conexao::getConnection();
+        $usuario = Usuario::buscarPorNome($pdo, $login);
 
-        if (!$usuario) {
-            // Não possui conta: informa que precisa criar uma
-            $semConta = true;
-            $erro = 'Conta não encontrada. Você precisa criar uma conta para jogar.';
-        } elseif (password_verify($senha, $usuario['senha'])) {
-            session_regenerate_id(true);
-            $_SESSION['logado'] = true;
-            $_SESSION['usuario'] = $usuario['nome'];
-            $_SESSION['usuario_id'] = (int)$usuario['id'];
-
-            header('Location: index.php?rota=menu');
-            exit;
-        } else {
-            $erro = 'Senha incorreta!';
+        if ($usuario && (password_verify($senha, $usuario['senha']) || $senha === $usuario['senha'])) {
+            $autenticado = true;
+            $usuarioId = (int)$usuario['id'];
+            $usuarioNome = $usuario['nome'];
         }
     } catch (Throwable $e) {
-        $erro = 'Não foi possível conectar ao banco de dados.';
+        // Falha de conexão ou tabela
+    }
+
+    // 2. Fallback para os usuários válidos em memória (material de apoio)
+    if (!$autenticado && isset($usuario_validos[$login]) && $usuario_validos[$login] === $senha) {
+        $autenticado = true;
+        $usuarioId = 1;
+        $usuarioNome = $login;
+    }
+
+    // Se autenticado, grava na sessão e redireciona
+    if ($autenticado) {
+        $_SESSION['logado'] = true;
+        $_SESSION['usuario'] = $usuarioNome;
+        $_SESSION['usuario_id'] = $usuarioId;
+        header('Location: index.php?rota=menu');
+        exit;
+    } else {
+        $erro = 'Login ou senha inválidos.';
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -53,15 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="login-container">
         <h2>Login</h2>
-
-        <?php if ($erro): ?>
-            <p class="erro-msg"><?php echo htmlspecialchars($erro); ?></p>
+        <?php if ($erro):?>
+            <p style="color: red;"><?php echo $erro;?></p>
         <?php endif; ?>
-
-        <?php if ($semConta): ?>
-            <p class="aviso-conta"><a href="cadastro.php">Clique aqui para criar sua conta</a></p>
-        <?php endif; ?>
-
         <form action="login.php" method="post">
             <label for="login">Login:</label>
             <input type="text" id="login" name="login" required value="<?php echo htmlspecialchars($_POST['login'] ?? ''); ?>">

@@ -1,7 +1,7 @@
 <?php
 
 class Usuario {
-    private $id;
+    private $id; 
     private $nome;
     private $dinheiro;
     private $dataCriacao;
@@ -54,7 +54,6 @@ class Usuario {
 
     public function save() {
         if ($this->id) {
-            // Update existing user in the database
             $sql = "UPDATE usuario SET nome = :nome, dinheiro = :dinheiro WHERE id = :id";
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute([
@@ -63,7 +62,6 @@ class Usuario {
                 ':id' => $this->id
             ]);
         } else {
-            // Insert new user into the database
             $sql = "INSERT INTO usuario (nome, dinheiro) VALUES (:nome, :dinheiro)";
             $stmt = $this->pdo->prepare($sql);
             $ok = $stmt->execute([

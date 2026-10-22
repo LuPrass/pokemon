@@ -12,9 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $senha = $_POST['senha'] ?? '';
     $confirmar = $_POST['confirmar'] ?? '';
 
-    if ($nome === '' || strlen($senha) < 4) {
-        $erro = 'Informe um nome e uma senha com pelo menos 4 caracteres.';
-    } elseif ($senha !== $confirmar) {
+   if ($senha !== $confirmar) {
         $erro = 'As senhas não conferem.';
     } else {
         try {
@@ -26,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id = Usuario::criarConta($pdo, $nome, $senha);
 
                 // Já entra logado depois de criar a conta
-                session_regenerate_id(true);
                 $_SESSION['logado'] = true;
                 $_SESSION['usuario'] = $nome;
                 $_SESSION['usuario_id'] = $id;

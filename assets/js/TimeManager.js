@@ -2,12 +2,6 @@
  * ==============================================================================
  * TimeManager.js
  * Gerenciador de Seleção do Time Pokémon
- * Regras:
- * - Adição APENAS ao clicar no botão "+ Adicionar ao Time"
- * - Remoção EXCLUSIVAMENTE ao clicar no botão "Remover"
- * - Pokémons selecionados aparecem com a mesma caixinha na área "Seu Time"
- * - Sem destaque roxo para os selecionados
- * - Segue o modelo padrão de requisições assíncronas JSON
  * ==============================================================================
  */
 
