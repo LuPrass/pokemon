@@ -1,43 +1,19 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/../../../verifica_login.php';
 
-$pdo = Conexao::getConnection();
-$usuarioId = (int)$_SESSION['usuario_id'];
-$usuarioNome = $_SESSION['usuario'] ?? 'Treinador';
-
-// Lista os 20 Pokémons cadastrados no catálogo
-$catalogo = PokemonCatalogo::listar();
-
-// Cria um mapa indexado pelo nome do Pokémon para facilitar o acesso no JavaScript
-$catalogoIndexado = [];
-foreach ($catalogo as $p) {
-    $catalogoIndexado[$p['nome']] = $p;
-}
-
-// Busca o time atual do usuário no banco de dados (se já tiver salvo antes)
-$timeAtual = Time::porUsuario($pdo, $usuarioId);
-$timeInicial = [];
-
-if (!empty($timeAtual)) {
-    foreach ($timeAtual as $tp) {
-        $pCatalogo = PokemonCatalogo::buscarPorNome($tp['nome']);
-        if ($pCatalogo) {
-            $timeInicial[] = $pCatalogo;
-        } else {
-            $timeInicial[] = [
-                'nome' => $tp['nome'],
-                'tipo' => $tp['tipo'],
-                'nivel' => (int)$tp['nivel'],
-                'hpMaximo' => (int)$tp['hp_maximo'],
-                'hpAtual' => (int)$tp['hp_atual'],
-                'ataque' => (int)$tp['ataque'],
-                'defesa' => (int)$tp['defesa'],
-                'velocidade' => (int)$tp['velocidade'],
-                'prioridade' => (int)$tp['prioridade'],
-                'statusCondicao' => $tp['status_condicao'],
-                'imagemArtwork' => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
-            ];
-        }
+// Processa o envio do time via AJAX/POST para guardar na Sessão do PHP
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    if ($data) {
+        $_SESSION['meu_time'] = $data['meuTime'];
+        $_SESSION['inimigos_restantes'] = $data['restantes'];
+        
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'redirect' => 'batalha.php']);
+        exit;
     }
 }
 ?>
@@ -47,121 +23,335 @@ if (!empty($timeAtual)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monte seu Time Pokémon</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        :root {
+            --primary: #ef5350;
+            --secondary: #3b4cca;
+            --bg: #f4f4f9;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .topo-nav {
+            max-width: 1200px;
+            margin: 0 auto 15px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-voltar {
+            text-decoration: none;
+            color: #fff;
+            background: var(--secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+        .btn-voltar:hover {
+            opacity: 0.85;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 { color: var(--secondary); margin-bottom: 5px; }
+
+        /* Painel do Time Selecionado */
+        .team-panel {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+            text-align: center;
+            border-top: 5px solid var(--primary);
+        }
+        .team-slots {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .slot {
+            width: 80px;
+            height: 80px;
+            border: 2px dashed #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+            overflow: hidden;
+            position: relative;
+        }
+        .slot img { width: 100%; height: 100%; object-fit: contain; }
+
+        /* Grid de Seleção */
+        .pokemon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Estilo do Card de Características */
+        .pokemon-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            border: 2px solid transparent;
+            cursor: pointer;
+            user-select: none;
+        }
+        .pokemon-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .pokemon-card.selected {
+            border-color: var(--secondary);
+            background-color: #ebf0ff;
+        }
+        .pokemon-card img {
+            width: 120px;
+            height: 120px;
+        }
+        .card-name {
+            text-transform: capitalize;
+            margin: 10px 0 5px 0;
+            font-size: 1.3rem;
+        }
+
+        /* Atributos / Características */
+        .stats-container {
+            margin-top: 15px;
+            text-align: left;
+            font-size: 0.85rem;
+            background: #fdfdfd;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+        .stat-bar-bg {
+            background: #e0e0e0;
+            height: 6px;
+            border-radius: 3px;
+            width: 100%;
+            margin-top: 2px;
+            overflow: hidden;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        .btn-ready {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+            display: none;
+            transition: background 0.2s;
+        }
+        .btn-ready:hover {
+            background: #d32f2f;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- Barra Superior de Navegação -->
-        <div class="topo-bar">
-            <div>
-                <h2>Olá, <?php echo htmlspecialchars($usuarioNome); ?>!</h2>
-                <small>Escolha até 3 Pokémons para o seu time clicando no botão "Adicionar ao Time" abaixo.</small>
-            </div>
-            <div class="acoes-topo">
-                <a href="index.php?rota=menu" class="botao">Voltar ao Menu</a>
-                <a href="logout.php" class="botao botao-sair">Sair</a>
-            </div>
-        </div>
-
-        <!-- Seção "Seu Time" (Apenas o título e as caixinhas dos Pokémons selecionados) -->
-        <div class="painel-time">
-            <div class="painel-time-header">
-                <h2>Seu Time <span class="contador-badge"><span id="contador">0</span>/3</span></h2>
-                <button type="button" class="btn-fechar-time" id="btnFecharTime" onclick="fecharTime()">
-                    ✓ Fechar Time
-                </button>
-            </div>
-
-            <!-- Área onde aparecem as caixinhas dos Pokémons selecionados -->
-            <div class="slots-container" id="slotsTime">
-                <!-- Preenchido dinamicamente pelo TimeManager.js com a mesma caixinha -->
-            </div>
-        </div>
-
-        <!-- Título do Catálogo -->
-        <div class="TituloCatalogo">
-            <h2>Pokémons Disponíveis (20)</h2>
-            <p>Analise os atributos e golpes. Para adicionar um Pokémon à equipe, clique no botão <b>"Adicionar ao Time"</b>.</p>
-        </div>
-
-        <!-- Grade de 20 Caixas com os Pokémons do Catálogo -->
-        <div class="catalogoPokemon" id="catalogoPokemon">
-            <?php foreach ($catalogo as $p): ?>
-                <?php $nomeSeguro = htmlspecialchars($p['nome']); ?>
-                <div class="poke-card" id="card-<?php echo $nomeSeguro; ?>">
-
-                    <!-- Topo da Caixa: Número, Nome e Tipo -->
-                    <div class="titulo-cartao">
-                        <div>
-                            <span class="numero-poke">#<?php echo str_pad($p['id_pokedex'], 3, '0', STR_PAD_LEFT); ?></span>
-                            <div class="nome-poke"><?php echo $nomeSeguro; ?></div>
-                        </div>
-                        <span class="tipo-<?php echo htmlspecialchars($p['tipo']); ?>">
-                            <?php echo htmlspecialchars($p['tipo']); ?>
-                        </span>
-                    </div>
-
-                    <!-- GIF Animado do Pokémon -->
-                    <div class="imagem-poke">
-                        <img src="<?php echo htmlspecialchars($p['gif']); ?>" alt="<?php echo $nomeSeguro; ?>" loading="lazy" onerror="this.src='<?php echo htmlspecialchars($p['imagemArtwork']); ?>'">
-                    </div>
-
-                    <!-- Atributos do Pokémon (HP, ATK, DEF, SPD) -->
-                    <div class="poke-stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-rotulo">HP:</span>
-                            <span class="stat-valor" style="color: #28a745;"><?php echo (int)$p['hpMaximo']; ?></span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-rotulo">ATK:</span>
-                            <span class="stat-valor" style="color: #e53e3e;"><?php echo (int)$p['ataque']; ?></span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-rotulo">DEF:</span>
-                            <span class="stat-valor" style="color: #dd6b20;"><?php echo (int)$p['defesa']; ?></span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-rotulo">SPD:</span>
-                            <span class="stat-valor" style="color: #3182ce;"><?php echo (int)$p['velocidade']; ?></span>
-                        </div>
-                    </div>
-
-                    <!-- Golpes do Pokémon -->
-                    <div class="poke-golpes-box">
-                        <b>Ataques:</b>
-                        <div class="golpes-chips">
-                            <?php foreach ($p['golpes'] as $g): ?>
-                                <span class="golpe-chip" title="Tipo: <?php echo htmlspecialchars($g['tipo']); ?> | Poder: <?php echo (int)$g['poder']; ?>">
-                                    <?php echo htmlspecialchars($g['nome']); ?>
-                                </span>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <!-- Botão de Ação: O Pokémon é adicionado APENAS clicando neste botão -->
-                    <button type="button" class="btn-acao-card adicionar" id="btn-<?php echo $nomeSeguro; ?>" data-nome="<?php echo $nomeSeguro; ?>" onclick="adicionarAoTime(window.catalogoPokemons['<?php echo $nomeSeguro; ?>'])">
-                        + Adicionar ao Time
-                    </button>
-                </div>
-            <?php endforeach; ?>
-        </div>
+    <div class="topo-nav">
+        <a href="index.php?rota=menu" class="btn-voltar">← Voltar ao Menu</a>
+        <?php if (!empty($_SESSION['usuario'])): ?>
+            <span>Treinador: <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b></span>
+        <?php endif; ?>
     </div>
 
-    <!-- Scripts da Aplicação -->
-    <script src="assets/js/ApiClient.js"></script>
-    <script src="assets/js/TimeManager.js"></script>
-    <script>
-        // Catálogo e dados do usuário disponibilizados para o JavaScript
-        window.catalogoPokemons = <?php echo json_encode($catalogoIndexado); ?>;
-        var usuarioId = <?php echo $usuarioId; ?>;
-        var dadosIniciais = <?php echo json_encode($timeInicial); ?>;
+    <header>
+        <h1>Construção de Time</h1>
+        <p>Escolha exatamente 3 Pokémon para a sua equipe de batalha</p>
+    </header>
 
-        // Inicia o gerenciador com os Pokémons do usuário
-        inicializarTime(dadosIniciais);
+    <!-- Painel do Time Selecionado -->
+    <div class="team-panel">
+        <h3>Seu Time (<span id="team-count">0</span>/3)</h3>
+        <div class="team-slots" id="team-slots">
+            <div class="slot" title="Vaga 1"></div>
+            <div class="slot" title="Vaga 2"></div>
+            <div class="slot" title="Vaga 3"></div>
+        </div>
+        <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar</button>
+    </div>
+
+    <!-- Grid com os Pokémon -->
+    <div class="pokemon-grid" id="pokemon-grid"></div>
+
+    <script>
+        // IDs dos 12 Pokémon selecionados
+        const pokemonDisponiveis = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92];
+        let meuTime = [];
+        const pokemonStatsCache = {};
+
+        // Tradução dos atributos
+        const traduzirStat = (name) => {
+            const traducoes = { 
+                'hp': 'HP', 
+                'attack': 'Ataque', 
+                'defense': 'Defesa', 
+                'speed': 'Velocidade' 
+            };
+            return traducoes[name] || name;
+        };
+
+        // 1. Carrega os dados da PokéAPI
+        async function carregarOpcoes() {
+            const grid = document.getElementById('pokemon-grid');
+
+            for (let id of pokemonDisponiveis) {
+                try {
+                    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+                    const poke = await response.json();
+                    
+                    // Armazena os atributos principais para facilitar o uso na batalha
+                    pokemonStatsCache[poke.id] = {
+                        hp: poke.stats.find(s => s.stat.name === 'hp')?.base_stat || 50,
+                        attack: poke.stats.find(s => s.stat.name === 'attack')?.base_stat || 50,
+                        defense: poke.stats.find(s => s.stat.name === 'defense')?.base_stat || 50,
+                        speed: poke.stats.find(s => s.stat.name === 'speed')?.base_stat || 50
+                    };
+
+                    grid.innerHTML += criarCardHTML(poke);
+                } catch (error) {
+                    console.error("Erro ao buscar Pokémon ID " + id, error);
+                }
+            }
+        }
+
+        // 2. Constrói o HTML do Card
+        function criarCardHTML(poke) {
+            const imagem = poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
+            const statsDesejados = ['hp', 'attack', 'defense', 'speed'];
+            let statsHTML = '';
+
+            poke.stats.forEach(s => {
+                if (statsDesejados.includes(s.stat.name)) {
+                    const nomePt = traduzirStat(s.stat.name);
+                    const porc = Math.min((s.base_stat / 150) * 100, 100);
+                    const corBarra = s.stat.name === 'hp' ? '#ff5252' : '#4caf50';
+
+                    statsHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <div class="stat-row">
+                                <strong>${nomePt}</strong>
+                                <span>${s.base_stat}</span>
+                            </div>
+                            <div class="stat-bar-bg">
+                                <div class="stat-bar-fill" style="width: ${porc}%; background: ${corBarra}"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            return `
+                <div class="pokemon-card" id="card-${poke.id}" onclick="alternarSelecao(${poke.id}, '${poke.name}', '${imagem}')">
+                    <img src="${imagem}" alt="${poke.name}">
+                    <h3 class="card-name">${poke.name}</h3>
+                    <div class="stats-container">
+                        ${statsHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Adiciona ou remove Pokémon do time
+        function alternarSelecao(id, name, img) {
+            const index = meuTime.findIndex(p => p.id === id);
+            const cardEl = document.getElementById(`card-${id}`);
+
+            if (index > -1) {
+                meuTime.splice(index, 1);
+                cardEl.classList.remove('selected');
+            } else {
+                if (meuTime.length >= 3) {
+                    alert("Seu time já está cheio! Remova um Pokémon antes de adicionar outro.");
+                    return;
+                }
+                const stats = pokemonStatsCache[id] || {};
+                meuTime.push({ id, name, img, ...stats });
+                cardEl.classList.add('selected');
+            }
+
+            atualizarPainelTime();
+        }
+
+        // 4. Atualiza os slots superiores
+        function atualizarPainelTime() {
+            document.getElementById('team-count').innerText = meuTime.length;
+            const slots = document.getElementById('team-slots').children;
+
+            for (let i = 0; i < 3; i++) {
+                slots[i].innerHTML = '';
+                if (meuTime[i]) {
+                    slots[i].innerHTML = `<img src="${meuTime[i].img}" alt="${meuTime[i].name}">`;
+                }
+            }
+
+            document.getElementById('btn-ready').style.display = meuTime.length === 3 ? 'inline-block' : 'none';
+        }
+
+        // 5. Separa os 9 Pokémon restantes e envia para a sessão / próxima página
+        async function iniciarJogo() {
+            const idsEscolhidos = meuTime.map(p => p.id);
+            const idsRestantes = pokemonDisponiveis.filter(id => !idsEscolhidos.includes(id));
+
+            // Guarda em sessionStorage no frontend como backup
+            sessionStorage.setItem('meuTime', JSON.stringify(meuTime));
+            sessionStorage.setItem('restantes', JSON.stringify(idsRestantes));
+
+            // Salva na Sessão PHP via POST
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        meuTime: meuTime,
+                        restantes: idsRestantes
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    window.location.href = result.redirect; // Redireciona para a tela de batalha
+                }
+            } catch (err) {
+                // Fallback caso PHP não trate o redirecionamento direto
+                window.location.href = 'batalha.php';
+            }
+        }
+
+        // Inicializa o carregamento dos Pokémon ao abrir a página
+        carregarOpcoes();
     </script>
 </body>
 </html>
