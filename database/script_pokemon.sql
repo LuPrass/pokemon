@@ -38,6 +38,8 @@ CREATE TABLE pokemon (
     velocidade INT NOT NULL,
     prioridade INT NOT NULL DEFAULT 0,
     status_condicao VARCHAR(20) NOT NULL DEFAULT 'Normal',
+    vantagem VARCHAR(100) NULL,
+    desvantagem VARCHAR(100) NULL,
     PRIMARY KEY (id),
     CONSTRAINT fk_pokemon_usuario 
         FOREIGN KEY (usuario_id) REFERENCES usuario(id) 
@@ -145,11 +147,11 @@ INSERT INTO usuario (nome, senha, dinheiro) VALUES
 
 -- Inserção dos Pokémons Iniciais (compatíveis com as classes PHP do projeto)
 -- 10 variáveis: nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao
-INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao) VALUES
-(1, 'Charmander', 'Fogo', 5, 39, 39, 52, 43, 65, 0, 'Normal'),
-(1, 'Pikachu', 'Raio', 5, 35, 35, 55, 40, 90, 0, 'Normal'),
-(2, 'Squirtle', 'Agua', 5, 44, 44, 48, 65, 43, 0, 'Normal'),
-(3, 'Bulbassauro', 'Planta', 5, 45, 45, 49, 49, 45, 0, 'Normal');
+INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao, vantagem, desvantagem) VALUES
+(1, 'Charmander', 'Fogo', 5, 39, 39, 52, 43, 65, 0, 'Normal', 'Planta, Gelo, Inseto, Aço', 'Água, Terra, Rocha'),
+(1, 'Pikachu', 'Raio', 5, 35, 35, 55, 40, 90, 0, 'Normal', 'Água, Voador', 'Terra'),
+(2, 'Squirtle', 'Agua', 5, 44, 44, 48, 65, 43, 0, 'Normal', 'Fogo, Terra, Rocha', 'Elétrico, Planta'),
+(3, 'Bulbassauro', 'Planta', 5, 45, 45, 49, 49, 45, 0, 'Normal', 'Água, Terra, Rocha', 'Fogo, Gelo, Veneno, Voador, Inseto');
 
 -- Inserção no Time de Batalha (Ash inicia com Charmander e Pikachu)
 INSERT INTO time (usuario_id, pokemon_id, posicao) VALUES
