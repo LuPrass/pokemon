@@ -230,6 +230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             for (let id of pokemonDisponiveis) {
                 try {
                     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+                    if (!response.ok) {
+                        throw new Error("Erro na requisição");
+                    }
                     const poke = await response.json();
                     
                     // Armazena os atributos principais para facilitar o uso na batalha
