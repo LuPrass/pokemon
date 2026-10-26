@@ -23,188 +23,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monte seu Time Pokémon</title>
-    <style>
-        :root {
-            --primary: #ef5350;
-            --secondary: #3b4cca;
-            --bg: #f4f4f9;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        .topo-nav {
-            max-width: 1200px;
-            margin: 0 auto 15px auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .btn-voltar {
-            text-decoration: none;
-            color: #fff;
-            background: var(--secondary);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            transition: opacity 0.2s;
-        }
-        .btn-voltar:hover {
-            opacity: 0.85;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        h1 { color: var(--secondary); margin-bottom: 5px; }
-
-        /* Painel do Time Selecionado */
-        .team-panel {
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            max-width: 600px;
-            margin: 0 auto 30px auto;
-            text-align: center;
-            border-top: 5px solid var(--primary);
-        }
-        .team-slots {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .slot {
-            width: 80px;
-            height: 80px;
-            border: 2px dashed #ccc;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fafafa;
-            overflow: hidden;
-            position: relative;
-        }
-        .slot img { width: 100%; height: 100%; object-fit: contain; }
-
-        /* Grid de Seleção */
-        .pokemon-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Estilo do Card de Características */
-        .pokemon-card {
-            background: #fff;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-            border: 2px solid transparent;
-            cursor: pointer;
-            user-select: none;
-        }
-        .pokemon-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-        .pokemon-card.selected {
-            border-color: var(--secondary);
-            background-color: #ebf0ff;
-        }
-        .pokemon-card img {
-            width: 120px;
-            height: 120px;
-        }
-        .card-name {
-            text-transform: capitalize;
-            margin: 10px 0 5px 0;
-            font-size: 1.3rem;
-        }
-
-        /* Atributos / Características */
-        .stats-container {
-            margin-top: 15px;
-            text-align: left;
-            font-size: 0.85rem;
-            background: #fdfdfd;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #eee;
-        }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
-        }
-        .stat-bar-bg {
-            background: #e0e0e0;
-            height: 6px;
-            border-radius: 3px;
-            width: 100%;
-            margin-top: 2px;
-            overflow: hidden;
-        }
-        .stat-bar-fill {
-            height: 100%;
-            width: 0%;
-            transition: width 0.5s;
-        }
-        .btn-ready {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 1rem;
-            border-radius: 20px;
-            cursor: pointer;
-            margin-top: 15px;
-            font-weight: bold;
-            display: none;
-            transition: background 0.2s;
-        }
-        .btn-ready:hover {
-            background: #d32f2f;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/builder.css">
 </head>
 <body>
 
-    <div class="topo-nav">
-        <a href="index.php?rota=menu" class="btn-voltar">← Voltar ao Menu</a>
-        <?php if (!empty($_SESSION['usuario'])): ?>
-            <span>Treinador: <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b></span>
-        <?php endif; ?>
-    </div>
+    <div class="builder-wrapper">
 
-    <header>
-        <h1>Construção de Time</h1>
-        <p>Escolha exatamente 3 Pokémon para a sua equipe de batalha</p>
-    </header>
+        <!-- Barra superior / Cabeçalho em tela cheia -->
+        <header class="builder-header">
+            <div class="titulo-box">
+                <h1>Construção de Time</h1>
+                <p>Escolha exatamente 3 Pokémon para a sua equipe de batalha</p>
+            </div>
+            <div class="builder-header-acoes">
+                <?php if (!empty($_SESSION['usuario'])): ?>
+                    <div class="treinador-badge">
+                        Treinador: <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b>
+                    </div>
+                <?php endif; ?>
+                <a href="index.php?rota=menu" class="btn-voltar">← Voltar ao Menu</a>
+            </div>
+        </header>
 
-    <!-- Painel do Time Selecionado -->
-    <div class="team-panel">
-        <h3>Seu Time (<span id="team-count">0</span>/3)</h3>
-        <div class="team-slots" id="team-slots">
-            <div class="slot" title="Vaga 1"></div>
-            <div class="slot" title="Vaga 2"></div>
-            <div class="slot" title="Vaga 3"></div>
+        <!-- Conteúdo Principal em Tela Cheia -->
+        <div class="builder-conteudo">
+
+            <!-- Painel do Time Selecionado -->
+            <div class="team-panel">
+                <h3>Seu Time (<span id="team-count">0</span>/3)</h3>
+                <div class="team-slots" id="team-slots">
+                    <div class="slot" title="Vaga 1"></div>
+                    <div class="slot" title="Vaga 2"></div>
+                    <div class="slot" title="Vaga 3"></div>
+                </div>
+                <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar</button>
+            </div>
+
+            <!-- Grid com os Pokémon -->
+            <div class="pokemon-grid" id="pokemon-grid"></div>
+
         </div>
-        <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar</button>
-    </div>
 
-    <!-- Grid com os Pokémon -->
-    <div class="pokemon-grid" id="pokemon-grid"></div>
+        <!-- Rodapé em Barra de Largura Total -->
+        <footer class="builder-footer">
+            <span><b>PokeArena</b> - Team Builder Oficial</span>
+            <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
+        </footer>
+
+    </div>
 
     <script>
         // IDs dos 12 Pokémon selecionados

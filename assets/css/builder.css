@@ -1,0 +1,322 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root {
+    --primary: #ef5350;
+    --primary-dark: #d32f2f;
+    --secondary: #3b4cca;
+    --secondary-dark: #2a3693;
+    --roxo-base: #5c358e;
+    --roxo-claro: #8259af;
+    --bg: #f7f5fa;
+    --card-bg: #ffffff;
+}
+
+/* Reset e layout full screen */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    box-sizing: border-box;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+.builder-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg);
+}
+
+/* Barra superior / Topo em tela cheia */
+.builder-header {
+    width: 100%;
+    background: #ffffff;
+    padding: 18px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 2px solid #ede8f5;
+    box-shadow: 0 2px 10px rgba(92, 53, 142, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.builder-header .titulo-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.builder-header h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    color: var(--roxo-base);
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.builder-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.builder-header-acoes {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.treinador-badge {
+    background: #f4effc;
+    border: 1px solid var(--roxo-claro);
+    color: var(--roxo-base);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.treinador-badge b {
+    color: var(--roxo-base);
+}
+
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--roxo-base);
+    background: #ede8f5;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 14px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-voltar:hover {
+    background: #dfd4ef;
+    color: #44246d;
+}
+
+/* Área central de conteúdo */
+.builder-conteudo {
+    width: 100%;
+    padding: 30px 40px;
+    flex: 1;
+}
+
+/* Painel do Time Selecionado em largura total */
+.team-panel {
+    background: #ffffff;
+    border: 1px solid #e7e0f2;
+    border-top: 5px solid var(--roxo-claro);
+    border-radius: 12px;
+    padding: 22px 28px;
+    margin-bottom: 35px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+}
+
+.team-panel h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.team-panel h3 span {
+    color: var(--roxo-claro);
+    font-weight: bold;
+}
+
+.team-slots {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.slot {
+    width: 90px;
+    height: 90px;
+    border: 2px dashed #bba9d4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #faf8fd;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.slot:hover {
+    border-color: var(--roxo-claro);
+}
+
+.slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.btn-ready {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 12px 36px;
+    font-size: 15px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    display: none;
+    transition: background 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+    margin-top: 10px;
+}
+
+.btn-ready:hover {
+    background: #1b5e20;
+    transform: scale(1.03);
+}
+
+/* Grid de Seleção dos Pokémon em Tela Cheia */
+.pokemon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 22px;
+    width: 100%;
+}
+
+/* Card individual do Pokémon */
+.pokemon-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 2px solid #ede8f5;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.pokemon-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(130, 89, 175, 0.16);
+    border-color: var(--roxo-claro);
+}
+
+.pokemon-card.selected {
+    border-color: var(--roxo-claro);
+    background-color: #f5f0fc;
+    box-shadow: 0 0 0 2px var(--roxo-claro), 0 8px 20px rgba(130, 89, 175, 0.2);
+}
+
+.pokemon-card img {
+    width: 130px;
+    height: 130px;
+    margin: 0 auto;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+.pokemon-card:hover img {
+    transform: scale(1.06);
+}
+
+.card-name {
+    text-transform: capitalize;
+    margin: 12px 0 6px 0;
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #222;
+}
+
+/* Painel de Estatísticas dentro do card */
+.stats-container {
+    margin-top: 15px;
+    text-align: left;
+    font-size: 0.85rem;
+    background: #faf8fc;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ece5f5;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+    font-weight: 600;
+    color: #555;
+}
+
+.stat-bar-bg {
+    background: #e5e0ed;
+    height: 7px;
+    border-radius: 4px;
+    width: 100%;
+    margin-top: 2px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+/* Rodapé em largura total */
+.builder-footer {
+    width: 100%;
+    margin-top: auto;
+    padding: 20px 40px;
+    background: #ffffff;
+    border-top: 1px solid #ede8f5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 14px;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+    .builder-header {
+        padding: 16px 20px;
+    }
+    .builder-conteudo {
+        padding: 20px 16px;
+    }
+    .builder-footer {
+        padding: 18px 20px;
+    }
+    .pokemon-grid {
+        grid-template-columns: 1fr;
+    }
+}

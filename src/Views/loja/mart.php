@@ -197,12 +197,6 @@ if (!empty($itensBanco)) {
 
         </div>
 
-        <!-- Rodapé em Barra de Largura Total -->
-        <footer class="rodape-nav">
-            <span><b>PokéArena</b> - Poké Mart Oficial</span>
-            <a class="btn-voltar" href="index.php?rota=menu">← Voltar ao Menu</a>
-        </footer>
-
     </div>
 
 </body>
