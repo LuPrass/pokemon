@@ -167,33 +167,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
 
             return `
-                <div class="pokemon-card card-tipo-${dadosTipo.classe}" id="card-${poke.id}" onclick="alternarSelecao(${poke.id}, '${poke.name}', '${imagem}', '${tipoPrincipal}')">
+                <div class="pokemon-card card-tipo-${dadosTipo.classe}" id="card-${poke.id}">
                     <img src="${imagem}" alt="${poke.name}">
                     <h3 class="card-name">${poke.name}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
                         ${statsHTML}
                     </div>
+                    <div class="card-botoes">
+                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.name}', '${imagem}', '${tipoPrincipal}', event)">+ Adicionar</button>
+                        <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" disabled>✕ Excluir</button>
+                    </div>
                 </div>
             `;
         }
 
-        // 3. Adiciona ou remove Pokémon do time
-        function alternarSelecao(id, name, img, tipo) {
-            const index = meuTime.findIndex(p => p.id === id);
-            const cardEl = document.getElementById(`card-${id}`);
+        // 3. Adiciona Pokémon ao time
+        function adicionarAoTime(id, name, img, tipo, event) {
+            if (event) event.stopPropagation();
 
+            const index = meuTime.findIndex(p => p.id === id);
             if (index > -1) {
-                meuTime.splice(index, 1);
-                cardEl.classList.remove('selected');
-            } else {
-                if (meuTime.length >= 3) {
-                    alert("Seu time já está cheio! Remova um Pokémon antes de adicionar outro.");
-                    return;
-                }
-                const stats = pokemonStatsCache[id] || {};
-                meuTime.push({ id, name, img, tipo: tipo || stats.tipo || 'normal', ...stats });
-                cardEl.classList.add('selected');
+                return; // Já está no time
+            }
+
+            if (meuTime.length >= 3) {
+                alert("Seu time já está cheio (máximo 3)! Exclua um Pokémon antes de adicionar outro.");
+                return;
+            }
+
+            const stats = pokemonStatsCache[id] || {};
+            meuTime.push({ id, name, img, tipo: tipo || stats.tipo || 'normal', ...stats });
+
+            // Atualiza os botões e estado visual do card
+            const cardEl = document.getElementById(`card-${id}`);
+            const btnAdd = document.getElementById(`btn-add-${id}`);
+            const btnDel = document.getElementById(`btn-del-${id}`);
+
+            if (cardEl) cardEl.classList.add('selected');
+            if (btnAdd) {
+                btnAdd.disabled = true;
+                btnAdd.innerText = "✓ No Time";
+            }
+            if (btnDel) {
+                btnDel.disabled = false;
+            }
+
+            atualizarPainelTime();
+        }
+
+        // 4. Remove/Exclui Pokémon do time
+        function removerDoTime(id, event) {
+            if (event) event.stopPropagation();
+
+            const index = meuTime.findIndex(p => p.id === id);
+            if (index === -1) {
+                return; // Não está no time
+            }
+
+            meuTime.splice(index, 1);
+
+            // Atualiza os botões e estado visual do card
+            const cardEl = document.getElementById(`card-${id}`);
+            const btnAdd = document.getElementById(`btn-add-${id}`);
+            const btnDel = document.getElementById(`btn-del-${id}`);
+
+            if (cardEl) cardEl.classList.remove('selected');
+            if (btnAdd) {
+                btnAdd.disabled = false;
+                btnAdd.innerText = "+ Adicionar";
+            }
+            if (btnDel) {
+                btnDel.disabled = true;
             }
 
             atualizarPainelTime();
