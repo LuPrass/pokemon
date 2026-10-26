@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monte seu Time Pokémon</title>
-    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/builder.css">
 </head>
 <body>
@@ -64,13 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="pokemon-grid" id="pokemon-grid"></div>
 
         </div>
-
-        <!-- Rodapé em Barra de Largura Total -->
-        <footer class="builder-footer">
-            <span><b>PokeArena</b> - Team Builder Oficial</span>
-            <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
-        </footer>
-
     </div>
 
     <script>

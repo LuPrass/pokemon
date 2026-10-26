@@ -1,5 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
+:root {
+    --roxo-base: #5c358e;
+    --roxo-claro: #8259af;
+    --roxo-hover: #44246d;
+    --roxo-fundo: #f4effc;
+    --verde-base: #2e7d32;
+    --verde-claro: #43a047;
+    --verde-hover: #1b5e20;
+    --verde-fundo: #e8f5e9;
+    --bg: #f7f5fa;
+    --card-bg: #ffffff;
+    --borda: #ede8f5;
+    --texto: #333333;
+    --texto-secundario: #666666;
+}
+
 /* Reset e layout de tela cheia */
 html, body {
     margin: 0;
@@ -266,7 +282,7 @@ html, body {
 }
 
 .btn-comprar {
-    background: #8259af;
+    background: var(--verde-base);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -278,7 +294,7 @@ html, body {
 }
 
 .btn-comprar:hover {
-    background: #6a4299;
+    background: var(--verde-hover);
     transform: scale(1.02);
 }
 

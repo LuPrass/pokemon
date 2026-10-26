@@ -1,14 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-    --primary: #ef5350;
-    --primary-dark: #d32f2f;
-    --secondary: #3b4cca;
-    --secondary-dark: #2a3693;
     --roxo-base: #5c358e;
     --roxo-claro: #8259af;
+    --roxo-hover: #44246d;
+    --roxo-fundo: #f4effc;
+    --verde-base: #2e7d32;
+    --verde-claro: #43a047;
+    --verde-hover: #1b5e20;
+    --verde-fundo: #e8f5e9;
     --bg: #f7f5fa;
     --card-bg: #ffffff;
+    --borda: #ede8f5;
+    --texto: #333333;
+    --texto-secundario: #666666;
 }
 
 /* Reset e layout full screen */
