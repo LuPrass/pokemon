@@ -63,6 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="pokemon-grid" id="pokemon-grid"></div>
 
         </div>
+
+        <!-- Rodapé em Barra de Largura Total -->
+        <footer class="builder-footer">
+            <span><b>PokeArena</b> - Team Builder Oficial</span>
+            <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
+        </footer>
+
     </div>
 
     <script>
@@ -70,6 +77,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const pokemonDisponiveis = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92];
         let meuTime = [];
         const pokemonStatsCache = {};
+
+        // Mapeamento e tradução visual dos tipos
+        const MAPA_TIPOS = {
+            'grass': { nome: 'Planta', icone: '🌿', classe: 'grass' },
+            'fire': { nome: 'Fogo', icone: '🔥', classe: 'fire' },
+            'water': { nome: 'Água', icone: '💧', classe: 'water' },
+            'electric': { nome: 'Elétrico', icone: '⚡', classe: 'electric' },
+            'normal': { nome: 'Normal', icone: '⚪', classe: 'normal' },
+            'psychic': { nome: 'Psíquico', icone: '🔮', classe: 'psychic' },
+            'ghost': { nome: 'Fantasma', icone: '👻', classe: 'ghost' },
+            'poison': { nome: 'Venenoso', icone: '☠️', classe: 'poison' },
+            'ground': { nome: 'Terra', icone: '🏜️', classe: 'ground' },
+            'rock': { nome: 'Pedra', icone: '🪨', classe: 'rock' },
+            'bug': { nome: 'Inseto', icone: '🐛', classe: 'bug' },
+            'dragon': { nome: 'Dragão', icone: '🐉', classe: 'dragon' },
+            'ice': { nome: 'Gelo', icone: '❄️', classe: 'ice' },
+            'fighting': { nome: 'Lutador', icone: '🥊', classe: 'fighting' }
+        };
 
         // Tradução dos atributos
         const traduzirStat = (name) => {
@@ -94,8 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     const poke = await response.json();
                     
-                    // Armazena os atributos principais para facilitar o uso na batalha
+                    const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
+
+                    // Armazena os atributos principais e tipo para facilitar o uso na batalha
                     pokemonStatsCache[poke.id] = {
+                        tipo: tipoPrincipal,
+                        tipos: poke.types.map(t => t.type.name),
                         hp: poke.stats.find(s => s.stat.name === 'hp')?.base_stat || 50,
                         attack: poke.stats.find(s => s.stat.name === 'attack')?.base_stat || 50,
                         defense: poke.stats.find(s => s.stat.name === 'defense')?.base_stat || 50,
@@ -109,9 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 2. Constrói o HTML do Card
+        // 2. Constrói o HTML do Card personalizado por tipo
         function criarCardHTML(poke) {
             const imagem = poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
+            const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
+            const dadosTipo = MAPA_TIPOS[tipoPrincipal] || { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
+
             const statsDesejados = ['hp', 'attack', 'defense', 'speed'];
             let statsHTML = '';
 
@@ -119,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (statsDesejados.includes(s.stat.name)) {
                     const nomePt = traduzirStat(s.stat.name);
                     const porc = Math.min((s.base_stat / 150) * 100, 100);
-                    const corBarra = s.stat.name === 'hp' ? '#ff5252' : '#4caf50';
+                    const corBarra = s.stat.name === 'hp' ? '#2e7d32' : '#8259af';
 
                     statsHTML += `
                         <div style="margin-bottom: 8px;">
@@ -136,9 +168,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
 
             return `
-                <div class="pokemon-card" id="card-${poke.id}" onclick="alternarSelecao(${poke.id}, '${poke.name}', '${imagem}')">
+                <div class="pokemon-card card-tipo-${dadosTipo.classe}" id="card-${poke.id}" onclick="alternarSelecao(${poke.id}, '${poke.name}', '${imagem}', '${tipoPrincipal}')">
                     <img src="${imagem}" alt="${poke.name}">
                     <h3 class="card-name">${poke.name}</h3>
+                    <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
                         ${statsHTML}
                     </div>
@@ -147,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // 3. Adiciona ou remove Pokémon do time
-        function alternarSelecao(id, name, img) {
+        function alternarSelecao(id, name, img, tipo) {
             const index = meuTime.findIndex(p => p.id === id);
             const cardEl = document.getElementById(`card-${id}`);
 
@@ -160,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     return;
                 }
                 const stats = pokemonStatsCache[id] || {};
-                meuTime.push({ id, name, img, ...stats });
+                meuTime.push({ id, name, img, tipo: tipo || stats.tipo || 'normal', ...stats });
                 cardEl.classList.add('selected');
             }
 
