@@ -146,6 +146,14 @@ html, body {
     font-weight: 700;
 }
 
+/* Linha do título com o botão de batalha ao lado */
+.secao-titulo-linha {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
 .aviso-vazio {
     background: #fff8e1;
     color: #8d6e63;

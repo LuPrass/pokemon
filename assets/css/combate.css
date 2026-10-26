@@ -1,0 +1,183 @@
+/* ==========================================================================
+   TELA DE COMBATE (usa as variáveis de cor definidas em arena.css)
+   ========================================================================== */
+
+/* Campo de batalha */
+.campo-batalha {
+    background: #ffffff;
+    border: 2px solid var(--borda);
+    border-radius: 14px;
+    padding: 30px 40px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    box-shadow: 0 4px 14px rgba(92, 53, 142, 0.08);
+}
+
+.lado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+/* Sprites */
+.sprite-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sprite-box img {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+}
+
+.sombra {
+    width: 120px;
+    height: 18px;
+    margin-top: -12px;
+    border-radius: 50%;
+    background: #ede8f5;
+}
+
+/* Caixas de status (nome + HP) */
+.caixa-status {
+    background: #faf8fc;
+    border: 2px solid var(--roxo-claro);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-width: 260px;
+}
+
+.lado-jogador .caixa-status {
+    border-color: var(--verde-base);
+}
+
+.status-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.status-nome {
+    font-weight: 700;
+    color: var(--roxo-base);
+    text-transform: capitalize;
+    font-size: 1.05rem;
+}
+
+.status-nivel {
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+    font-weight: 600;
+}
+
+.hp-linha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hp-rotulo {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ffffff;
+    background: var(--roxo-base);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.hp-barra-bg {
+    flex: 1;
+    height: 10px;
+    background: #ede8f5;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.hp-barra {
+    height: 100%;
+    background: var(--verde-claro);
+    border-radius: 6px;
+    transition: width 0.4s ease;
+}
+
+.hp-numeros {
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+/* Painel inferior: mensagem + ações */
+.painel-combate {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.caixa-mensagem {
+    background: #ffffff;
+    border: 2px solid var(--borda);
+    border-left: 5px solid var(--verde-base);
+    border-radius: 10px;
+    padding: 20px 22px;
+    font-size: 1rem;
+    color: var(--texto);
+    display: flex;
+    align-items: center;
+}
+
+.caixa-mensagem b {
+    color: var(--roxo-base);
+    text-transform: capitalize;
+}
+
+.acoes-combate {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.btn-acao {
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.btn-acao:hover {
+    transform: translateY(-2px);
+}
+
+.btn-atacar { background: var(--roxo-base); color: #ffffff; }
+.btn-atacar:hover { background: var(--roxo-hover); }
+
+.btn-trocar { background: var(--verde-base); color: #ffffff; }
+.btn-trocar:hover { background: var(--verde-hover); }
+
+.btn-item { background: #ede8f5; color: var(--roxo-base); }
+.btn-item:hover { background: #dfd4ef; }
+
+.btn-fugir { background: #f5f5f5; color: var(--texto-secundario); }
+.btn-fugir:hover { background: #e0e0e0; }
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .campo-batalha { padding: 20px; }
+    .painel-combate { grid-template-columns: 1fr; }
+    .caixa-status { min-width: 0; flex: 1; }
+    .sprite-box img { width: 100px; height: 100px; }
+}

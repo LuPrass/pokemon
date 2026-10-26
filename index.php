@@ -78,6 +78,10 @@ switch ($rota) {
         require_once __DIR__ . '/src/Views/batalha/arena.php';
         break;
 
+    case 'combate':
+        require_once __DIR__ . '/src/Views/batalha/combate.php';
+        break;
+
     case 'loja':
         require_once __DIR__ . '/src/Views/loja/mart.php';
         break;

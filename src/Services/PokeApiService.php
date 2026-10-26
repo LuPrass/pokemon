@@ -29,6 +29,7 @@ class PokeApiService {
 
         // Pega só o que o nosso jogo precisa
         $pokemon = [
+            'id'         => $dados['id'],
             'nome'       => $dados['name'],
             'tipo'       => $dados['types'][0]['type']['name'],
             'nivel'      => 5,
@@ -37,7 +38,8 @@ class PokeApiService {
             'defesa'     => $dados['stats'][2]['base_stat'],
             'velocidade' => $dados['stats'][5]['base_stat'],
             'imagem'     => $dados['sprites']['front_default'],
-            'imagemCostas' => $dados['sprites']['back_default']
+            'imagemCostas' => $dados['sprites']['back_default'],
+            'imagemArtwork' => $dados['sprites']['other']['official-artwork']['front_default'] ?? $dados['sprites']['front_default']
         ];
 
         return $pokemon;
