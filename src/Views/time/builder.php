@@ -17,6 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 }
+
+// Se o time já foi salvo e não foi clicado em "Modificar Time", impede a alteração e redireciona para a batalha
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
+    header('Location: index.php?rota=batalha');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -70,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
         // IDs dos 12 Pokémon selecionados
         const pokemonDisponiveis = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92];
-        let meuTime = [];
+        let meuTime = <?php echo (!empty($_SESSION['meu_time']) && !empty($_GET['modificar'])) ? json_encode(array_values($_SESSION['meu_time'])) : '[]'; ?>;
         const pokemonStatsCache = {};
 
         // Mapeamento e tradução visual dos tipos
@@ -138,6 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     console.error("Erro ao buscar Pokémon ID " + id, error);
                 }
             }
+
+            atualizarPainelTime();
         }
 
         // 2. Constrói o HTML do Card personalizado por tipo
@@ -171,8 +179,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
 
+            const noTime = meuTime.some(p => Number(p.id) === Number(poke.id));
+
             return `
-                <div class="pokemon-card card-tipo-${dadosTipo.classe}" id="card-${poke.id}">
+                <div class="pokemon-card card-tipo-${dadosTipo.classe} ${noTime ? 'selected' : ''}" id="card-${poke.id}">
                     <img src="${imagem}" alt="${poke.name}" onerror="this.onerror=null; this.src='${imagemFallback}'">
                     <h3 class="card-name">${poke.name}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
@@ -180,8 +190,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ${statsHTML}
                     </div>
                     <div class="card-botoes">
-                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.name}', '${imagem}', '${tipoPrincipal}', event)">+ Adicionar</button>
-                        <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" disabled>✕ Excluir</button>
+                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.name}', '${imagem}', '${tipoPrincipal}', event)" ${noTime ? 'disabled' : ''}>${noTime ? '✓ No Time' : '+ Adicionar'}</button>
+                        <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" ${noTime ? '' : 'disabled'}>✕ Excluir</button>
                     </div>
                 </div>
             `;
@@ -191,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function adicionarAoTime(id, name, img, tipo, event) {
             if (event) event.stopPropagation();
 
-            const index = meuTime.findIndex(p => p.id === id);
+            const index = meuTime.findIndex(p => Number(p.id) === Number(id));
             if (index > -1) {
                 return; // Já está no time
             }
@@ -225,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function removerDoTime(id, event) {
             if (event) event.stopPropagation();
 
-            const index = meuTime.findIndex(p => p.id === id);
+            const index = meuTime.findIndex(p => Number(p.id) === Number(id));
             if (index === -1) {
                 return; // Não está no time
             }

@@ -115,7 +115,7 @@ if (!empty($inimigosTime)) {
                         Treinador: <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b>
                     </div>
                 <?php endif; ?>
-                <a href="index.php?rota=builder" class="btn-link">⚙ Modificar Time</a>
+                <a href="index.php?rota=builder&modificar=1" class="btn-link">⚙ Modificar Time</a>
                 <a href="index.php?rota=loja" class="btn-link btn-verde">🏪 Poké Mart</a>
                 <a href="index.php?rota=menu" class="btn-link">← Menu</a>
             </div>
