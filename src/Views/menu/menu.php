@@ -15,7 +15,7 @@ require_once __DIR__ . '/../../../verifica_login.php';
         <h2>Menu</h2>
         <p>Bem-vindo, <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b>!</p>
 
-        <a class="menu-opcao" href="index.php?rota=builder">Batalha</a>
+        <a class="menu-opcao" href="index.php?rota=builder">Construir Time</a>
         <a class="menu-opcao" href="index.php?rota=pokemons">Menu de Pokémons</a>
         <a class="menu-opcao" href="index.php?rota=loja">PokéMart</a>
         <?php

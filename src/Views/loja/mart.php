@@ -111,7 +111,6 @@ if (!empty($itensBanco)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PokeArena - Poké Mart</title>
-    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/mart.css">
 </head>
 <body>
@@ -129,6 +128,7 @@ if (!empty($itensBanco)) {
                     <span class="carteira-rotulo">Seu Saldo:</span>
                     <span class="carteira-saldo">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
                 </div>
+                <a class="btn-voltar" href="index.php?rota=batalha">⚔ Voltar à Batalha</a>
                 <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
             </div>
         </header>
@@ -196,6 +196,15 @@ if (!empty($itensBanco)) {
             </main>
 
         </div>
+
+        <!-- Rodapé em Barra de Largura Total -->
+        <footer class="rodape-nav">
+            <span><b>PokéArena</b> - Poké Mart Oficial</span>
+            <div>
+                <a class="btn-voltar" href="index.php?rota=batalha" style="margin-right: 10px;">⚔ Voltar à Batalha</a>
+                <a class="btn-voltar" href="index.php?rota=menu">← Voltar ao Menu</a>
+            </div>
+        </footer>
 
     </div>
 

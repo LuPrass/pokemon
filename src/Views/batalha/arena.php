@@ -40,15 +40,8 @@ $inimigosRestantes = $_SESSION['inimigos_restantes'] ?? [];
 
         <!-- Conteúdo Principal em Tela Cheia -->
         <div class="arena-conteudo">
-
-            <!-- Banner Informativo de Status da Equipe -->
-            <div class="arena-banner-status">
-                <span>⚡ Seu time foi montado com sucesso e está sincronizado com a sessão do servidor.</span>
-                <span class="badge-pronto">✓ Time Pronto para Batalha</span>
-            </div>
-
-            <!-- Seção do Time Selecionado -->
-            <h2 class="secao-titulo">Seu Time Selecionado (<?php echo count($meuTime); ?>)</h2>
+             <!-- Seção do Time Selecionado -->
+            <h2 class="secao-titulo">Seu Time Selecionado</h2>
             <?php if (empty($meuTime)): ?>
                 <div class="aviso-vazio">
                     Nenhum Pokémon foi selecionado ainda. <a href="index.php?rota=builder">Clique aqui para montar sua equipe no Team Builder</a>.
@@ -72,7 +65,7 @@ $inimigosRestantes = $_SESSION['inimigos_restantes'] ?? [];
 
             <!-- Seção de Inimigos Restantes -->
             <div class="painel-inimigos">
-                <h2 class="secao-titulo" style="margin-top: 0;">Inimigos Restantes Disponíveis (<?php echo count($inimigosRestantes); ?>)</h2>
+                <h2 class="secao-titulo" style="margin-top: 0;">Inimigos  Disponíveis (<?php echo count($inimigosRestantes); ?>)</h2>
                 <div class="inimigos-chips">
                     <?php foreach ($inimigosRestantes as $inimigoId): ?>
                         <span class="inimigo-chip">🔴 Pokémon #<?php echo (int)$inimigoId; ?></span>
