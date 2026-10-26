@@ -355,138 +355,138 @@ html, body {
 .badge-pill-poison { background: #fdf2f8; color: #92268f; border: 1px solid #e08ddb; }
 .badge-pill-ground { background: #fdfaf0; color: #876d20; border: 1px solid #e2cb82; }
 
-/* Temas dos Cartões por Tipo */
+/* Temas dos Cartões por Tipo (Cores Sólidas e Simplificadas) */
 .card-tipo-grass {
-    border-color: #48d0b0 !important;
-    background: linear-gradient(180deg, #f0fdf9 0%, #ffffff 50%) !important;
+    border: 2px solid #2ecc71 !important;
+    background-color: #eafaf1 !important;
 }
 .card-tipo-grass:hover {
-    box-shadow: 0 8px 24px rgba(72, 208, 176, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(46, 204, 113, 0.25) !important;
 }
 .card-tipo-grass.selected {
-    box-shadow: 0 0 0 3px #48d0b0, 0 8px 24px rgba(72, 208, 176, 0.45) !important;
-    background: linear-gradient(180deg, #e1faf4 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #2ecc71, 0 8px 24px rgba(46, 204, 113, 0.35) !important;
+    background-color: #daf7e8 !important;
 }
 .card-tipo-grass .card-name {
-    color: #1b6d49 !important;
+    color: #145a32 !important;
 }
 
 .card-tipo-fire {
-    border-color: #fb6c6c !important;
-    background: linear-gradient(180deg, #fff5f5 0%, #ffffff 50%) !important;
+    border: 2px solid #e74c3c !important;
+    background-color: #fef0ed !important;
 }
 .card-tipo-fire:hover {
-    box-shadow: 0 8px 24px rgba(251, 108, 108, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(231, 76, 60, 0.25) !important;
 }
 .card-tipo-fire.selected {
-    box-shadow: 0 0 0 3px #fb6c6c, 0 8px 24px rgba(251, 108, 108, 0.45) !important;
-    background: linear-gradient(180deg, #ffe8e8 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #e74c3c, 0 8px 24px rgba(231, 76, 60, 0.35) !important;
+    background-color: #fce2de !important;
 }
 .card-tipo-fire .card-name {
-    color: #b72b2b !important;
+    color: #78281f !important;
 }
 
 .card-tipo-water {
-    border-color: #76befe !important;
-    background: linear-gradient(180deg, #f0f8ff 0%, #ffffff 50%) !important;
+    border: 2px solid #3498db !important;
+    background-color: #ebf5fb !important;
 }
 .card-tipo-water:hover {
-    box-shadow: 0 8px 24px rgba(118, 190, 254, 0.4) !important;
+    box-shadow: 0 6px 18px rgba(52, 152, 219, 0.25) !important;
 }
 .card-tipo-water.selected {
-    box-shadow: 0 0 0 3px #76befe, 0 8px 24px rgba(118, 190, 254, 0.45) !important;
-    background: linear-gradient(180deg, #e1f1ff 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #3498db, 0 8px 24px rgba(52, 152, 219, 0.35) !important;
+    background-color: #d6eaf8 !important;
 }
 .card-tipo-water .card-name {
-    color: #1765ad !important;
+    color: #1b4f72 !important;
 }
 
 .card-tipo-electric {
-    border-color: #ffd76a !important;
-    background: linear-gradient(180deg, #fffdf0 0%, #ffffff 50%) !important;
+    border: 2px solid #f1c40f !important;
+    background-color: #fefde8 !important;
 }
 .card-tipo-electric:hover {
-    box-shadow: 0 8px 24px rgba(255, 215, 106, 0.45) !important;
+    box-shadow: 0 6px 18px rgba(241, 196, 15, 0.3) !important;
 }
 .card-tipo-electric.selected {
-    box-shadow: 0 0 0 3px #f5b000, 0 8px 24px rgba(245, 176, 0, 0.4) !important;
-    background: linear-gradient(180deg, #fff8d6 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #d4ac0d, 0 8px 24px rgba(212, 172, 13, 0.35) !important;
+    background-color: #fef9c3 !important;
 }
 .card-tipo-electric .card-name {
-    color: #9c6b00 !important;
+    color: #7d6608 !important;
 }
 
 .card-tipo-normal {
-    border-color: #c5c2b8 !important;
-    background: linear-gradient(180deg, #f7f6f2 0%, #ffffff 50%) !important;
+    border: 2px solid #bdc3c7 !important;
+    background-color: #f4f6f7 !important;
 }
 .card-tipo-normal:hover {
-    box-shadow: 0 8px 24px rgba(197, 194, 184, 0.4) !important;
+    box-shadow: 0 6px 18px rgba(189, 195, 199, 0.3) !important;
 }
 .card-tipo-normal.selected {
-    box-shadow: 0 0 0 3px #a8a878, 0 8px 24px rgba(168, 168, 120, 0.4) !important;
-    background: linear-gradient(180deg, #f0efe8 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #95a5a6, 0 8px 24px rgba(149, 165, 166, 0.35) !important;
+    background-color: #eaeded !important;
 }
 .card-tipo-normal .card-name {
-    color: #55534c !important;
+    color: #2c3e50 !important;
 }
 
 .card-tipo-psychic {
-    border-color: #f85888 !important;
-    background: linear-gradient(180deg, #fef1f5 0%, #ffffff 50%) !important;
+    border: 2px solid #e91e63 !important;
+    background-color: #fdf0f5 !important;
 }
 .card-tipo-psychic:hover {
-    box-shadow: 0 8px 24px rgba(248, 88, 136, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(233, 30, 99, 0.25) !important;
 }
 .card-tipo-psychic.selected {
-    box-shadow: 0 0 0 3px #f85888, 0 8px 24px rgba(248, 88, 136, 0.4) !important;
-    background: linear-gradient(180deg, #fde2ec 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #e91e63, 0 8px 24px rgba(233, 30, 99, 0.35) !important;
+    background-color: #fce4ec !important;
 }
 .card-tipo-psychic .card-name {
-    color: #a81c47 !important;
+    color: #880e4f !important;
 }
 
 .card-tipo-ghost {
-    border-color: #9c84c4 !important;
-    background: linear-gradient(180deg, #f5f0fc 0%, #ffffff 50%) !important;
+    border: 2px solid #8e44ad !important;
+    background-color: #f4effa !important;
 }
 .card-tipo-ghost:hover {
-    box-shadow: 0 8px 24px rgba(156, 132, 196, 0.4) !important;
+    box-shadow: 0 6px 18px rgba(142, 68, 173, 0.25) !important;
 }
 .card-tipo-ghost.selected {
-    box-shadow: 0 0 0 3px #705898, 0 8px 24px rgba(112, 88, 152, 0.4) !important;
-    background: linear-gradient(180deg, #ece1f9 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #8e44ad, 0 8px 24px rgba(142, 68, 173, 0.35) !important;
+    background-color: #ebdff5 !important;
 }
 .card-tipo-ghost .card-name {
-    color: #53387d !important;
+    color: #4a235a !important;
 }
 
 .card-tipo-ground {
-    border-color: #e0c068 !important;
-    background: linear-gradient(180deg, #fdfbf3 0%, #ffffff 50%) !important;
+    border: 2px solid #d4ac0d !important;
+    background-color: #fdf8ea !important;
 }
 .card-tipo-ground:hover {
-    box-shadow: 0 8px 24px rgba(224, 192, 104, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(212, 172, 13, 0.25) !important;
 }
 .card-tipo-ground.selected {
-    box-shadow: 0 0 0 3px #d1a83b, 0 8px 24px rgba(209, 168, 59, 0.4) !important;
-    background: linear-gradient(180deg, #fcf4db 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #b7950b, 0 8px 24px rgba(183, 149, 11, 0.35) !important;
+    background-color: #fbf2d2 !important;
 }
 .card-tipo-ground .card-name {
-    color: #7b621e !important;
+    color: #7d6608 !important;
 }
 
 .card-tipo-poison {
-    border-color: #a040a0 !important;
-    background: linear-gradient(180deg, #faf0fa 0%, #ffffff 50%) !important;
+    border: 2px solid #9b59b6 !important;
+    background-color: #fbf0fb !important;
 }
 .card-tipo-poison:hover {
-    box-shadow: 0 8px 24px rgba(160, 64, 160, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(155, 89, 182, 0.25) !important;
 }
 .card-tipo-poison.selected {
-    box-shadow: 0 0 0 3px #a040a0, 0 8px 24px rgba(160, 64, 160, 0.4) !important;
-    background: linear-gradient(180deg, #f5dcf5 0%, #ffffff 50%) !important;
+    box-shadow: 0 0 0 3px #9b59b6, 0 8px 24px rgba(155, 89, 182, 0.35) !important;
+    background-color: #f7ddf7 !important;
 }
 .card-tipo-poison .card-name {
-    color: #6d246d !important;
+    color: #512e5f !important;
 }

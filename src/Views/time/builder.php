@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($data) {
         $_SESSION['meu_time'] = $data['meuTime'];
         $_SESSION['inimigos_restantes'] = $data['restantes'];
+        $_SESSION['inimigos_time'] = $data['inimigos'] ?? [];
         
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success', 'redirect' => 'batalha.php']);
@@ -64,12 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         </div>
 
-        <!-- Rodapé em Barra de Largura Total -->
-        <footer class="builder-footer">
-            <span><b>PokeArena</b> - Team Builder Oficial</span>
-            <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
-        </footer>
-
     </div>
 
     <script>
@@ -119,10 +114,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     const poke = await response.json();
                     
+                    const imagem = poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
                     const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
 
                     // Armazena os atributos principais e tipo para facilitar o uso na batalha
                     pokemonStatsCache[poke.id] = {
+                        id: poke.id,
+                        name: poke.name,
+                        img: imagem,
                         tipo: tipoPrincipal,
                         tipos: poke.types.map(t => t.type.name),
                         hp: poke.stats.find(s => s.stat.name === 'hp')?.base_stat || 50,
@@ -140,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 2. Constrói o HTML do Card personalizado por tipo
         function criarCardHTML(poke) {
-            const imagem = poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
+            const imagem = pokemonStatsCache[poke.id]?.img || poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
             const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
             const dadosTipo = MAPA_TIPOS[tipoPrincipal] || { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
 
@@ -219,10 +218,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         async function iniciarJogo() {
             const idsEscolhidos = meuTime.map(p => p.id);
             const idsRestantes = pokemonDisponiveis.filter(id => !idsEscolhidos.includes(id));
+            const inimigosCompletos = idsRestantes.map(id => {
+                const p = pokemonStatsCache[id] || {};
+                return {
+                    id: id,
+                    name: p.name || `Pokémon #${id}`,
+                    img: p.img || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+                    tipo: p.tipo || 'normal',
+                    hp: p.hp || 50,
+                    attack: p.attack || 50,
+                    defense: p.defense || 50,
+                    speed: p.speed || 50
+                };
+            });
 
             // Guarda em sessionStorage no frontend como backup
             sessionStorage.setItem('meuTime', JSON.stringify(meuTime));
             sessionStorage.setItem('restantes', JSON.stringify(idsRestantes));
+            sessionStorage.setItem('inimigos', JSON.stringify(inimigosCompletos));
 
             // Salva na Sessão PHP via POST
             try {
@@ -231,7 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         meuTime: meuTime,
-                        restantes: idsRestantes
+                        restantes: idsRestantes,
+                        inimigos: inimigosCompletos
                     })
                 });
 
