@@ -112,86 +112,94 @@ if (!empty($itensBanco)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PokeArena - Poké Mart</title>
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/menu.css">
     <link rel="stylesheet" href="assets/css/mart.css">
 </head>
 <body>
 
     <div class="mart-wrapper">
 
-        <!-- Cabeçalho da Poké Mart -->
+        <!-- Cabeçalho da Poké Mart em tela cheia -->
         <header class="mart-header">
             <div class="titulo-box">
                 <h1>Poké Mart</h1>
                 <p>Bem-vindo, Treinador <b><?php echo htmlspecialchars($usuarioNome); ?></b>! Abasteça seus itens para as batalhas.</p>
             </div>
-            <div class="carteira">
-                <span class="carteira-rotulo">Seu Saldo:</span>
-                <span class="carteira-saldo">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
+            <div class="mart-header-acoes">
+                <div class="carteira">
+                    <span class="carteira-rotulo">Seu Saldo:</span>
+                    <span class="carteira-saldo">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
+                </div>
+                <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
             </div>
         </header>
 
-        <!-- Painel: Visualização dos Pokémons do Treinador -->
-        <section class="painel-time">
-            <h3>👥 Seu Time Atual</h3>
-            <?php if (empty($pokemons)): ?>
-                <p style="margin: 0; color: #777; font-size: 14px;">Você ainda não montou seu time na tela de Batalha. <a href="index.php?rota=builder" style="color: #8259af; font-weight: bold; text-decoration: underline;">Clique aqui para escolher seus 3 Pokémons no Builder</a>.</p>
-            <?php else: ?>
-                <div class="grid-pokemons-usuario">
-                    <?php foreach ($pokemons as $p): ?>
-                        <?php
-                            $hpAtual = (int)($p['hp_atual'] ?? 0);
-                            $hpMax = (int)($p['hp_maximo'] ?? 1);
-                            $status = $p['status_condicao'] ?? 'Normal';
-                            $desmaiado = ($hpAtual <= 0 || strtolower($status) === 'desmaiado');
-                            $classeStatus = $desmaiado ? 'badge-desmaiado' : (strtolower($status) === 'normal' ? 'badge-normal' : 'badge-alerta');
-                            $foto = !empty($p['imagem_frente']) ? $p['imagem_frente'] : 'assets/img/pokeball.png';
-                        ?>
-                        <div class="card-pokemon-mini <?php echo $desmaiado ? 'desmaiado' : ''; ?>">
-                            <img src="<?php echo htmlspecialchars($foto); ?>" alt="<?php echo htmlspecialchars($p['nome']); ?>" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png'">
-                            <div class="pokemon-mini-info">
-                                <b><?php echo htmlspecialchars($p['nome']); ?></b>
-                                <div>HP: <?php echo $hpAtual; ?> / <?php echo $hpMax; ?></div>
-                                <span class="badge-status <?php echo $classeStatus; ?>"><?php echo htmlspecialchars($status); ?></span>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </section>
+        <!-- Conteúdo Principal em Tela Cheia -->
+        <div class="mart-conteudo">
 
-        <!-- Vitrine de Produtos da Loja Organizados por Categoria -->
-        <main class="vitrine-itens">
-            <?php foreach ($itensCatalogo as $categoria => $itens): ?>
-                <section class="secao-categoria">
-                    <h2><?php echo htmlspecialchars($categoria); ?></h2>
-                    <div class="grid-itens">
-                        <?php foreach ($itens as $item): ?>
-                            <div class="item-card" data-item-id="<?php echo htmlspecialchars($item['id'] ?? ''); ?>" data-item-tipo="<?php echo htmlspecialchars($item['tipo']); ?>">
-                                <div>
-                                    <div class="item-topo">
-                                        <span class="item-icone"><?php echo $item['icone']; ?></span>
-                                        <span class="item-nome"><?php echo htmlspecialchars($item['nome']); ?></span>
-                                    </div>
-                                    <div class="item-descricao">
-                                        <?php echo htmlspecialchars($item['descricao']); ?>
-                                    </div>
-                                </div>
-                                <div class="item-rodape">
-                                    <span class="item-preco">₽ <?php echo number_format($item['preco'], 0, ',', '.'); ?></span>
-                                    <button type="button" class="btn-comprar" title="Comprar <?php echo htmlspecialchars($item['nome']); ?>">
-                                        Comprar
-                                    </button>
+            <!-- Painel: Visualização dos Pokémons do Treinador -->
+            <section class="painel-time">
+                <h3>👥 Seu Time Atual</h3>
+                <?php if (empty($pokemons)): ?>
+                    <p style="margin: 0; color: #777; font-size: 14px;">Você ainda não montou seu time na tela de Batalha. <a href="index.php?rota=builder" style="color: #8259af; font-weight: bold; text-decoration: underline;">Clique aqui para escolher seus 3 Pokémons no Builder</a>.</p>
+                <?php else: ?>
+                    <div class="grid-pokemons-usuario">
+                        <?php foreach ($pokemons as $p): ?>
+                            <?php
+                                $hpAtual = (int)($p['hp_atual'] ?? 0);
+                                $hpMax = (int)($p['hp_maximo'] ?? 1);
+                                $status = $p['status_condicao'] ?? 'Normal';
+                                $desmaiado = ($hpAtual <= 0 || strtolower($status) === 'desmaiado');
+                                $classeStatus = $desmaiado ? 'badge-desmaiado' : (strtolower($status) === 'normal' ? 'badge-normal' : 'badge-alerta');
+                                $foto = !empty($p['imagem_frente']) ? $p['imagem_frente'] : 'assets/img/pokeball.png';
+                            ?>
+                            <div class="card-pokemon-mini <?php echo $desmaiado ? 'desmaiado' : ''; ?>">
+                                <img src="<?php echo htmlspecialchars($foto); ?>" alt="<?php echo htmlspecialchars($p['nome']); ?>" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png'">
+                                <div class="pokemon-mini-info">
+                                    <b><?php echo htmlspecialchars($p['nome']); ?></b>
+                                    <div>HP: <?php echo $hpAtual; ?> / <?php echo $hpMax; ?></div>
+                                    <span class="badge-status <?php echo $classeStatus; ?>"><?php echo htmlspecialchars($status); ?></span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
-                </section>
-            <?php endforeach; ?>
-        </main>
+                <?php endif; ?>
+            </section>
 
-        <!-- Navegação / Rodapé -->
+            <!-- Vitrine de Produtos da Loja Organizados por Categoria -->
+            <main class="vitrine-itens">
+                <?php foreach ($itensCatalogo as $categoria => $itens): ?>
+                    <section class="secao-categoria">
+                        <h2><?php echo htmlspecialchars($categoria); ?></h2>
+                        <div class="grid-itens">
+                            <?php foreach ($itens as $item): ?>
+                                <div class="item-card" data-item-id="<?php echo htmlspecialchars($item['id'] ?? ''); ?>" data-item-tipo="<?php echo htmlspecialchars($item['tipo']); ?>">
+                                    <div>
+                                        <div class="item-topo">
+                                            <span class="item-icone"><?php echo $item['icone']; ?></span>
+                                            <span class="item-nome"><?php echo htmlspecialchars($item['nome']); ?></span>
+                                        </div>
+                                        <div class="item-descricao">
+                                            <?php echo htmlspecialchars($item['descricao']); ?>
+                                        </div>
+                                    </div>
+                                    <div class="item-rodape">
+                                        <span class="item-preco">₽ <?php echo number_format($item['preco'], 0, ',', '.'); ?></span>
+                                        <button type="button" class="btn-comprar" title="Comprar <?php echo htmlspecialchars($item['nome']); ?>">
+                                            Comprar
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
+            </main>
+
+        </div>
+
+        <!-- Rodapé em Barra de Largura Total -->
         <footer class="rodape-nav">
+            <span><b>PokéArena</b> - Poké Mart Oficial</span>
             <a class="btn-voltar" href="index.php?rota=menu">← Voltar ao Menu</a>
         </footer>
 
