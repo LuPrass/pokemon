@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../verifica_login.php';
+require_once __DIR__ . '/../../Services/PokemonCatalogo.php';
 
 // Processa o envio do time via AJAX/POST para guardar na Sessão do PHP
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -74,8 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
     </div>
 
     <script>
-        // IDs dos 12 Pokémon selecionados
-        const pokemonDisponiveis = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92];
+        // IDs centralizados no catálogo dos Pokémon
+        const pokemonDisponiveis = <?php echo json_encode(PokemonCatalogo::IDS); ?>;
         let meuTime = <?php echo (!empty($_SESSION['meu_time']) && !empty($_GET['modificar'])) ? json_encode(array_values($_SESSION['meu_time'])) : '[]'; ?>;
         const pokemonStatsCache = {};
 
@@ -108,68 +109,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
             return traducoes[name] || name;
         };
 
-        // 1. Carrega os dados da PokéAPI
+        async function buscarPokemon(id) {
+            const resposta = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+            if (!resposta.ok) {
+                throw new Error(`Pokémon não encontrado: ${id}`);
+            }
+
+            const dados = await resposta.json();
+            const imagemArtwork = dados.sprites.other?.['official-artwork']?.front_default
+                || dados.sprites.front_default;
+
+            return {
+                id: dados.id,
+                nome: dados.name,
+                imagem: imagemArtwork,
+                imagemAnimada: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${dados.id}.gif`,
+                tipo: dados.types[0]?.type?.name || 'normal',
+                tipos: dados.types.map(t => t.type.name),
+                stats: Object.fromEntries(
+                    dados.stats.map(stat => [stat.stat.name, stat.base_stat])
+                )
+            };
+        }
+
+        // Busca os 12 Pokémon em paralelo e mantém a ordem do catálogo.
         async function carregarOpcoes() {
             const grid = document.getElementById('pokemon-grid');
+            const resultados = await Promise.all(
+                pokemonDisponiveis.map(id =>
+                    buscarPokemon(id).catch(error => {
+                        console.error(`Erro ao buscar Pokémon ID ${id}`, error);
+                        return null;
+                    })
+                )
+            );
 
-            for (let id of pokemonDisponiveis) {
-                try {
-                    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-                    if (!response.ok) {
-                        throw new Error("Erro na requisição");
-                    }
-                    const poke = await response.json();
-                    
-                    // GIF animado direto do repositório da PokéAPI
-                    const imagem = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${poke.id}.gif`;
-                    const imagemEstatica = poke.sprites.other?.['official-artwork']?.front_default || poke.sprites.front_default;
-                    const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
-
-                    // Armazena os atributos principais e tipo para facilitar o uso na batalha
-                    pokemonStatsCache[poke.id] = {
-                        id: poke.id,
-                        name: poke.name,
-                        img: imagem,
-                        imgEstatica: imagemEstatica,
-                        tipo: tipoPrincipal,
-                        tipos: poke.types.map(t => t.type.name),
-                        hp: poke.stats.find(s => s.stat.name === 'hp')?.base_stat || 50,
-                        attack: poke.stats.find(s => s.stat.name === 'attack')?.base_stat || 50,
-                        defense: poke.stats.find(s => s.stat.name === 'defense')?.base_stat || 50,
-                        speed: poke.stats.find(s => s.stat.name === 'speed')?.base_stat || 50
-                    };
-
-                    grid.innerHTML += criarCardHTML(poke);
-                } catch (error) {
-                    console.error("Erro ao buscar Pokémon ID " + id, error);
-                }
-            }
+            resultados.filter(Boolean).forEach(poke => {
+                pokemonStatsCache[poke.id] = {
+                    id: poke.id,
+                    name: poke.nome,
+                    img: poke.imagemAnimada,
+                    imgEstatica: poke.imagem,
+                    tipo: poke.tipo,
+                    tipos: poke.tipos,
+                    hp: poke.stats.hp,
+                    attack: poke.stats.attack,
+                    defense: poke.stats.defense,
+                    speed: poke.stats.speed
+                };
+                grid.innerHTML += criarCardHTML(poke);
+            });
 
             atualizarPainelTime();
         }
 
         // 2. Constrói o HTML do Card personalizado por tipo
         function criarCardHTML(poke) {
-            const dadosPoke = pokemonStatsCache[poke.id] || {};
-            const imagem = dadosPoke.img || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${poke.id}.gif`;
-            const imagemFallback = dadosPoke.imgEstatica || poke.sprites.other?.['official-artwork']?.front_default || poke.sprites.front_default;
-            const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
+            const imagem = poke.imagemAnimada;
+            const imagemFallback = poke.imagem;
+            const tipoPrincipal = poke.tipo;
             const dadosTipo = MAPA_TIPOS[tipoPrincipal] || { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
 
             const statsDesejados = ['hp', 'attack', 'defense', 'speed'];
             let statsHTML = '';
 
-            poke.stats.forEach(s => {
-                if (statsDesejados.includes(s.stat.name)) {
-                    const nomePt = traduzirStat(s.stat.name);
-                    const porc = Math.min((s.base_stat / 150) * 100, 100);
-                    const corBarra = s.stat.name === 'hp' ? '#2e7d32' : '#8259af';
+            statsDesejados.forEach(nome => {
+                if (poke.stats[nome] !== undefined) {
+                    const nomePt = traduzirStat(nome);
+                    const porc = Math.min((poke.stats[nome] / 150) * 100, 100);
+                    const corBarra = nome === 'hp' ? '#2e7d32' : '#8259af';
 
                     statsHTML += `
                         <div style="margin-bottom: 8px;">
                             <div class="stat-row">
                                 <strong>${nomePt}</strong>
-                                <span>${s.base_stat}</span>
+                                <span>${poke.stats[nome]}</span>
                             </div>
                             <div class="stat-bar-bg">
                                 <div class="stat-bar-fill" style="width: ${porc}%; background: ${corBarra}"></div>
@@ -183,14 +197,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 
             return `
                 <div class="pokemon-card card-tipo-${dadosTipo.classe} ${noTime ? 'selected' : ''}" id="card-${poke.id}">
-                    <img src="${imagem}" alt="${poke.name}" onerror="this.onerror=null; this.src='${imagemFallback}'">
-                    <h3 class="card-name">${poke.name}</h3>
+                    <img src="${imagem}" alt="${poke.nome}" onerror="this.onerror=null; this.src='${imagemFallback}'">
+                    <h3 class="card-name">${poke.nome}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
                         ${statsHTML}
                     </div>
                     <div class="card-botoes">
-                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.name}', '${imagem}', '${tipoPrincipal}', event)" ${noTime ? 'disabled' : ''}>${noTime ? '✓ No Time' : '+ Adicionar'}</button>
+                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.nome}', '${imagem}', '${tipoPrincipal}', event)" ${noTime ? 'disabled' : ''}>${noTime ? '✓ No Time' : '+ Adicionar'}</button>
                         <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" ${noTime ? '' : 'disabled'}>✕ Excluir</button>
                     </div>
                 </div>

@@ -31,18 +31,26 @@ class PokemonCatalogo {
             return null; // API indisponível ou Pokémon não encontrado
         }
 
+        $baseStats = [
+            'hp' => (int)($info['baseStats']['hp'] ?? $info['hp'] ?? 0),
+            'attack' => (int)($info['baseStats']['attack'] ?? $info['ataque'] ?? 0),
+            'defense' => (int)($info['baseStats']['defense'] ?? $info['defesa'] ?? 0),
+            'speed' => (int)($info['baseStats']['speed'] ?? $info['velocidade'] ?? 0),
+        ];
+
         $pokemon = [
             'id_pokedex'     => $info['id'],
             'nome'           => ucfirst($info['nome']),
             'tipo'           => $info['tipo'],
             'nivel'          => $info['nivel'],
-            'hpMaximo'       => $info['hp'],
-            'hpAtual'        => $info['hp'],
-            'ataque'         => $info['ataque'],
-            'defesa'         => $info['defesa'],
-            'velocidade'     => $info['velocidade'],
+            'hpMaximo'       => $baseStats['hp'],
+            'hpAtual'        => $baseStats['hp'],
+            'ataque'         => $baseStats['attack'],
+            'defesa'         => $baseStats['defense'],
+            'velocidade'     => $baseStats['speed'],
             'prioridade'     => 0,
             'statusCondicao' => 'Normal',
+            'baseStats'      => $baseStats,
             'imagemArtwork'  => $info['imagemArtwork'],
             'imagemFrente'   => $info['imagem'],
             'imagemCostas'   => $info['imagemCostas'],

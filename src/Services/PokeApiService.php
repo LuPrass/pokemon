@@ -27,16 +27,32 @@ class PokeApiService {
 
         $dados = json_decode($json, true);
 
-        // Pega só o que o nosso jogo precisa
+        $baseStats = [];
+        foreach (($dados['stats'] ?? []) as $stat) {
+            $nomeStat = $stat['stat']['name'] ?? null;
+            $valor = $stat['base_stat'] ?? 0;
+            if ($nomeStat !== null) {
+                $baseStats[$nomeStat] = (int) $valor;
+            }
+        }
+
+        // Pega só o que o nosso jogo precisa usando o nome do atributo da API,
+        // evitando dependência da ordem de `stats[]`.
         $pokemon = [
             'id'         => $dados['id'],
             'nome'       => $dados['name'],
             'tipo'       => $dados['types'][0]['type']['name'],
             'nivel'      => 5,
-            'hp'         => $dados['stats'][0]['base_stat'],
-            'ataque'     => $dados['stats'][1]['base_stat'],
-            'defesa'     => $dados['stats'][2]['base_stat'],
-            'velocidade' => $dados['stats'][5]['base_stat'],
+            'hp'         => $baseStats['hp'] ?? 0,
+            'ataque'     => $baseStats['attack'] ?? 0,
+            'defesa'     => $baseStats['defense'] ?? 0,
+            'velocidade' => $baseStats['speed'] ?? 0,
+            'baseStats'  => [
+                'hp' => $baseStats['hp'] ?? 0,
+                'attack' => $baseStats['attack'] ?? 0,
+                'defense' => $baseStats['defense'] ?? 0,
+                'speed' => $baseStats['speed'] ?? 0,
+            ],
             'imagem'     => $dados['sprites']['front_default'],
             'imagemCostas' => $dados['sprites']['back_default'],
             'imagemArtwork' => $dados['sprites']['other']['official-artwork']['front_default'] ?? $dados['sprites']['front_default']
