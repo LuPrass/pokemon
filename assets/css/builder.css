@@ -155,33 +155,49 @@ html, body {
 .team-slots {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 40px;
     flex-wrap: wrap;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    align-items: flex-end;
+    min-height: 150px;
 }
 
 .slot {
-    width: 90px;
-    height: 90px;
-    border: 2px dashed #bba9d4;
-    border-radius: 50%;
+    width: 140px;
+    min-height: 140px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #faf8fd;
-    overflow: hidden;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     position: relative;
-    transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-.slot:hover {
-    border-color: var(--roxo-claro);
+    padding: 0;
 }
 
 .slot img {
-    width: 100%;
-    height: 100%;
+    width: 140px;
+    height: 140px;
+    max-width: 150px;
+    max-height: 150px;
     object-fit: contain;
+    filter: drop-shadow(0 8px 18px rgba(92, 53, 142, 0.22));
+    transition: transform 0.2s ease;
+}
+
+.slot img:hover {
+    transform: scale(1.12);
+}
+
+.slot-nome {
+    text-transform: capitalize;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--roxo-base);
+    margin-top: 6px;
+    display: block;
 }
 
 .btn-ready {

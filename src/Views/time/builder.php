@@ -53,9 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="team-panel">
                 <h3>Seu Time (<span id="team-count">0</span>/3)</h3>
                 <div class="team-slots" id="team-slots">
-                    <div class="slot" title="Vaga 1"></div>
-                    <div class="slot" title="Vaga 2"></div>
-                    <div class="slot" title="Vaga 3"></div>
+                    <div class="slot" id="slot-0"></div>
+                    <div class="slot" id="slot-1"></div>
+                    <div class="slot" id="slot-2"></div>
                 </div>
                 <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar</button>
             </div>
@@ -114,7 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     const poke = await response.json();
                     
-                    const imagem = poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
+                    // GIF animado direto do repositório da PokéAPI
+                    const imagem = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${poke.id}.gif`;
+                    const imagemEstatica = poke.sprites.other?.['official-artwork']?.front_default || poke.sprites.front_default;
                     const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
 
                     // Armazena os atributos principais e tipo para facilitar o uso na batalha
@@ -122,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         id: poke.id,
                         name: poke.name,
                         img: imagem,
+                        imgEstatica: imagemEstatica,
                         tipo: tipoPrincipal,
                         tipos: poke.types.map(t => t.type.name),
                         hp: poke.stats.find(s => s.stat.name === 'hp')?.base_stat || 50,
@@ -139,7 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 2. Constrói o HTML do Card personalizado por tipo
         function criarCardHTML(poke) {
-            const imagem = pokemonStatsCache[poke.id]?.img || poke.sprites.other['official-artwork'].front_default || poke.sprites.front_default;
+            const dadosPoke = pokemonStatsCache[poke.id] || {};
+            const imagem = dadosPoke.img || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${poke.id}.gif`;
+            const imagemFallback = dadosPoke.imgEstatica || poke.sprites.other?.['official-artwork']?.front_default || poke.sprites.front_default;
             const tipoPrincipal = poke.types[0]?.type?.name || 'normal';
             const dadosTipo = MAPA_TIPOS[tipoPrincipal] || { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
 
@@ -168,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             return `
                 <div class="pokemon-card card-tipo-${dadosTipo.classe}" id="card-${poke.id}">
-                    <img src="${imagem}" alt="${poke.name}">
+                    <img src="${imagem}" alt="${poke.name}" onerror="this.onerror=null; this.src='${imagemFallback}'">
                     <h3 class="card-name">${poke.name}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
@@ -250,9 +255,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const slots = document.getElementById('team-slots').children;
 
             for (let i = 0; i < 3; i++) {
-                slots[i].innerHTML = '';
                 if (meuTime[i]) {
-                    slots[i].innerHTML = `<img src="${meuTime[i].img}" alt="${meuTime[i].name}">`;
+                    slots[i].innerHTML = `
+                        <img src="${meuTime[i].img}" alt="${meuTime[i].name}" title="${meuTime[i].name}">
+                        <span class="slot-nome">${meuTime[i].name}</span>
+                    `;
+                } else {
+                    slots[i].innerHTML = '';
                 }
             }
 

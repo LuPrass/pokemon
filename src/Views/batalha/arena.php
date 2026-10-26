@@ -190,12 +190,6 @@ if (!empty($inimigosTime)) {
 
         </div>
 
-        <!-- Rodapé em Barra de Largura Total -->
-        <footer class="arena-footer">
-            <span><b>PokeArena</b> - Arena de Batalha Oficial</span>
-            <a class="btn-link" href="index.php?rota=menu">← Voltar ao Menu Principal</a>
-        </footer>
-
     </div>
 
 </body>
