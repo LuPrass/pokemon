@@ -13,8 +13,40 @@ $usuario = new Usuario();
 $usuario->load($usuarioId);
 $saldo = $usuario->getDinheiro() ?? 1000;
 
-// Busca os Pokémons do usuário para visualização prévia da equipe
-$pokemons = Pokemon::porUsuario($pdo, $usuarioId);
+// Busca preferencialmente os Pokémons escolhidos no Team Builder ($_SESSION['meu_time'])
+$timeBuilder = $_SESSION['meu_time'] ?? [];
+$pokemons = [];
+
+if (!empty($timeBuilder)) {
+    foreach ($timeBuilder as $p) {
+        $hpMax = (int)($p['hp_maximo'] ?? $p['hp'] ?? 50);
+        $hpAtual = (int)($p['hp_atual'] ?? $p['hp'] ?? $hpMax);
+        $status = $p['status_condicao'] ?? $p['status'] ?? 'Normal';
+        $foto = !empty($p['img']) ? $p['img'] : (!empty($p['imagem_frente']) ? $p['imagem_frente'] : '');
+
+        $pokemons[] = [
+            'id' => $p['id'] ?? null,
+            'nome' => ucfirst($p['name'] ?? $p['nome'] ?? 'Pokémon'),
+            'imagem_frente' => $foto,
+            'hp_atual' => $hpAtual,
+            'hp_maximo' => $hpMax,
+            'status_condicao' => $status
+        ];
+    }
+} else {
+    // Fallback: se ainda não houver time no builder, verifica no banco de dados
+    $pokemonsBanco = Pokemon::porUsuario($pdo, $usuarioId);
+    foreach ($pokemonsBanco as $p) {
+        $pokemons[] = [
+            'id' => $p['id'] ?? null,
+            'nome' => ucfirst($p['nome'] ?? 'Pokémon'),
+            'imagem_frente' => $p['imagem_frente'] ?? '',
+            'hp_atual' => (int)($p['hp_atual'] ?? 0),
+            'hp_maximo' => (int)($p['hp_maximo'] ?? 1),
+            'status_condicao' => $p['status_condicao'] ?? 'Normal'
+        ];
+    }
+}
 
 // Busca itens cadastrados no banco de dados
 $itensBanco = [];
@@ -103,7 +135,7 @@ if (!empty($itensBanco)) {
         <section class="painel-time">
             <h3>👥 Seu Time Atual</h3>
             <?php if (empty($pokemons)): ?>
-                <p style="margin: 0; color: #777; font-size: 14px;">Você ainda não possui Pokémons cadastrados. Monte seu time no <b>Team Builder</b> para usar itens.</p>
+                <p style="margin: 0; color: #777; font-size: 14px;">Você ainda não montou seu time na tela de Batalha. <a href="index.php?rota=builder" style="color: #8259af; font-weight: bold; text-decoration: underline;">Clique aqui para escolher seus 3 Pokémons no Builder</a>.</p>
             <?php else: ?>
                 <div class="grid-pokemons-usuario">
                     <?php foreach ($pokemons as $p): ?>
