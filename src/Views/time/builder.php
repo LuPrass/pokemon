@@ -333,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 }
             } catch (err) {
                 // Fallback caso PHP não trate o redirecionamento direto
-                window.location.href = 'batalha.php';
+                window.location.href = 'arena.php';
             }
         }
 

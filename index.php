@@ -1,100 +1,48 @@
 <?php
-
 require_once __DIR__ . '/Autoload.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Roteador simples da aplicação
 $rota = $_GET['rota'] ?? (isset($_SESSION['logado']) && $_SESSION['logado'] === true ? 'menu' : 'login');
 
-switch ($rota) {
-    // Autenticação
-    case 'login':
-        require_once __DIR__ . '/login.php';
-        break;
+// Mapa de rotas (Views e Ações)
+$rotas = [
+    'login'             => ['type' => 'view', 'path' => '/login.php'],
+    'logout'            => ['type' => 'view', 'path' => '/logout.php'],
+    'menu'              => ['type' => 'view', 'path' => '/src/Views/menu/menu.php'],
+    'pokemons'          => ['type' => 'view', 'path' => '/src/Views/pokemons/pokemons.php'],
+    'builder'           => ['type' => 'view', 'path' => '/src/Views/time/builder.php'],
+    'time'              => ['type' => 'view', 'path' => '/src/Views/time/builder.php'],
+    'batalha'           => ['type' => 'view', 'path' => '/src/Views/batalha/arena.php'],
+    'combate'           => ['type' => 'view', 'path' => '/src/Views/batalha/combate.php'],
+    'loja'              => ['type' => 'view', 'path' => '/src/Views/loja/mart.php'],
+    'centro'            => ['type' => 'view', 'path' => '/src/Views/centro_pokemon/centro.php'],
+    'logs'              => ['type' => 'view', 'path' => '/src/Views/logs/historico.php'],
+    
+    // Controladores
+    'salvar-time'       => ['type' => 'action', 'class' => TimeController::class, 'method' => 'salvarTime'],
+    'usuarios'          => ['type' => 'action', 'class' => UsuarioController::class, 'method' => 'listar'],
+    'comprar'           => ['type' => 'action', 'class' => LojaController::class, 'method' => 'comprar'],
+    'lutar'             => ['type' => 'action', 'class' => BatalhaController::class, 'method' => 'lutar'],
+    'curar'             => ['type' => 'action', 'class' => CentroPokemonController::class, 'method' => 'curarTodos'],
+];
 
-    case 'logout':
-        require_once __DIR__ . '/logout.php';
-        break;
-
-    // API Endpoints
-    case 'salvar-time':
-        (new TimeController())->salvarTime();
-        break;
-
-    case 'usuarios':
-        (new UsuarioController())->listar();
-        break;
-
-    case 'usuario':
-        (new UsuarioController())->buscar($_GET['id'] ?? 0);
-        break;
-
-    case 'criar-usuario':
-        (new UsuarioController())->criar();
-        break;
-
-    case 'loja-itens':
-        (new LojaController())->listarItens();
-        break;
-
-    case 'comprar':
-        (new LojaController())->comprar();
-        break;
-
-    case 'historico-loja':
-        (new LojaController())->historico($_GET['usuario_id'] ?? 0);
-        break;
-
-    case 'lutar':
-        (new BatalhaController())->lutar();
-        break;
-
-    case 'historico-batalha':
-        (new BatalhaController())->historico($_GET['usuario_id'] ?? 0);
-        break;
-
-    case 'curar':
-        (new CentroPokemonController())->curarTodos();
-        break;
-
-    // Views
-    case 'menu':
-        require_once __DIR__ . '/src/Views/menu/menu.php';
-        break;
-
-    case 'pokemons':
-        require_once __DIR__ . '/src/Views/pokemons/pokemons.php';
-        break;
-
-    case 'builder':
-    case 'time':
-        require_once __DIR__ . '/src/Views/time/builder.php';
-        break;
-
-    case 'batalha':
-        require_once __DIR__ . '/src/Views/batalha/arena.php';
-        break;
-
-    case 'combate':
-        require_once __DIR__ . '/src/Views/batalha/combate.php';
-        break;
-
-    case 'loja':
-        require_once __DIR__ . '/src/Views/loja/mart.php';
-        break;
-
-    case 'centro':
-        require_once __DIR__ . '/src/Views/centro_pokemon/centro.php';
-        break;
-
-    case 'logs':
-        require_once __DIR__ . '/src/Views/logs/historico.php';
-        break;
-
-    default:
-        require_once __DIR__ . '/src/Views/time/builder.php';
-        break;
+// Executa a rota se existir
+if (isset($rotas[$rota])) {
+    $r = $rotas[$rota];
+    if ($r['type'] === 'view') {
+        require_once __DIR__ . $r['path'];
+    } else {
+        $controller = new $r['class']();
+        $param = $_GET['id'] ?? $_GET['usuario_id'] ?? null;
+        if ($param !== null) {
+            $controller->{$r['method']}($param);
+        } else {
+            $controller->{$r['method']}();
+        }
+    }
+} else {
+    require_once __DIR__ . '/src/Views/time/builder.php';
 }
