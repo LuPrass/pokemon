@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../verifica_login.php';
-require_once __DIR__ . '/../../Services/PokemonCatalogo.php';
+require_once __DIR__ . '/../../Services/PokeApiService.php';
 
 // Processa o envio do time via AJAX/POST para guardar na Sessão do PHP
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 
     <script>
         // IDs centralizados no catálogo dos Pokémon
-        const pokemonDisponiveis = <?php echo json_encode(PokemonCatalogo::IDS); ?>;
+        const pokemonDisponiveis = <?php echo json_encode(PokeApiService::IDS); ?>;
         let meuTime = <?php echo (!empty($_SESSION['meu_time']) && !empty($_GET['modificar'])) ? json_encode(array_values($_SESSION['meu_time'])) : '[]'; ?>;
         const pokemonStatsCache = {};
 

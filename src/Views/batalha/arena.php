@@ -3,12 +3,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../verifica_login.php';
-require_once __DIR__ . '/../../Services/PokemonCatalogo.php';
+require_once __DIR__ . '/../../Services/PokeApiService.php';
 
 $meuTime = $_SESSION['meu_time'] ?? [];
 $inimigosRestantes = $_SESSION['inimigos_restantes'] ?? [];
-$inimigosTime = $_SESSION['inimigos_time'] ?? [];
-
 // Mapeamento visual e tradução dos tipos para a Arena
 $mapaTipos = [
     'grass' => ['nome' => 'Planta', 'icone' => '🌿', 'classe' => 'grass'],
@@ -26,3 +24,6 @@ $mapaTipos = [
     'ice' => ['nome' => 'Gelo', 'icone' => '❄️', 'classe' => 'ice'],
     'fighting' => ['nome' => 'Lutador', 'icone' => '🥊', 'classe' => 'fighting']
 ];
+//sortear 1 inimigo aleatório do array de inimigos restantes
+    $inimigoSorteado = $inimigosRestantes[array_rand($inimigosRestantes)];
+    
