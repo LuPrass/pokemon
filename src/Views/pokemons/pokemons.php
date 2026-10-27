@@ -1,5 +1,7 @@
 <?php
-require_once __DIR__ . '/../../../verifica_login.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $pokemons = Pokemon::porUsuario(Conexao::getConnection(), $_SESSION['usuario_id']);
 ?>

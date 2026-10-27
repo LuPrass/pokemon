@@ -20,7 +20,6 @@ async function buscarPokemon(nome) {
         const pokemon = {
             nome: dados.name,
             tipo: dados.types[0].type.name,
-            nivel: 5,
             hpMaximo: dados.stats[0].base_stat,
             hpAtual: dados.stats[0].base_stat,
             ataque: dados.stats[1].base_stat,

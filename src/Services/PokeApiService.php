@@ -150,28 +150,4 @@ class PokeApiService {
         }
         return null;
     }
-
-    /**
-     * Sorteia oponentes ignorando os que o jogador escolheu
-     */
-    public static function sortearOponentes(array $nomesIgnorados, int $quantidade = 3): array {
-        $todos = self::listar();
-        $disponiveis = [];
-
-        foreach ($todos as $p) {
-            $escolhido = false;
-            foreach ($nomesIgnorados as $nome) {
-                if (strcasecmp($p['nome'], $nome) === 0) {
-                    $escolhido = true;
-                    break;
-                }
-            }
-            if (!$escolhido) {
-                $disponiveis[] = $p;
-            }
-        }
-
-        shuffle($disponiveis);
-        return array_slice($disponiveis, 0, $quantidade);
-    }
 }

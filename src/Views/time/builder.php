@@ -2,7 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-require_once __DIR__ . '/../../../verifica_login.php';
+
 require_once __DIR__ . '/../../Services/PokeApiService.php';
 
 // Processa o envio do time via AJAX/POST para guardar na Sessão do PHP
