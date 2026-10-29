@@ -6,8 +6,10 @@ class BatalhaController extends Controller {
     // Recebe JSON: { "usuario_id": 1, "pokemon_id": 1, "adversario": "geodude" }
     public function lutar() {
         $dados = $this->lerJson();
+        $pdo = null;
 
         try {
+            $pdo = Conexao::getConnection();
             $jogador = new Pokemon();
             if (!$jogador->load($dados['pokemon_id'] ?? 0) || $jogador->getUsuarioId() != ($dados['usuario_id'] ?? 0)) {
                 throw new Exception('Pokémon não encontrado neste perfil.');
@@ -33,9 +35,15 @@ class BatalhaController extends Controller {
                 $dinheiro = 300;
             }
 
-            $jogador->save(); // grava o HP que sobrou
+            $pdo->beginTransaction();
+            if (!$jogador->save()) {
+                throw new Exception('Não foi possível salvar o estado do Pokémon.');
+            }
             $log = new LogBatalha(null, $jogador->getUsuarioId(), $jogador->getId(), $info['nome'], $resultado, $dinheiro);
-            $log->save();
+            if (!$log->save()) {
+                throw new Exception('Não foi possível registrar a batalha.');
+            }
+            $pdo->commit();
 
             $this->responder([
                 'sucesso' => true,
@@ -47,6 +55,9 @@ class BatalhaController extends Controller {
                 'imagemJogadorCostas' => $info['imagemCostas']
             ]);
         } catch (Exception $e) {
+            if ($pdo && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->responder(['sucesso' => false, 'mensagem' => $e->getMessage()], 400);
         }
     }

@@ -5,20 +5,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../Services/PokeApiService.php';
 
-// Processa o envio do time via AJAX/POST para guardar na Sessão do PHP
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if ($data) {
-        $_SESSION['meu_time'] = $data['meuTime'];
-        $_SESSION['inimigos_restantes'] = $data['restantes'];
-        $_SESSION['inimigos_time'] = $data['inimigos'] ?? [];
-        
-        header('Content-Type: application/json');
-        echo json_encode(['status' => 'success', 'redirect' => 'batalha.php']);
-        exit;
-    }
-}
-
 // Se o time já foi salvo e não foi clicado em "Modificar Time", impede a alteração e redireciona para a batalha
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
     header('Location: index.php?rota=batalha');
@@ -294,6 +280,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 
         // 5. Separa os 9 Pokémon restantes e envia para a sessão / próxima página
         async function iniciarJogo() {
+            const botaoConfirmar = document.getElementById('btn-ready');
+            botaoConfirmar.disabled = true;
+
             const idsEscolhidos = meuTime.map(p => p.id);
             const idsRestantes = pokemonDisponiveis.filter(id => !idsEscolhidos.includes(id));
             const inimigosCompletos = idsRestantes.map(id => {
@@ -310,17 +299,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 };
             });
 
-            // Guarda em sessionStorage no frontend como backup
-            sessionStorage.setItem('meuTime', JSON.stringify(meuTime));
-            sessionStorage.setItem('restantes', JSON.stringify(idsRestantes));
-            sessionStorage.setItem('inimigos', JSON.stringify(inimigosCompletos));
-
-            // Salva na Sessão PHP via POST
             try {
-                const response = await fetch(window.location.href, {
+                const timeParaSalvar = meuTime.map(p => {
+                    const stats = pokemonStatsCache[p.id] || {};
+                    const hpMaximo = p.hpMaximo ?? p.hp ?? stats.hp ?? 35;
+                    return {
+                        nome: p.name || p.nome,
+                        tipo: p.tipo || stats.tipo || 'normal',
+                        nivel: p.nivel ?? 5,
+                        hpMaximo: hpMaximo,
+                        hpAtual: p.hpAtual ?? hpMaximo,
+                        ataque: p.ataque ?? p.attack ?? stats.attack ?? 40,
+                        defesa: p.defesa ?? p.defense ?? stats.defense ?? 40,
+                        velocidade: p.velocidade ?? p.speed ?? stats.speed ?? 50,
+                        prioridade: p.prioridade ?? 0,
+                        statusCondicao: p.statusCondicao || 'Normal'
+                    };
+                });
+                const response = await fetch('index.php?rota=salvar-time', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        time: timeParaSalvar,
                         meuTime: meuTime,
                         restantes: idsRestantes,
                         inimigos: inimigosCompletos
@@ -328,12 +328,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 });
 
                 const result = await response.json();
-                if (result.status === 'success') {
-                    window.location.href = result.redirect; // Redireciona para a tela de batalha
+                if (!response.ok || !result.sucesso) {
+                    throw new Error(result.mensagem || 'Não foi possível salvar seu time.');
                 }
+                window.location.href = result.redirect;
             } catch (err) {
-                // Fallback caso PHP não trate o redirecionamento direto
-                window.location.href = 'arena.php';
+                alert(err.message || 'Erro ao salvar o time. Tente novamente.');
+                botaoConfirmar.disabled = false;
             }
         }
 

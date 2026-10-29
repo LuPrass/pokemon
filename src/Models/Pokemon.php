@@ -120,7 +120,8 @@ class Pokemon {
             // Update existing pokemon in the database
             $sql = "UPDATE pokemon SET nome = :nome, tipo = :tipo, nivel = :nivel, hp_maximo = :hp_maximo,
                     hp_atual = :hp_atual, ataque = :ataque, defesa = :defesa, velocidade = :velocidade,
-                    prioridade = :prioridade, status_condicao = :status_condicao WHERE id = :id";
+                    prioridade = :prioridade, status_condicao = :status_condicao
+                    WHERE id = :id AND usuario_id = :usuario_id";
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute([
                 ':nome' => $this->nome,
@@ -133,7 +134,8 @@ class Pokemon {
                 ':velocidade' => $this->velocidade,
                 ':prioridade' => $this->prioridade,
                 ':status_condicao' => $this->statusCondicao,
-                ':id' => $this->id
+                ':id' => $this->id,
+                ':usuario_id' => $this->usuarioId
             ]);
         } else {
             // Insert new pokemon into the database

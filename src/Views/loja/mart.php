@@ -16,32 +16,6 @@ $usuario = new Usuario();
 $usuario->load($usuarioId);
 $saldo = $usuario->getDinheiro() ?? 1000;
 
-
-// Catálogo com as categorias e descrições exigidas no documento de avaliação
-$itensCatalogo = [
-    'Restauradores de Vida (HP)' => [
-        ['nome' => 'Potion', 'descricao' => 'Recupera 20 HP', 'preco' => 200, 'tipo' => 'restaurador', 'icone' => '🧪'],
-        ['nome' => 'Super Potion', 'descricao' => 'Recupera 50 HP', 'preco' => 700, 'tipo' => 'restaurador', 'icone' => '🧴'],
-        ['nome' => 'Hyper Potion', 'descricao' => 'Recupera 200 HP', 'preco' => 1200, 'tipo' => 'restaurador', 'icone' => '⚗️'],
-        ['nome' => 'Max Potion', 'descricao' => 'Recupera 100% do HP', 'preco' => 2500, 'tipo' => 'restaurador', 'icone' => '✨'],
-        ['nome' => 'Full Restore', 'descricao' => 'Recupera 100% do HP + cura todas as condições de status', 'preco' => 3000, 'tipo' => 'restaurador', 'icone' => '💖'],
-    ],
-    'Cura de Condição' => [
-        ['nome' => 'Antidote', 'descricao' => 'Cura envenenamento', 'preco' => 100, 'tipo' => 'cura', 'icone' => '🟢'],
-        ['nome' => 'Burn Heal', 'descricao' => 'Cura queimadura', 'preco' => 250, 'tipo' => 'cura', 'icone' => '🔥'],
-        ['nome' => 'Ice Heal', 'descricao' => 'Cura congelamento', 'preco' => 250, 'tipo' => 'cura', 'icone' => '❄️'],
-        ['nome' => 'Awakening', 'descricao' => 'Cura sono', 'preco' => 250, 'tipo' => 'cura', 'icone' => '⏰'],
-        ['nome' => 'Paralyze Heal', 'descricao' => 'Cura paralisia', 'preco' => 200, 'tipo' => 'cura', 'icone' => '⚡'],
-        ['nome' => 'Full Heal', 'descricao' => 'Cura todos os status', 'preco' => 600, 'tipo' => 'cura', 'icone' => '⭐'],
-    ],
-    'Reviver' => [
-        ['nome' => 'Revive', 'descricao' => 'Revive um Pokémon desmaiado com metade da vida', 'preco' => 1500, 'tipo' => 'reviver', 'icone' => '💎'],
-    ],
-    'Evolução' => [
-        ['nome' => 'Pedra de Evolução', 'descricao' => 'Evolui o Pokémon para a sua próxima forma', 'preco' => 5000, 'tipo' => 'evolucao', 'icone' => '🔮'],
-    ]
-];
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
