@@ -15,14 +15,7 @@ $mapaTipos = [
     'electric' => ['nome' => 'Elétrico', 'icone' => '⚡', 'classe' => 'electric'],
     'normal' => ['nome' => 'Normal', 'icone' => '⚪', 'classe' => 'normal'],
     'psychic' => ['nome' => 'Psíquico', 'icone' => '🔮', 'classe' => 'psychic'],
-    'ghost' => ['nome' => 'Fantasma', 'icone' => '👻', 'classe' => 'ghost'],
-    'poison' => ['nome' => 'Venenoso', 'icone' => '☠️', 'classe' => 'poison'],
-    'ground' => ['nome' => 'Terra', 'icone' => '🏜️', 'classe' => 'ground'],
-    'rock' => ['nome' => 'Pedra', 'icone' => '🪨', 'classe' => 'rock'],
-    'bug' => ['nome' => 'Inseto', 'icone' => '🐛', 'classe' => 'bug'],
-    'dragon' => ['nome' => 'Dragão', 'icone' => '🐉', 'classe' => 'dragon'],
-    'ice' => ['nome' => 'Gelo', 'icone' => '❄️', 'classe' => 'ice'],
-    'fighting' => ['nome' => 'Lutador', 'icone' => '🥊', 'classe' => 'fighting']
+    'ghost' => ['nome' => 'Fantasma', 'icone' => '👻', 'classe' => 'ghost']
 ];
 //sortear 1 inimigo aleatório do array de inimigos restantes
     $inimigoAtual = $inimigosRestantes[array_rand($inimigosRestantes)];
