@@ -10,8 +10,6 @@ if (isset($_SESSION['logado']) && $_SESSION['logado'] === true) {
 
 require_once __DIR__ . '/Autoload.php'; 
 
-$assetBasePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/login.php')), '/');
-
 $erro = '';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
@@ -56,7 +54,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($assetBasePath, ENT_QUOTES, 'UTF-8'); ?>/assets/css/login.css?v=<?php echo filemtime(__DIR__ . '/assets/css/login.css'); ?>">
+    <link rel="stylesheet" href="assets/css/login.css?v=<?= time() ?>">
 </head>
 <body>
 
@@ -64,7 +62,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         <div class="login-card">
             
             <div class="card-header">
-                <img src="<?php echo htmlspecialchars($assetBasePath, ENT_QUOTES, 'UTF-8'); ?>/assets/img/pokearena_title.png?v=<?php echo filemtime(__DIR__ . '/assets/img/pokearena_title.png'); ?>" alt="PokéArena" class="pokearena-logo">
+                <img src="assets/img/pokearena_title.png" alt="PokéArena" class="pokearena-logo">
                 <span class="game-subtitle">THE INFINITE POKÉMON ADVENTURE</span>
             </div>
 
