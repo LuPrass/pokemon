@@ -49,7 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
     <div class="login-container">
-        <h1 class="titulo-jogo">PokeArena</h1>
+        <div class="cadastro-logo-box">
+            <img src="assets/img/pokearena_title.png?v=<?php echo filemtime(__DIR__ . '/assets/img/pokearena_title.png'); ?>" alt="PokéArena" class="cadastro-logo">
+        </div>
         <h2>Criar conta</h2>
 
         <?php if ($erro): ?>

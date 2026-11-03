@@ -1,122 +1,471 @@
-/* Fonte pixelada (Google Fonts) */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+/* =========================================
+   PokéArena - Login & Auth Styles
+   ========================================= */
 
-html {
-    min-height: 100%;
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    background-image: url('../img/Tela_login.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 18px;
-    line-height: 1.6;
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #0c101c;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #ffffff;
+}
 
-    /* Centraliza a caixa na tela */
+/* =========================================
+   Fundo da Tela (Cenário Pokémon)
+   ========================================= */
+.game-viewport {
+    width: 100vw;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+    padding: 16px;
+    background-image: url('../img/pokemon_login.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
-/* Campos e botões não herdam a fonte sozinhos */
-input,
-button {
+.game-viewport::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.15) 30%, rgba(0, 0, 0, 0.55) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* =========================================
+   Card de Login
+   ========================================= */
+.login-card {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 410px;
+    background: rgba(22, 28, 48, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid #10b981;
+    border-radius: 20px;
+    box-shadow: 
+        0 0 24px rgba(16, 185, 129, 0.28),
+        0 20px 45px rgba(0, 0, 0, 0.85);
+    padding: 26px 28px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Detalhes de brilho neon nos cantos */
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 60px;
+    height: 60px;
+    border-top: 3.5px solid #34d399;
+    border-left: 3.5px solid #34d399;
+    border-top-left-radius: 20px;
+    filter: drop-shadow(0 0 6px #34d399);
+    pointer-events: none;
+}
+
+.login-card::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 65px;
+    height: 65px;
+    border-bottom: 3.5px solid #34d399;
+    border-right: 3.5px solid #34d399;
+    border-bottom-right-radius: 20px;
+    filter: drop-shadow(0 0 8px #34d399);
+    pointer-events: none;
+}
+
+/* =========================================
+   Cabeçalho (Logo e Subtítulo)
+   ========================================= */
+.card-header {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.pokearena-logo {
+    max-width: 265px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+    transition: transform 0.2s ease;
+}
+
+.pokearena-logo:hover {
+    transform: scale(1.02);
+}
+
+.game-subtitle {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 2.2px;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    margin-top: 6px;
+}
+
+/* =========================================
+   Alerta de Erro
+   ========================================= */
+.login-alert {
+    width: 100%;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.55);
+    border-radius: 12px;
+    padding: 10px 14px 10px 42px;
+    margin-bottom: 16px;
+    color: #fca5a5;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23ef4444'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 18px 18px;
+    animation: fadeInShake 0.3s ease-out;
+}
+
+@keyframes fadeInShake {
+    0% { opacity: 0; transform: translateY(-6px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   Formulário e Inputs
+   ========================================= */
+.login-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group {
+    position: relative;
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+.input-group input {
+    width: 100%;
+    background-color: #1a2236;
+    border-radius: 12px;
+    padding: 13px 44px 13px 46px;
+    color: #ffffff;
     font-family: inherit;
-    font-size: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.input-group input::placeholder {
+    color: #4b5563;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+/* Input Treinador / Usuário (Borda Verde e Ícone Pokébola) */
+.input-username input {
+    border: 1.5px solid #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23ffffff' stroke='%23111827' stroke-width='2'/%3E%3Cpath d='M2,12 A10,10 0 0,1 22,12 Z' fill='%23ef4444' stroke='%23111827' stroke-width='2'/%3E%3Cline x1='2' y1='12' x2='22' y2='12' stroke='%23111827' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='3.5' fill='%23ffffff' stroke='%23111827' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%23111827'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 22px 22px;
+}
+
+.input-username input:focus {
+    border-color: #34d399;
+    box-shadow: 0 0 16px rgba(52, 211, 153, 0.45);
+}
+
+/* Input Senha (Borda Escura e Ícone Cadeado) */
+.input-password input {
+    border: 1.5px solid #2e384e;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 20px 20px;
+}
+
+.input-password input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 14px rgba(2, 132, 199, 0.35);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+}
+
+/* Botão Olho (Mostrar/Ocultar Senha) */
+.btn-eye {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24'/%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20px 20px;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
+}
+
+.btn-eye:hover {
+    opacity: 1;
+}
+
+.btn-eye.visible {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+    opacity: 1;
+}
+
+/* =========================================
+   Botões de Ação
+   ========================================= */
+.btn-entrar,
+.btn-cadastrar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    outline: none;
+    border-radius: 12px;
+    padding: 13px 20px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-entrar:active,
+.btn-cadastrar:active {
+    transform: scale(0.985);
+}
+
+/* Botão ENTRAR */
+.btn-entrar {
+    background: linear-gradient(180deg, #ff5722 0%, #ea4a13 100%);
+    color: #ffffff;
+    letter-spacing: 1.5px;
+    box-shadow: 0 4px 15px rgba(234, 74, 19, 0.42);
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+
+.btn-entrar:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(234, 74, 19, 0.6);
+}
+
+/* Botão CADASTRAR NOVA CONTA */
+.btn-cadastrar {
+    background: linear-gradient(180deg, #0288d1 0%, #01579b 100%);
+    color: #ffffff;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(2, 136, 209, 0.42);
+    margin-bottom: 14px;
+}
+
+.btn-cadastrar:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(2, 136, 209, 0.6);
+}
+
+/* Link Esqueci a Senha */
+.btn-esqueci {
+    display: block;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #64748b;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-transform: uppercase;
+    padding-top: 2px;
+    transition: color 0.15s ease;
+}
+
+.btn-esqueci:hover {
+    color: #94a3b8;
+}
+
+/* =========================================
+   Compatibilidade com cadastro.php
+   ========================================= */
 .login-container {
     width: 100%;
-    max-width: 380px;
-    margin: 24px;
-    padding: 24px;
-    background: rgba(255, 255, 255, 0.75); /* meio transparente */
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    max-width: 390px;
+    margin: 24px auto;
+    padding: 24px 28px;
+    background: rgba(22, 28, 48, 0.95);
+    backdrop-filter: blur(8px);
+    border: 2px solid #10b981;
+    border-radius: 18px;
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.28), 0 20px 45px rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
 }
 
-.titulo-jogo,
-.titulo {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 22px;
-    color: #5c358e;
+.cadastro-logo-box {
     text-align: center;
-    margin: 0 0 16px 0;
-    letter-spacing: 1px;
-    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
+    margin-bottom: 10px;
+}
+
+.cadastro-logo {
+    max-width: 240px;
+    height: auto;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
 
 .login-container h2 {
     margin-top: 0;
     margin-bottom: 16px;
     text-align: center;
-    color: #333;
-    font-size: 20px;
+    color: #e2e8f0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
 }
 
 .login-container label {
-    font-weight: bold;
+    font-weight: 600;
     display: block;
-    margin-top: 12px;
+    margin-top: 14px;
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+    color: #cbd5e1;
 }
 
 .login-container input[type="text"],
 .login-container input[type="password"] {
     width: 100%;
-    padding: 8px;
-    margin-top: 4px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 12px 14px;
+    background: #1a2236;
+    border: 1.5px solid #2e384e;
+    border-radius: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-container input[type="text"]:focus,
+.login-container input[type="password"]:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.35);
 }
 
 .login-container button {
     width: 100%;
-    margin-top: 20px;
-    padding: 10px;
-    background: #8259af;
+    margin-top: 22px;
+    padding: 12px 20px;
+    background: linear-gradient(180deg, #0288d1 0%, #01579b 100%);
     color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: 12px;
     cursor: pointer;
-    font-size: 15px;
-    font-weight: bold;
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(2, 136, 209, 0.42);
+    transition: filter 0.15s, transform 0.12s;
 }
 
 .login-container button:hover {
-    background: #8259af;
+    filter: brightness(1.1);
+}
+
+.login-container button:active {
+    transform: scale(0.985);
 }
 
 .erro-msg {
-    color: red;
-    background: #ffe6e6;
-    padding: 8px;
-    border-radius: 4px;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    padding: 10px 14px;
+    border-radius: 10px;
     text-align: center;
-}
-
-.dica-login {
-    margin-top: 16px;
-    font-size: 15px;
-    color: #666;
-    background: #f9f9f9;
-    padding: 8px;
-    border-radius: 4px;
-}
-
-.aviso-conta {
-    text-align: center;
-    font-weight: bold;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
 .link-secundario {
     text-align: center;
-    margin-top: 16px;
-    font-size: 13px;
+    margin-top: 18px;
+    font-size: 0.82rem;
+    color: #94a3b8;
 }
 
+.link-secundario a {
+    color: #38bdf8;
+    text-decoration: underline;
+    font-weight: 700;
+}
+
+/* =========================================
+   Responsividade Mobile
+   ========================================= */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 22px 20px 18px;
+        border-radius: 16px;
+    }
+
+    .pokearena-logo {
+        max-width: 210px;
+    }
+
+    .game-subtitle {
+        font-size: 0.62rem;
+        letter-spacing: 1.8px;
+    }
+
+    .input-group input {
+        padding: 12px 40px 12px 42px;
+        font-size: 0.9rem;
+    }
+
+    .btn-entrar,
+    .btn-cadastrar {
+        padding: 12px 18px;
+        font-size: 0.88rem;
+    }
+}

@@ -8,11 +8,13 @@ if (isset($_SESSION['logado']) && $_SESSION['logado'] === true) {
     exit;
 }
 
-require_once __DIR__ . '/Autoload.php';
+require_once __DIR__ . '/Autoload.php'; 
+
+$assetBasePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/login.php')), '/');
 
 $erro = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $login = trim($_POST['login'] ?? '');
     $senha = $_POST['senha'] ?? '';
 
@@ -20,11 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuarioId = null;
     $usuarioNome = null;
 
-    // 1. Busca e autentica pelo Banco de Dados (tabela usuario)
     try {
         $pdo = Conexao::getConnection();
         $usuario = Usuario::buscarPorNome($pdo, $login);
 
+        // Verifica a senha (suporta hash seguro ou texto plano legado)
         if ($usuario && (password_verify($senha, $usuario['senha']) || $senha === $usuario['senha'])) {
             $autenticado = true;
             $usuarioId = (int)$usuario['id'];
@@ -34,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'Não foi possível acessar o banco de dados para autenticar.';
     }
 
-    // Se autenticado, grava na sessão e redireciona
     if ($autenticado) {
         $_SESSION['logado'] = true;
         $_SESSION['usuario'] = $usuarioNome;
@@ -46,34 +47,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="assets/css/login.css">
+    <title>PokéArena - Conexão de Treinador</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($assetBasePath, ENT_QUOTES, 'UTF-8'); ?>/assets/css/login.css?v=<?php echo filemtime(__DIR__ . '/assets/css/login.css'); ?>">
 </head>
 <body>
 
-    <div class="login-container">
-        <h2>Login</h2>
-        <?php if ($erro):?>
-            <p style="color: red;"><?php echo $erro;?></p>
-        <?php endif; ?>
-        <form action="login.php" method="post">
-            <label for="login">Login:</label>
-            <input type="text" id="login" name="login" required value="<?php echo htmlspecialchars($_POST['login'] ?? ''); ?>">
+    <div class="game-viewport">
+        <div class="login-card">
+            
+            <div class="card-header">
+                <img src="<?php echo htmlspecialchars($assetBasePath, ENT_QUOTES, 'UTF-8'); ?>/assets/img/pokearena_title.png?v=<?php echo filemtime(__DIR__ . '/assets/img/pokearena_title.png'); ?>" alt="PokéArena" class="pokearena-logo">
+                <span class="game-subtitle">THE INFINITE POKÉMON ADVENTURE</span>
+            </div>
 
-            <label for="senha">Senha:</label>
-            <input type="password" id="senha" name="senha" required>
+            <?php if ($erro): ?>
+                <div class="login-alert"><?php echo htmlspecialchars($erro); ?></div>
+            <?php endif; ?>
 
-            <button type="submit">Entrar</button>
-        </form>
+            <form action="login.php" method="post" class="login-form">
+                
+                <div class="input-group input-username">
+                    <input type="text" id="login" name="login" required 
+                           value="<?php echo htmlspecialchars($_POST['login'] ?? ''); ?>" 
+                           placeholder="Nome de usuário" autocomplete="username" autofocus>
+                </div>
 
-        <p class="link-secundario">Não tem conta? <a href="cadastro.php">Criar conta</a></p>
+                <div class="input-group input-password">
+                    <input type="password" id="senha" name="senha" required 
+                           placeholder="Senha" autocomplete="current-password">
+                    <button type="button" class="btn-eye" id="togglePassword" aria-label="Mostrar ou ocultar senha"></button>
+                </div>
+
+                <button type="submit" class="btn-entrar">ENTRAR</button>
+                <a href="cadastro.php" class="btn-cadastrar">CADASTRAR NOVA CONTA</a>
+                <a href="javascript:void(0)" class="btn-esqueci" id="btnForgot">ESQUECI A SENHA?</a>
+
+            </form>
+
+        </div>
     </div>
 
+    <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const senhaInput = document.getElementById('senha');
+
+        if (togglePassword && senhaInput) {
+            togglePassword.addEventListener('click', function() {
+                const isPassword = senhaInput.getAttribute('type') === 'password';
+                senhaInput.setAttribute('type', isPassword ? 'text' : 'password');
+                togglePassword.classList.toggle('visible', isPassword);
+            });
+        }
+
+        const btnForgot = document.getElementById('btnForgot');
+        if (btnForgot) {
+            btnForgot.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Para recuperar o acesso à sua conta, solicite ao administrador ou crie uma nova conta de treinador!');
+            });
+        }
+    </script>
 </body>
 </html>
