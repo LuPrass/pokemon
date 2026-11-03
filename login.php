@@ -10,10 +10,6 @@ if (isset($_SESSION['logado']) && $_SESSION['logado'] === true) {
 
 require_once __DIR__ . '/Autoload.php';
 
-$usuario_validos = [
-    'adm' => '123456',
-];    
-
 $erro = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,14 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $usuarioNome = $usuario['nome'];
         }
     } catch (Throwable $e) {
-        // Falha de conexão ou tabela
-    }
-
-    // 2. Fallback para os usuários válidos em memória (material de apoio)
-    if (!$autenticado && isset($usuario_validos[$login]) && $usuario_validos[$login] === $senha) {
-        $autenticado = true;
-        $usuarioId = 1;
-        $usuarioNome = $login;
+        $erro = 'Não foi possível acessar o banco de dados para autenticar.';
     }
 
     // Se autenticado, grava na sessão e redireciona
@@ -52,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['usuario_id'] = $usuarioId;
         header('Location: index.php?rota=menu');
         exit;
-    } else {
+    } elseif (!$erro) {
         $erro = 'Login ou senha inválidos.';
     }
 }

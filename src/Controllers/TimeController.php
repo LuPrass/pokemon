@@ -19,7 +19,16 @@ class TimeController {
                 throw new Exception("Dados da requisição inválidos ou usuário não informado.");
             }
 
-            $usuarioId = (int)($_SESSION['usuario_id'] ?? $dados['usuario_id'] ?? 0);
+            if (empty($_SESSION['logado']) || $_SESSION['logado'] !== true) {
+                http_response_code(401);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => 'Faça login antes de salvar seu time.'
+                ]);
+                exit;
+            }
+
+            $usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
             if ($usuarioId <= 0 || !isset($dados['time']) || !is_array($dados['time'])) {
                 throw new Exception("Dados da requisição inválidos ou usuário não informado.");
             }
@@ -36,6 +45,26 @@ class TimeController {
             }
 
             $pdo = Conexao::getConnection();
+            $stmtUsuario = $pdo->prepare("SELECT id FROM usuario WHERE id = :usuario_id");
+            $stmtUsuario->execute([':usuario_id' => $usuarioId]);
+            if (!$stmtUsuario->fetchColumn()) {
+                $stmtUsuario = $pdo->prepare("SELECT id FROM usuario WHERE nome = :nome");
+                $stmtUsuario->execute([':nome' => $_SESSION['usuario'] ?? '']);
+                $usuarioIdBanco = $stmtUsuario->fetchColumn();
+
+                if (!$usuarioIdBanco) {
+                    http_response_code(401);
+                    echo json_encode([
+                        'sucesso' => false,
+                        'mensagem' => 'Seu perfil não foi encontrado no banco. Saia da conta e entre novamente para atualizar a sessão.'
+                    ]);
+                    exit;
+                }
+
+                $usuarioId = (int)$usuarioIdBanco;
+                $_SESSION['usuario_id'] = $usuarioId;
+            }
+
             $pdo->beginTransaction();
 
             // Remove o time anterior do usuário para atualizar com a nova escalação
@@ -46,14 +75,18 @@ class TimeController {
             $pokemonsPersistidos = [];
             foreach ($pokemons as $pk) {
                 // Valida atributos obrigatórios
-                if (!is_array($pk) || empty($pk['nome']) || empty($pk['tipo'])) {
+                if (
+                    !is_array($pk)
+                    || empty($pk['nome'])
+                    || empty($pk['tipo'])
+                ) {
                     throw new PokemonInvalidoException("Dados incompletos para um dos Pokémons selecionados.");
                 }
 
-                // Reaproveita o registro do Pokémon para manter HP e condição entre partidas.
+                // Reutiliza o Pokémon já salvo para este usuário, preservando seus estados.
                 $stmtPokemonExistente = $pdo->prepare("
                     SELECT id FROM pokemon
-                    WHERE usuario_id = :usuario_id AND nome = :nome
+                    WHERE usuario_id = :usuario_id AND LOWER(nome) = LOWER(:nome)
                     ORDER BY id LIMIT 1
                 ");
                 $stmtPokemonExistente->execute([

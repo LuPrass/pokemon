@@ -16,6 +16,21 @@ $usuario = new Usuario();
 $usuario->load($usuarioId);
 $saldo = $usuario->getDinheiro() ?? 1000;
 
+$categorias = [
+    'restaurador' => ['nome' => 'Restauradores de HP', 'icone' => '🧪'],
+    'cura' => ['nome' => 'Cura de Status', 'icone' => '💊'],
+    'reviver' => ['nome' => 'Reviver', 'icone' => '💖'],
+    'evolucao' => ['nome' => 'Evolução', 'icone' => '✨']
+];
+$itensCatalogo = [];
+
+foreach (Item::all($pdo) as $item) {
+    $tipo = $item['tipo'];
+    $categoria = $categorias[$tipo]['nome'] ?? ucfirst($tipo);
+    $item['icone'] = $categorias[$tipo]['icone'] ?? '✨';
+    $itensCatalogo[$categoria][] = $item;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
