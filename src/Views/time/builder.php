@@ -3,6 +3,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Redireciona para o login se a sessão não estiver ativa
+if (empty($_SESSION['logado'])) {
+    header('Location: login.php');
+    exit;
+}
+
 require_once __DIR__ . '/../../Services/PokeApiService.php';
 
 // Se o time já foi salvo e não foi clicado em "Modificar Time", impede a alteração e redireciona para a batalha
@@ -12,35 +18,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 }
 ?>
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monte seu Time Pokémon</title>
-    <link rel="stylesheet" href="assets/css/builder.css">
+    <title>PokéArena - Construtor de Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/builder.css?v=<?= time() ?>">
 </head>
 <body>
 
-    <div class="builder-wrapper">
+    <div class="builder-viewport">
+        <div class="builder-container">
 
-        <!-- Barra superior / Cabeçalho em tela cheia -->
-        <header class="builder-header">
-            <div class="titulo-box">
-                <h1>Construção de Time</h1>
-                <p>Escolha exatamente 3 Pokémon para a sua equipe de batalha</p>
-            </div>
-            <div class="builder-header-acoes">
-                <?php if (!empty($_SESSION['usuario'])): ?>
-                    <div class="treinador-badge">
-                        Treinador: <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b>
+            <!-- Barra superior / Cabeçalho em tela cheia -->
+            <header class="builder-header-card">
+                <div class="builder-brand">
+                    <img src="assets/img/pokearena_title.png" alt="PokéArena" class="builder-logo">
+                    <div class="builder-title-text">
+                        <span class="builder-badge-title">CONSTRUTOR DE EQUIPE</span>
+                        <span class="builder-subtitle">Escolha exatamente 3 Pokémon para a sua equipe</span>
                     </div>
-                <?php endif; ?>
-                <a href="index.php?rota=menu" class="btn-voltar">← Voltar ao Menu</a>
-            </div>
-        </header>
+                </div>
 
-        <!-- Conteúdo Principal em Tela Cheia -->
-        <div class="builder-conteudo">
+                <div class="builder-header-acoes">
+                    <?php if (!empty($_SESSION['usuario'])): ?>
+                        <div class="treinador-badge">
+                            Treinador: <b><?php echo htmlspecialchars($_SESSION['usuario']); ?></b>
+                        </div>
+                    <?php endif; ?>
+                    <a href="index.php?rota=menu" class="btn-voltar">← Menu Principal</a>
+                </div>
+            </header>
 
             <!-- Painel do Time Selecionado -->
             <div class="team-panel">
@@ -50,14 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                     <div class="slot" id="slot-1"></div>
                     <div class="slot" id="slot-2"></div>
                 </div>
-                <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar</button>
+                <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar Batalha</button>
             </div>
 
             <!-- Grid com os Pokémon -->
             <div class="pokemon-grid" id="pokemon-grid"></div>
 
         </div>
-
     </div>
 
     <script>
@@ -163,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 if (poke.stats[nome] !== undefined) {
                     const nomePt = traduzirStat(nome);
                     const porc = Math.min((poke.stats[nome] / 150) * 100, 100);
-                    const corBarra = nome === 'hp' ? '#2e7d32' : '#8259af';
+                    const corBarra = nome === 'hp' ? '#10b981' : (nome === 'attack' ? '#f97316' : (nome === 'defense' ? '#0ea5e9' : '#f59e0b'));
 
                     statsHTML += `
                         <div style="margin-bottom: 8px;">
