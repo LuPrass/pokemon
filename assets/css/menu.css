@@ -1,57 +1,298 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+/* =========================================
+   PokéArena - Menu Screen Styles
+   Modern Neon Pixel Aesthetic
+   ========================================= */
 
-.menu-container {
-    max-width: 420px;
-    margin: 60px auto;
-    padding: 24px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    font-family: Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    background-color: #0c101c;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #ffffff;
+}
+
+/* Fundo da tela cheia com o cenário Pokémon */
+.menu-viewport {
+    min-height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 24px 16px;
+    background-image: url('../img/pokemon_login.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.menu-viewport::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.2) 30%, rgba(0, 0, 0, 0.6) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Card Central do Menu */
+.menu-card {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 430px;
+    background: rgba(22, 28, 48, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid #10b981;
+    border-radius: 20px;
+    box-shadow: 
+        0 0 24px rgba(16, 185, 129, 0.28),
+        0 20px 45px rgba(0, 0, 0, 0.85);
+    padding: 26px 28px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: auto;
+}
+
+/* Brilho neon nos cantos */
+.menu-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 60px;
+    height: 60px;
+    border-top: 3.5px solid #34d399;
+    border-left: 3.5px solid #34d399;
+    border-top-left-radius: 20px;
+    filter: drop-shadow(0 0 6px #34d399);
+    pointer-events: none;
+}
+
+.menu-card::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 65px;
+    height: 65px;
+    border-bottom: 3.5px solid #34d399;
+    border-right: 3.5px solid #34d399;
+    border-bottom-right-radius: 20px;
+    filter: drop-shadow(0 0 8px #34d399);
+    pointer-events: none;
+}
+
+/* Cabeçalho */
+.menu-header {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.menu-logo {
+    max-width: 250px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+    transition: transform 0.2s ease;
+}
+
+.menu-logo:hover {
+    transform: scale(1.02);
+}
+
+.menu-subtitle {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 2.2px;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    margin-top: 6px;
+}
+
+/* Badge do Treinador */
+.trainer-badge {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #1a2236;
+    border: 1.5px solid #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+    border-radius: 12px;
+    padding: 10px 16px 10px 42px;
+    margin-bottom: 18px;
+    font-size: 0.88rem;
+    color: #cbd5e1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23ffffff' stroke='%23111827' stroke-width='2'/%3E%3Cpath d='M2,12 A10,10 0 0,1 22,12 Z' fill='%23ef4444' stroke='%23111827' stroke-width='2'/%3E%3Cline x1='2' y1='12' x2='22' y2='12' stroke='%23111827' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='3.5' fill='%23ffffff' stroke='%23111827' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%23111827'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 20px 20px;
+}
+
+.trainer-name {
+    color: #34d399;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Lista de Opções do Menu */
+.menu-options {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Botões do Menu */
+.menu-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    outline: none;
+    border-radius: 12px;
+    padding: 13px 20px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.15s ease;
     text-align: center;
 }
 
-.titulo-jogo {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 24px;
-    color: #5c358e;
-    margin: 0 0 16px 0;
+.menu-btn:active {
+    transform: scale(0.985);
+}
+
+/* Botão Batalha (Laranja / Vermelho Vibrante) */
+.btn-batalha {
+    background: linear-gradient(180deg, #ff5722 0%, #ea4a13 100%);
+    color: #ffffff;
+    letter-spacing: 1.5px;
+    box-shadow: 0 4px 15px rgba(234, 74, 19, 0.42);
+}
+
+.btn-batalha:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(234, 74, 19, 0.6);
+}
+
+/* Botão Construir Time (Âmbar / Dourado) */
+.btn-builder {
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+    color: #ffffff;
     letter-spacing: 1px;
-    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgba(217, 119, 6, 0.42);
 }
 
-.menu-container h2 {
-    margin: 0 0 16px 0;
-    font-size: 20px;
-    color: #444;
+.btn-builder:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(217, 119, 6, 0.6);
 }
 
-.menu-opcao {
-    display: block;
-    margin-top: 14px;
-    padding: 14px;
-    background: #8259af;
-    color: #fff;
-    border-radius: 4px;
+/* Botão Menu de Pokémons (Azul Vibrante) */
+.btn-pokemons {
+    background: linear-gradient(180deg, #0288d1 0%, #01579b 100%);
+    color: #ffffff;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(2, 136, 209, 0.42);
+}
+
+.btn-pokemons:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(2, 136, 209, 0.6);
+}
+
+/* Botão PokéMart (Verde Esmeralda) */
+.btn-loja {
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.42);
+}
+
+.btn-loja:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+}
+
+/* Botão Ver Logs (Índigo) */
+.btn-logs {
+    background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+    color: #ffffff;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.42);
+}
+
+.btn-logs:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+}
+
+/* Botão Sair (Muted / Danger) */
+.btn-sair {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px 16px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1.5px solid rgba(239, 68, 68, 0.45);
+    color: #fca5a5;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     text-decoration: none;
-    font-weight: bold;
-    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
-.menu-opcao:hover {
-    background: #8259af;
+.btn-sair:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
 }
 
-.menu-sair {
-    display: inline-block;
-    margin-top: 24px;
-    color: #666;
-}
+/* Responsividade Mobile */
+@media (max-width: 480px) {
+    .menu-card {
+        padding: 22px 20px 18px;
+        border-radius: 16px;
+    }
 
-.pokemon-card {
-    margin-top: 10px;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 4px;
-    text-align: left;
+    .menu-logo {
+        max-width: 210px;
+    }
+
+    .menu-btn {
+        padding: 12px 18px;
+        font-size: 0.88rem;
+    }
 }
