@@ -3,6 +3,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Redireciona para o login se a sessão não estiver ativa
+if (empty($_SESSION['logado'])) {
+    header('Location: login.php');
+    exit;
+}
+
 require_once __DIR__ . '/../../../Autoload.php';
 
 $pdo = Conexao::getConnection();
@@ -30,43 +36,48 @@ foreach (Item::all($pdo) as $item) {
     $item['icone'] = $categorias[$tipo]['icone'] ?? '✨';
     $itensCatalogo[$categoria][] = $item;
 }
-
 ?>
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PokeArena - Poké Mart</title>
-    <link rel="stylesheet" href="assets/css/mart.css">
+    <title>PokéArena - PokéMart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/mart.css?v=<?= time() ?>">
 </head>
 <body>
 
-    <div class="mart-wrapper">
+    <div class="mart-viewport">
+        <div class="mart-container">
 
-        <!-- Cabeçalho da Poké Mart em tela cheia -->
-        <header class="mart-header">
-            <div class="titulo-box">
-                <h1>Poké Mart</h1>
-                <p>Bem-vindo, Treinador <b><?php echo htmlspecialchars($usuarioNome); ?></b>! Abasteça seus itens para as batalhas.</p>
-            </div>
-            <div class="mart-header-acoes">
-                <div class="carteira">
-                    <span class="carteira-rotulo">Seu Saldo:</span>
-                    <span class="carteira-saldo">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
+            <!-- Cabeçalho PokéMart -->
+            <header class="mart-header-card">
+                <div class="mart-brand">
+                    <img src="assets/img/pokearena_title.png" alt="PokéArena" class="mart-logo">
+                    <div class="mart-title-text">
+                        <span class="mart-badge-title">POKÉMART - LOJA DE ITENS</span>
+                        <span class="mart-welcome">Treinador: <b><?php echo htmlspecialchars($usuarioNome); ?></b></span>
+                    </div>
                 </div>
-                <a class="btn-voltar" href="index.php?rota=batalha">⚔ Voltar à Batalha</a>
-                <a class="btn-voltar" href="index.php?rota=menu">← Menu Principal</a>
-            </div>
-        </header>
 
-        <!-- Conteúdo Principal em Tela Cheia -->
-        <div class="mart-conteudo">
-            <!-- Vitrine de Produtos da Loja Organizados por Categoria -->
+                <div class="mart-actions">
+                    <div class="carteira-hud">
+                        <span class="carteira-label">Saldo:</span>
+                        <span class="carteira-valor">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
+                    </div>
+                    <a class="btn-nav-mart btn-nav-batalha" href="index.php?rota=batalha">⚔ Batalha</a>
+                    <a class="btn-nav-mart btn-nav-menu" href="index.php?rota=menu">← Menu</a>
+                </div>
+            </header>
+
+            <!-- Vitrine de Itens Organizados por Categoria -->
             <main class="vitrine-itens">
                 <?php foreach ($itensCatalogo as $categoria => $itens): ?>
                     <section class="secao-categoria">
-                        <h2><?php echo htmlspecialchars($categoria); ?></h2>
+                        <h2 class="categoria-titulo"><?php echo htmlspecialchars($categoria); ?></h2>
                         <div class="grid-itens">
                             <?php foreach ($itens as $item): ?>
                                 <div class="item-card" data-item-id="<?php echo htmlspecialchars($item['id'] ?? ''); ?>" data-item-tipo="<?php echo htmlspecialchars($item['tipo']); ?>">
@@ -93,7 +104,7 @@ foreach (Item::all($pdo) as $item) {
             </main>
 
         </div>
-
     </div>
+
 </body>
 </html>
