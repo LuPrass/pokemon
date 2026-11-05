@@ -35,6 +35,13 @@ if (empty($_SESSION['logado'])) {
                 <span class="trainer-name"><?php echo htmlspecialchars($_SESSION['usuario'] ?? 'Treinador'); ?></span>
             </div>
 
+            <?php if (!empty($_SESSION['aviso_derrota'])): ?>
+                <div style="background: #ffebee; color: #c62828; padding: 12px; border: 1px solid #ef9a9a; border-radius: 8px; margin-bottom: 15px; font-weight: bold; text-align: center;">
+                    <?= htmlspecialchars($_SESSION['aviso_derrota']); ?>
+                </div>
+                <?php unset($_SESSION['aviso_derrota']); ?>
+            <?php endif; ?>
+
             <div class="menu-options">
                 <?php if (!empty($_SESSION['meu_time'])): ?>
                     <a class="menu-btn btn-batalha" href="index.php?rota=batalha">Batalha</a>
