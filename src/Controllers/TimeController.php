@@ -143,12 +143,29 @@ class TimeController {
                 if (is_array($pokemon) && isset($pokemonsPersistidos[$indice])) {
                     $pokemon['pokemon_db_id'] = $pokemonsPersistidos[$indice];
                 }
+                if (is_array($pokemon)) {
+                    $idPk = (int)($pokemon['id'] ?? $pokemon['id_pokedex'] ?? 0);
+                    $nomePk = $pokemon['nome'] ?? $pokemon['name'] ?? '';
+                    $tipoPk = $pokemon['tipo'] ?? 'normal';
+                    $pokemon['movimentos'] = PokeApiService::obterMovimentosPadrao($idPk, $nomePk, $tipoPk);
+                }
             }
             unset($pokemon);
 
+            $inimigosCompletos = is_array($dados['inimigos'] ?? null) ? $dados['inimigos'] : [];
+            foreach ($inimigosCompletos as &$inimigo) {
+                if (is_array($inimigo)) {
+                    $idIni = (int)($inimigo['id'] ?? 0);
+                    $nomeIni = $inimigo['nome'] ?? $inimigo['name'] ?? '';
+                    $tipoIni = $inimigo['tipo'] ?? 'normal';
+                    $inimigo['movimentos'] = PokeApiService::obterMovimentosPadrao($idIni, $nomeIni, $tipoIni);
+                }
+            }
+            unset($inimigo);
+
             $_SESSION['meu_time'] = array_values($timeDaSessao);
             $_SESSION['inimigos_restantes'] = is_array($dados['restantes'] ?? null) ? $dados['restantes'] : [];
-            $_SESSION['inimigos_time'] = is_array($dados['inimigos'] ?? null) ? $dados['inimigos'] : [];
+            $_SESSION['inimigos_time'] = array_values($inimigosCompletos);
 
             echo json_encode([
                 'sucesso'  => true,

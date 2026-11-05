@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 1. Validações de acesso básicas
+// 1. Validações de acesso
 if (empty($_SESSION['logado'])) {
     header('Location: login.php');
     exit;
@@ -31,35 +31,45 @@ $dadosUser = $stmtUser->fetch(PDO::FETCH_ASSOC);
 $usuarioNome = $dadosUser['nome'] ?? ($_SESSION['usuario'] ?? 'Treinador');
 $usuarioDinheiro = (int)($dadosUser['dinheiro'] ?? 1000);
 
-// Sincroniza dados da equipe do jogador
+// Sincroniza dados da equipe do jogador e garante que cada um possua seus movimentos anexados
 $meuTime = array_values($_SESSION['meu_time']);
+foreach ($meuTime as &$pk) {
+    if (empty($pk['movimentos'])) {
+        $idPk = (int)($pk['id'] ?? $pk['id_pokedex'] ?? 0);
+        $nomePk = $pk['nome'] ?? $pk['name'] ?? '';
+        $tipoPk = $pk['tipo'] ?? 'normal';
+        $pk['movimentos'] = PokeApiService::obterMovimentosPadrao($idPk, $nomePk, $tipoPk);
+    }
+}
+unset($pk);
+$_SESSION['meu_time'] = $meuTime;
 
 // 2. Inicialização da Campanha de 9 Batalhas (caso não exista)
 if (empty($_SESSION['campanha']) || !isset($_SESSION['campanha']['batalha_atual'])) {
     $inimigosTime = array_values($_SESSION['inimigos_time'] ?? []);
 
-    // Se a lista de 9 inimigos ainda não estiver montada, cria a partir dos IDs restantes do catálogo
     if (empty($inimigosTime)) {
         $idsEscolhidos = array_map(fn($p) => (int)($p['id'] ?? 0), $meuTime);
         $idsRestantes = array_values(array_diff(PokeApiService::IDS, $idsEscolhidos));
         $inimigosTime = array_map(function($id) {
             $info = PokeApiService::buscarPorId($id) ?? [];
             return [
-                'id'       => $id,
-                'nome'     => $info['nome'] ?? "Pokémon #{$id}",
-                'tipo'     => $info['tipo'] ?? 'normal',
-                'hpMaximo' => (int)($info['hp'] ?? 45),
-                'hpAtual'  => (int)($info['hp'] ?? 45),
-                'ataque'   => (int)($info['ataque'] ?? 40),
-                'defesa'   => (int)($info['defesa'] ?? 40),
-                'velocidade'=> (int)($info['velocidade'] ?? 45),
-                'nivel'    => 5
+                'id'         => $id,
+                'nome'       => $info['nome'] ?? "Pokémon #{$id}",
+                'tipo'       => $info['tipo'] ?? 'normal',
+                'hpMaximo'   => (int)($info['hp'] ?? 45),
+                'hpAtual'    => (int)($info['hp'] ?? 45),
+                'ataque'     => (int)($info['ataque'] ?? 40),
+                'defesa'     => (int)($info['defesa'] ?? 40),
+                'velocidade' => (int)($info['velocidade'] ?? 45),
+                'nivel'      => 5,
+                'movimentos' => PokeApiService::obterMovimentosPadrao($id, $info['nome'] ?? '', $info['tipo'] ?? 'normal')
             ];
         }, $idsRestantes);
         $_SESSION['inimigos_time'] = $inimigosTime;
     }
 
-    // Sorteia 1 Pokémon do seu time para iniciar a primeira batalha (conforme a lógica solicitada)
+    // Sorteia 1 Pokémon do seu time para iniciar a primeira batalha
     $indicesVivos = [];
     foreach ($meuTime as $idx => $pk) {
         $hp = (int)($pk['hpAtual'] ?? $pk['hpMaximo'] ?? $pk['hp'] ?? 40);
@@ -75,6 +85,11 @@ if (empty($_SESSION['campanha']) || !isset($_SESSION['campanha']['batalha_atual'
     $inimigoAtual = $inimigosPool[$idxInimigoSorteado];
     unset($inimigosPool[$idxInimigoSorteado]);
 
+    // Garante que o inimigo sorteado tenha os movimentos próprios anexados
+    if (empty($inimigoAtual['movimentos'])) {
+        $inimigoAtual['movimentos'] = PokeApiService::obterMovimentosPadrao((int)($inimigoAtual['id'] ?? 0), $inimigoAtual['nome'] ?? $inimigoAtual['name'] ?? '', $inimigoAtual['tipo'] ?? 'normal');
+    }
+
     $_SESSION['campanha'] = [
         'batalha_atual'      => 1,
         'total_batalhas'     => 9,
@@ -82,7 +97,10 @@ if (empty($_SESSION['campanha']) || !isset($_SESSION['campanha']['batalha_atual'
         'pokemon_ativo_idx'  => $idxJogadorSorteado,
         'inimigo_atual'      => $inimigoAtual,
         'inimigos_restantes' => array_values($inimigosPool),
-        'status'             => 'em_combate', // 'em_combate', 'vitoria_rodada', 'campeao'
+        'status'             => 'em_combate',
+        'menu_aberto'        => 'principal', // 'principal', 'lutar', 'trocar'
+        'mods_jogador'       => ['atk_mult' => 1.0, 'def_mult' => 1.0, 'condicao' => 'Normal'],
+        'mods_inimigo'       => ['atk_mult' => 1.0, 'def_mult' => 1.0, 'condicao' => 'Normal'],
         'mensagens'          => [
             "Início da Campanha! Batalha 1 de 9.",
             "O seu Pokémon sorteado foi: " . ($meuTime[$idxJogadorSorteado]['nome'] ?? $meuTime[$idxJogadorSorteado]['name']) . "!",
@@ -101,39 +119,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pokemonJogador = &$meuTime[$ativoIdx];
     $pokemonInimigo = &$campanha['inimigo_atual'];
 
-    // Helper: função para calcular multiplicador de tipos elemental
-    $calcularMultiplicador = function($tipoAtacante, $tipoDefensor) {
-        $tipoAtacante = strtolower(trim($tipoAtacante));
-        $tipoDefensor = strtolower(trim($tipoDefensor));
+    // Helper: multiplicador de vantagens elementais
+    $calcularMultiplicador = function($tipoAtk, $tipoDef) {
+        $tipoAtk = strtolower(trim($tipoAtk));
+        $tipoDef = strtolower(trim($tipoDef));
 
         $vantagens = [
-            'fogo'     => ['planta' => 2.0, 'agua' => 0.5, 'fogo' => 0.5],
-            'fire'     => ['grass' => 2.0, 'water' => 0.5, 'fire' => 0.5],
-            'agua'     => ['fogo' => 2.0, 'planta' => 0.5, 'agua' => 0.5],
-            'water'    => ['fire' => 2.0, 'grass' => 0.5, 'water' => 0.5],
-            'planta'   => ['agua' => 2.0, 'fogo' => 0.5, 'planta' => 0.5],
-            'grass'    => ['water' => 2.0, 'fire' => 0.5, 'grass' => 0.5],
-            'eletrico' => ['agua' => 2.0, 'eletrico' => 0.5, 'terra' => 0.0],
-            'electric' => ['water' => 2.0, 'electric' => 0.5, 'ground' => 0.0]
+            'fogo'     => ['planta' => 2.0, 'agua' => 0.5, 'fogo' => 0.5, 'grass' => 2.0, 'water' => 0.5, 'fire' => 0.5],
+            'fire'     => ['grass' => 2.0, 'water' => 0.5, 'fire' => 0.5, 'planta' => 2.0, 'agua' => 0.5, 'fogo' => 0.5],
+            'agua'     => ['fogo' => 2.0, 'planta' => 0.5, 'agua' => 0.5, 'fire' => 2.0, 'grass' => 0.5, 'water' => 0.5],
+            'water'    => ['fire' => 2.0, 'grass' => 0.5, 'water' => 0.5, 'fogo' => 2.0, 'planta' => 0.5, 'agua' => 0.5],
+            'planta'   => ['agua' => 2.0, 'fogo' => 0.5, 'planta' => 0.5, 'water' => 2.0, 'fire' => 0.5, 'grass' => 0.5],
+            'grass'    => ['water' => 2.0, 'fire' => 0.5, 'grass' => 0.5, 'agua' => 2.0, 'fogo' => 0.5, 'planta' => 0.5],
+            'eletrico' => ['agua' => 2.0, 'eletrico' => 0.5, 'terra' => 0.0, 'water' => 2.0, 'electric' => 0.5, 'ground' => 0.0],
+            'electric' => ['water' => 2.0, 'electric' => 0.5, 'ground' => 0.0, 'agua' => 2.0, 'eletrico' => 0.5, 'terra' => 0.0]
         ];
 
-        return $vantagens[$tipoAtacante][$tipoDefensor] ?? 1.0;
+        return $vantagens[$tipoAtk][$tipoDef] ?? 1.0;
     };
 
-    // Helper: cálculo do dano numérico
-    $calcularDano = function($atacante, $defensor) use ($calcularMultiplicador) {
+    // Helper: cálculo do dano com base na categoria do ataque armazenado
+    $calcularDanoCategoria = function($atacante, $defensor, $movimento, $modsAtacante, $modsDefensor) use ($calcularMultiplicador) {
         $nivel = (int)($atacante['nivel'] ?? 5);
-        $atk = (int)($atacante['ataque'] ?? $atacante['attack'] ?? 40);
-        $def = max(1, (int)($defensor['defesa'] ?? $defensor['defense'] ?? 40));
-        $tipoAtk = $atacante['tipo'] ?? 'normal';
-        $tipoDef = $defensor['tipo'] ?? 'normal';
+        $poder = (int)($movimento['poder'] ?? 40);
 
-        $base = ((($nivel * 2 / 5) + 2) * 40 * $atk / $def) / 50 + 2;
-        $mult = $calcularMultiplicador($tipoAtk, $tipoDef);
-        return max(1, (int)round($base * $mult));
+        $atkMult = (float)($modsAtacante['atk_mult'] ?? 1.0);
+        $defMult = (float)($modsDefensor['def_mult'] ?? 1.0);
+
+        $categoria = strtolower($movimento['damage_class'] ?? $movimento['cat'] ?? 'physical');
+
+        if ($categoria === 'special' || $categoria === 'especial') {
+            // Especial: energia à distância com poder especial
+            $atkEfetivo = max(1, (int)(($atacante['ataque'] ?? 40) * $atkMult * 1.1));
+            $defEfetiva = max(1, (int)(($defensor['defesa'] ?? 40) * $defMult));
+        } else {
+            // Físico: contato corporal direto baseado em Atk vs Def
+            $atkEfetivo = max(1, (int)(($atacante['ataque'] ?? 40) * $atkMult));
+            $defEfetiva = max(1, (int)(($defensor['defesa'] ?? 40) * $defMult));
+        }
+
+        $base = ((($nivel * 2 / 5) + 2) * $poder * $atkEfetivo / $defEfetiva) / 50 + 2;
+        $multTipo = $calcularMultiplicador($movimento['tipo'] ?? 'normal', $defensor['tipo'] ?? 'normal');
+
+        return [
+            'dano'     => max(1, (int)round($base * $multTipo)),
+            'multTipo' => $multTipo
+        ];
     };
 
-    // Helper: salvar o estado de HP do Pokémon do jogador no banco de dados
+    // Helper: salvar HP no banco
     $salvarHpBanco = function($pk) use ($pdo, $usuarioId) {
         $nomePk = $pk['nome'] ?? $pk['name'] ?? '';
         $hpAtual = (int)($pk['hpAtual'] ?? 0);
@@ -147,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     };
 
-    // Helper: verificar se todos do time do jogador desmaiaram e checar condição de Game Over
+    // Helper: verificar condição de Game Over (sem Pokémon e sem dinheiro para curar)
     $verificarGameOver = function() use (&$meuTime, $usuarioDinheiro) {
         $todosDesmaiados = true;
         foreach ($meuTime as $pk) {
@@ -159,9 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($todosDesmaiados) {
-            $custoMinimoCura = 200; // Valor de uma poção básica de recuperação
+            $custoMinimoCura = 200;
             if ($usuarioDinheiro < $custoMinimoCura) {
-                // Game Over: Sem Pokémon e sem dinheiro para curar/recuperar!
                 unset($_SESSION['campanha']);
                 $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui dinheiro suficiente para comprar HP ou curá-los! Você foi retirado da batalha.";
                 header("Location: index.php?rota=menu");
@@ -172,85 +205,177 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     };
 
     // -------------------------------------------------------------
-    // AÇÃO 1: ATACAR
+    // CONTROLE DE NAVEGAÇÃO DO MINI MENU ("O que o pokemon deve fazer?")
     // -------------------------------------------------------------
-    if ($acao === 'atacar' && $campanha['status'] === 'em_combate') {
+    if ($acao === 'abrir_menu') {
+        $menuAlvo = $_POST['menu_alvo'] ?? 'principal';
+        $campanha['menu_aberto'] = $menuAlvo;
+    }
+
+    // -------------------------------------------------------------
+    // AÇÃO DE LUTAR: EXECUTA O ATAQUE ARMAZENADO NO PRÓPRIO POKÉMON
+    // -------------------------------------------------------------
+    elseif ($acao === 'executar_ataque' && $campanha['status'] === 'em_combate') {
+        $tipoAtaqueEscolhido = $_POST['tipo_ataque'] ?? 'fisico'; // 'fisico', 'especial' ou 'status'
         $campanha['mensagens'] = [];
+
         $nomeJogador = $pokemonJogador['nome'] ?? $pokemonJogador['name'];
         $nomeInimigo = $pokemonInimigo['nome'] ?? $pokemonInimigo['name'];
 
-        // Jogador desfere ataque
-        $danoJogador = $calcularDano($pokemonJogador, $pokemonInimigo);
-        $hpInimigo = max(0, (int)($pokemonInimigo['hpAtual'] ?? $pokemonInimigo['hpMaximo'] ?? 45) - $danoJogador);
-        $pokemonInimigo['hpAtual'] = $hpInimigo;
+        // Lê os movimentos armazenados no próprio Pokémon do jogador
+        $golpesJogador = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimentosPadrao((int)($pokemonJogador['id'] ?? 0), $nomeJogador, $pokemonJogador['tipo'] ?? 'normal');
+        $golpeUsado = $golpesJogador[$tipoAtaqueEscolhido] ?? $golpesJogador['fisico'];
 
-        $campanha['mensagens'][] = "{$nomeJogador} atacou {$nomeInimigo} e causou {$danoJogador} de dano! (HP restante do inimigo: {$hpInimigo})";
+        $podeAtacar = true;
+        if (($campanha['mods_jogador']['condicao'] ?? 'Normal') === 'Paralisado') {
+            if (rand(1, 100) <= 25) {
+                $podeAtacar = false;
+                $campanha['mensagens'][] = "⚡ {$nomeJogador} está totalmente paralisado e não conseguiu se mover!";
+            }
+        }
+
+        if ($podeAtacar) {
+            $cat = strtolower($golpeUsado['damage_class'] ?? $tipoAtaqueEscolhido);
+
+            // 1. ATAQUE FÍSICO
+            if ($cat === 'physical' || $tipoAtaqueEscolhido === 'fisico') {
+                $res = $calcularDanoCategoria($pokemonJogador, $pokemonInimigo, $golpeUsado, $campanha['mods_jogador'], $campanha['mods_inimigo']);
+                $dano = $res['dano'];
+                $hpInimigo = max(0, (int)($pokemonInimigo['hpAtual'] ?? $pokemonInimigo['hpMaximo'] ?? 45) - $dano);
+                $pokemonInimigo['hpAtual'] = $hpInimigo;
+
+                $msgExtra = ($res['multTipo'] > 1.0) ? " (Super efetivo!)" : (($res['multTipo'] < 1.0 && $res['multTipo'] > 0) ? " (Pouco efetivo...)" : "");
+                $campanha['mensagens'][] = "⚔️ [Ataque Físico] {$nomeJogador} usou {$golpeUsado['nome']} causando {$dano} de dano direto a {$nomeInimigo}!{$msgExtra}";
+            }
+
+            // 2. ATAQUE ESPECIAL
+            elseif ($cat === 'special' || $tipoAtaqueEscolhido === 'especial') {
+                $res = $calcularDanoCategoria($pokemonJogador, $pokemonInimigo, $golpeUsado, $campanha['mods_jogador'], $campanha['mods_inimigo']);
+                $dano = $res['dano'];
+                $hpInimigo = max(0, (int)($pokemonInimigo['hpAtual'] ?? $pokemonInimigo['hpMaximo'] ?? 45) - $dano);
+                $pokemonInimigo['hpAtual'] = $hpInimigo;
+
+                $msgExtra = ($res['multTipo'] > 1.0) ? " (Super efetivo!)" : (($res['multTipo'] < 1.0 && $res['multTipo'] > 0) ? " (Pouco efetivo...)" : "");
+                $campanha['mensagens'][] = "🔮 [Ataque Especial] {$nomeJogador} disparou {$golpeUsado['nome']} à distância causando {$dano} de dano a {$nomeInimigo}!{$msgExtra}";
+            }
+
+            // 3. ATAQUE DE STATUS
+            elseif ($cat === 'status' || $tipoAtaqueEscolhido === 'status') {
+                $efeito = $golpeUsado['efeito'] ?? 'reduzir_atk';
+
+                if ($efeito === 'reduzir_atk') {
+                    $campanha['mods_inimigo']['atk_mult'] = max(0.4, ($campanha['mods_inimigo']['atk_mult'] ?? 1.0) * 0.8);
+                    $campanha['mensagens'][] = "🛡️ [Status] {$nomeJogador} usou {$golpeUsado['nome']}! O Ataque de {$nomeInimigo} caiu em 20%!";
+                } elseif ($efeito === 'reduzir_def') {
+                    $campanha['mods_inimigo']['def_mult'] = max(0.4, ($campanha['mods_inimigo']['def_mult'] ?? 1.0) * 0.8);
+                    $campanha['mensagens'][] = "🛡️ [Status] {$nomeJogador} usou {$golpeUsado['nome']}! A Defesa de {$nomeInimigo} caiu em 20%!";
+                } elseif ($efeito === 'paralisar') {
+                    $campanha['mods_inimigo']['condicao'] = 'Paralisado';
+                    $campanha['mensagens'][] = "⚡ [Status] {$nomeJogador} usou {$golpeUsado['nome']}! {$nomeInimigo} foi PARALISADO!";
+                } elseif ($efeito === 'curar_proprio') {
+                    $hpMax = (int)($pokemonJogador['hpMaximo'] ?? $pokemonJogador['hp'] ?? 40);
+                    $hpAtual = (int)($pokemonJogador['hpAtual'] ?? $hpMax);
+                    $cura = max(10, (int)round($hpMax * 0.35));
+                    $novoHp = min($hpMax, $hpAtual + $cura);
+                    $pokemonJogador['hpAtual'] = $novoHp;
+                    $salvarHpBanco($pokemonJogador);
+                    $campanha['mensagens'][] = "✨ [Status] {$nomeJogador} usou {$golpeUsado['nome']} e restaurou {$cura} de HP! (HP atual: {$novoHp}/{$hpMax})";
+                }
+            }
+        }
 
         // Verifica se o adversário foi derrotado
-        if ($hpInimigo <= 0) {
-            $campanha['mensagens'][] = "O {$nomeInimigo} selvagem desmaiou! Você venceu a Batalha {$campanha['batalha_atual']} de {$campanha['total_batalhas']}!";
+        $hpInimigoRestante = (int)($pokemonInimigo['hpAtual'] ?? 0);
+        if ($hpInimigoRestante <= 0) {
+            $campanha['mensagens'][] = "💥 O {$nomeInimigo} selvagem desmaiou! Você venceu a Batalha {$campanha['batalha_atual']} de {$campanha['total_batalhas']}!";
             $campanha['vitorias']++;
 
-            // Recompensa: +300 Pokédollars
             $recompensa = 300;
             $stmtMoney = $pdo->prepare("UPDATE usuario SET dinheiro = dinheiro + :recompensa WHERE id = :id");
             $stmtMoney->execute([':recompensa' => $recompensa, ':id' => $usuarioId]);
             $usuarioDinheiro += $recompensa;
-            $campanha['mensagens'][] = "Recompensa: +{$recompensa} Pokédollars adicionados à sua conta!";
+            $campanha['mensagens'][] = "💰 Recompensa: +{$recompensa} Pokédollars adicionados ao seu saldo!";
 
-            // Registra no banco de dados na tabela log_batalha
             try {
-                $stmtLog = $pdo->prepare("
-                    INSERT INTO log_batalha (usuario_id, pokemon_id, adversario, resultado, dinheiro_ganho)
-                    VALUES (:usuario_id, :pokemon_id, :adversario, 'vitoria', :dinheiro)
-                ");
+                $stmtLog = $pdo->prepare("INSERT INTO log_batalha (usuario_id, pokemon_id, adversario, resultado, dinheiro_ganho) VALUES (:usuario_id, :pokemon_id, :adversario, 'vitoria', :dinheiro)");
                 $stmtLog->execute([
                     ':usuario_id' => $usuarioId,
                     ':pokemon_id' => $pokemonJogador['pokemon_db_id'] ?? null,
                     ':adversario' => $nomeInimigo,
                     ':dinheiro'   => $recompensa
                 ]);
-            } catch (Exception $e) {
-                // Log opcional se a tabela permitir
-            }
+            } catch (Exception $e) {}
 
-            // Verifica se completou as 9 batalhas
             if ($campanha['batalha_atual'] >= $campanha['total_batalhas']) {
                 $campanha['status'] = 'campeao';
-                $campanha['mensagens'][] = "PARABÉNS! Você derrotou todos os 9 adversários e consagrou-se o GRANDE CAMPEÃO da PokéArena!";
+                $campanha['mensagens'][] = "🏆 PARABÉNS! Você derrotou todos os 9 adversários da PokéArena e se tornou o GRANDE CAMPEÃO!";
             } else {
                 $campanha['status'] = 'vitoria_rodada';
             }
-
         } else {
-            // Adversário contra-ataca
-            $danoInimigo = $calcularDano($pokemonInimigo, $pokemonJogador);
-            $hpJogador = max(0, (int)($pokemonJogador['hpAtual'] ?? $pokemonJogador['hpMaximo'] ?? 40) - $danoInimigo);
-            $pokemonJogador['hpAtual'] = $hpJogador;
-            $salvarHpBanco($pokemonJogador);
+            // CONTRA-ATAQUE DO ADVERSÁRIO (Usa os movimentos armazenados no próprio adversário)
+            $golpesInimigo = $pokemonInimigo['movimentos'] ?? PokeApiService::obterMovimentosPadrao((int)($pokemonInimigo['id'] ?? 0), $nomeInimigo, $pokemonInimigo['tipo'] ?? 'normal');
 
-            $campanha['mensagens'][] = "{$nomeInimigo} contra-atacou {$nomeJogador} e causou {$danoInimigo} de dano! (Seu HP restante: {$hpJogador})";
+            $inimigoPodeAtacar = true;
+            if (($campanha['mods_inimigo']['condicao'] ?? 'Normal') === 'Paralisado') {
+                if (rand(1, 100) <= 25) {
+                    $inimigoPodeAtacar = false;
+                    $campanha['mensagens'][] = "⚡ {$nomeInimigo} está paralisado e não conseguiu contra-atacar!";
+                }
+            }
 
-            if ($hpJogador <= 0) {
-                $campanha['mensagens'][] = "Seu Pokémon {$nomeJogador} desmaiou!";
-                
-                // Se todos desmaiarem e não tiver dinheiro -> GAME OVER com redirecionamento ao menu
-                $todosDesmaiados = $verificarGameOver();
-                if (!$todosDesmaiados) {
-                    $campanha['mensagens'][] = "Seu Pokémon ativo foi derrotado. Troque por outro Pokémon consciente da sua equipe para continuar lutando!";
+            if ($inimigoPodeAtacar) {
+                $escolhaIa = ['fisico', 'especial', 'status'][rand(0, 2)];
+                $golpeIni = $golpesInimigo[$escolhaIa] ?? $golpesInimigo['fisico'];
+
+                if ($escolhaIa === 'status') {
+                    $ef = $golpeIni['efeito'] ?? 'reduzir_atk';
+                    if ($ef === 'reduzir_atk') {
+                        $campanha['mods_jogador']['atk_mult'] = max(0.4, ($campanha['mods_jogador']['atk_mult'] ?? 1.0) * 0.8);
+                        $campanha['mensagens'][] = "🛡️ {$nomeInimigo} usou o golpe de status {$golpeIni['nome']}! O Ataque de {$nomeJogador} caiu em 20%!";
+                    } elseif ($ef === 'reduzir_def') {
+                        $campanha['mods_jogador']['def_mult'] = max(0.4, ($campanha['mods_jogador']['def_mult'] ?? 1.0) * 0.8);
+                        $campanha['mensagens'][] = "🛡️ {$nomeInimigo} usou {$golpeIni['nome']}! A Defesa de {$nomeJogador} caiu em 20%!";
+                    } elseif ($ef === 'paralisar') {
+                        $campanha['mods_jogador']['condicao'] = 'Paralisado';
+                        $campanha['mensagens'][] = "⚡ {$nomeInimigo} usou {$golpeIni['nome']}! Seu {$nomeJogador} ficou PARALISADO!";
+                    } else {
+                        $resIni = $calcularDanoCategoria($pokemonInimigo, $pokemonJogador, $golpesInimigo['fisico'], $campanha['mods_inimigo'], $campanha['mods_jogador']);
+                        $dIni = $resIni['dano'];
+                        $hpJog = max(0, (int)($pokemonJogador['hpAtual'] ?? $pokemonJogador['hpMaximo'] ?? 40) - $dIni);
+                        $pokemonJogador['hpAtual'] = $hpJog;
+                        $salvarHpBanco($pokemonJogador);
+                        $campanha['mensagens'][] = "⚔️ {$nomeInimigo} contra-atacou fisicamente com {$golpesInimigo['fisico']['nome']} causando {$dIni} de dano!";
+                    }
                 } else {
-                    $campanha['status'] = 'derrota_sem_pokemon';
-                    $campanha['mensagens'][] = "Todos os seus Pokémon desmaiaram! Mas você ainda tem P$ {$usuarioDinheiro}. Vá até a Loja ou Centro Pokémon para recuperá-los.";
+                    $resIni = $calcularDanoCategoria($pokemonInimigo, $pokemonJogador, $golpeIni, $campanha['mods_inimigo'], $campanha['mods_jogador']);
+                    $dIni = $resIni['dano'];
+                    $hpJog = max(0, (int)($pokemonJogador['hpAtual'] ?? $pokemonJogador['hpMaximo'] ?? 40) - $dIni);
+                    $pokemonJogador['hpAtual'] = $hpJog;
+                    $salvarHpBanco($pokemonJogador);
+
+                    $tag = ($escolhaIa === 'especial') ? '🔮 [Especial]' : '⚔️ [Físico]';
+                    $campanha['mensagens'][] = "{$tag} {$nomeInimigo} contra-atacou com {$golpeIni['nome']} causando {$dIni} de dano em {$nomeJogador}! (Seu HP: {$hpJog})";
+                }
+
+                if ((int)($pokemonJogador['hpAtual'] ?? 0) <= 0) {
+                    $campanha['mensagens'][] = "💀 Seu Pokémon {$nomeJogador} desmaiou!";
+                    $todosDesmaiados = $verificarGameOver();
+                    if (!$todosDesmaiados) {
+                        $campanha['mensagens'][] = "Seu Pokémon desmaiou! Vá até 'Pokémon (Trocar)' para escolher outro Pokémon consciente.";
+                    } else {
+                        $campanha['status'] = 'derrota_sem_pokemon';
+                    }
                 }
             }
         }
 
-        // Salva estado do time na sessão
+        $campanha['menu_aberto'] = 'principal';
         $_SESSION['meu_time'] = $meuTime;
     }
 
     // -------------------------------------------------------------
-    // AÇÃO 2: TROCAR DE POKÉMON (Com validação estrita de desmaio)
+    // AÇÃO DE TROCAR POKÉMON (Com validação estrita)
     // -------------------------------------------------------------
     elseif ($acao === 'trocar' && ($campanha['status'] === 'em_combate' || $campanha['status'] === 'derrota_sem_pokemon')) {
         $novoIdx = isset($_POST['novo_idx']) ? (int)$_POST['novo_idx'] : -1;
@@ -261,7 +386,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $candidato = $meuTime[$novoIdx];
             $hpCandidato = (int)($candidato['hpAtual'] ?? $candidato['hpMaximo'] ?? $candidato['hp'] ?? 40);
 
-            // Regra crucial solicitada pelo usuário: não pode trocar se estiver desmaiado
             if ($hpCandidato <= 0) {
                 $avisoErro = "O Pokémon " . ($candidato['nome'] ?? $candidato['name']) . " está desmaiado (HP = 0) e não pode entrar em combate!";
             } elseif ($novoIdx === $campanha['pokemon_ativo_idx']) {
@@ -269,20 +393,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $campanha['pokemon_ativo_idx'] = $novoIdx;
                 $campanha['status'] = 'em_combate';
+                $campanha['menu_aberto'] = 'principal';
+                
+                $campanha['mods_jogador'] = ['atk_mult' => 1.0, 'def_mult' => 1.0, 'condicao' => 'Normal'];
+
                 $nomeNovo = $candidato['nome'] ?? $candidato['name'];
                 $nomeInimigo = $pokemonInimigo['nome'] ?? $pokemonInimigo['name'];
-                $campanha['mensagens'] = ["Você trocou para {$nomeNovo}!"];
+                $campanha['mensagens'] = ["🔄 Você colocou {$nomeNovo} em campo!"];
 
-                // O adversário aproveita a troca para atacar o novo Pokémon que entrou
-                $danoInimigo = $calcularDano($pokemonInimigo, $candidato);
+                $golpesInimigo = $pokemonInimigo['movimentos'] ?? PokeApiService::obterMovimentosPadrao((int)($pokemonInimigo['id'] ?? 0), $nomeInimigo, $pokemonInimigo['tipo'] ?? 'normal');
+                $resIni = $calcularDanoCategoria($pokemonInimigo, $candidato, $golpesInimigo['fisico'], $campanha['mods_inimigo'], $campanha['mods_jogador']);
+                $danoInimigo = $resIni['dano'];
                 $hpRestante = max(0, $hpCandidato - $danoInimigo);
                 $meuTime[$novoIdx]['hpAtual'] = $hpRestante;
                 $salvarHpBanco($meuTime[$novoIdx]);
 
-                $campanha['mensagens'][] = "{$nomeInimigo} atacou {$nomeNovo} na entrada e causou {$danoInimigo} de dano! (HP restante: {$hpRestante})";
+                $campanha['mensagens'][] = "⚔️ {$nomeInimigo} atacou {$nomeNovo} na entrada com {$golpesInimigo['fisico']['nome']} causando {$danoInimigo} de dano! (HP restante: {$hpRestante})";
 
                 if ($hpRestante <= 0) {
-                    $campanha['mensagens'][] = "{$nomeNovo} desmaiou logo na entrada!";
+                    $campanha['mensagens'][] = "💀 {$nomeNovo} desmaiou logo na entrada!";
                     $verificarGameOver();
                 }
 
@@ -292,7 +421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // -------------------------------------------------------------
-    // AÇÃO 3: PRÓXIMA BATALHA (Avança de 1 a 9 e sorteia o próximo)
+    // AÇÃO: AVANÇAR PARA A PRÓXIMA BATALHA
     // -------------------------------------------------------------
     elseif ($acao === 'proxima_batalha' && $campanha['status'] === 'vitoria_rodada') {
         if (!empty($campanha['inimigos_restantes'])) {
@@ -302,10 +431,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($campanha['inimigos_restantes'][$idxSorteado]);
             $campanha['inimigos_restantes'] = array_values($campanha['inimigos_restantes']);
 
-            // Reinicia o HP do novo adversário sorteado
             $novoInimigo['hpAtual'] = (int)($novoInimigo['hpMaximo'] ?? $novoInimigo['hp'] ?? 45);
+            if (empty($novoInimigo['movimentos'])) {
+                $novoInimigo['movimentos'] = PokeApiService::obterMovimentosPadrao((int)($novoInimigo['id'] ?? 0), $novoInimigo['nome'] ?? $novoInimigo['name'] ?? '', $novoInimigo['tipo'] ?? 'normal');
+            }
+
             $campanha['inimigo_atual'] = $novoInimigo;
             $campanha['status'] = 'em_combate';
+            $campanha['menu_aberto'] = 'principal';
+
+            $campanha['mods_jogador'] = ['atk_mult' => 1.0, 'def_mult' => 1.0, 'condicao' => 'Normal'];
+            $campanha['mods_inimigo'] = ['atk_mult' => 1.0, 'def_mult' => 1.0, 'condicao' => 'Normal'];
 
             $campanha['mensagens'] = [
                 "Batalha {$campanha['batalha_atual']} de {$campanha['total_batalhas']} iniciada!",
@@ -315,37 +451,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // -------------------------------------------------------------
-    // AÇÃO 4: RECUPERAR HP COM POÇÃO (Custo de P$ 200)
+    // AÇÃO: FUGIR
     // -------------------------------------------------------------
-    elseif ($acao === 'comprar_pocao') {
-        $custoPocao = 200;
-        $curaValor = 20;
-
-        if ($usuarioDinheiro < $custoPocao) {
-            $avisoErro = "Você não possui dinheiro suficiente para comprar uma poção (Custo: P$ {$custoPocao})!";
-        } else {
-            $hpMax = (int)($pokemonJogador['hpMaximo'] ?? $pokemonJogador['hp'] ?? 40);
-            $hpAtual = (int)($pokemonJogador['hpAtual'] ?? $hpMax);
-
-            if ($hpAtual >= $hpMax) {
-                $avisoErro = "O Pokémon já está com a vida cheia!";
-            } else {
-                $usuarioDinheiro -= $custoPocao;
-                $stmtGasto = $pdo->prepare("UPDATE usuario SET dinheiro = :dinheiro WHERE id = :id");
-                $stmtGasto->execute([':dinheiro' => $usuarioDinheiro, ':id' => $usuarioId]);
-
-                $novoHp = min($hpMax, $hpAtual + $curaValor);
-                $pokemonJogador['hpAtual'] = $novoHp;
-                $salvarHpBanco($pokemonJogador);
-                $_SESSION['meu_time'] = $meuTime;
-
-                $campanha['mensagens'][] = "Você comprou e usou uma Poção por P$ 200! {$pokemonJogador['nome']} recuperou {$curaValor} de HP (Atual: {$novoHp}/{$hpMax}).";
-            }
-        }
+    elseif ($acao === 'fugir') {
+        header("Location: index.php?rota=menu");
+        exit;
     }
 
     // -------------------------------------------------------------
-    // AÇÃO 5: REINICIAR CAMPANHA
+    // AÇÃO: REINICIAR CAMPANHA
     // -------------------------------------------------------------
     elseif ($acao === 'reiniciar') {
         unset($_SESSION['campanha']);
@@ -369,17 +483,24 @@ $hpMaxIni = (int)($pokemonInimigo['hpMaximo'] ?? $pokemonInimigo['hp'] ?? 45);
 $hpAtualIni = (int)($pokemonInimigo['hpAtual'] ?? $hpMaxIni);
 
 $statusCampanha = $campanha['status'] ?? 'em_combate';
+$menuAberto = $campanha['menu_aberto'] ?? 'principal';
 $mensagensLog = $campanha['mensagens'] ?? [];
+
+$nomeJog = $pokemonJogador['nome'] ?? $pokemonJogador['name'];
+$nomeIni = $pokemonInimigo['nome'] ?? $pokemonInimigo['name'];
+
+// Lê os movimentos armazenados no próprio Pokémon
+$movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimentosPadrao((int)($pokemonJogador['id'] ?? 0), $nomeJog, $pokemonJogador['tipo'] ?? 'normal');
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>PokéArena - Batalha PHP Puro</title>
+    <title>PokéArena - Batalha (PHP Puro)</title>
 </head>
 <body>
 
-    <h1>PokéArena - Batalha PHP Puro</h1>
+    <h1>POKÉARENA - BATALHA PHP PURO</h1>
     <p>
         <strong>Treinador:</strong> <?= htmlspecialchars($usuarioNome) ?> | 
         <strong>Saldo:</strong> P$ <?= number_format($usuarioDinheiro, 0, ',', '.') ?> | 
@@ -390,7 +511,7 @@ $mensagensLog = $campanha['mensagens'] ?? [];
 
     <h2>Progresso: Batalha <?= $batalhaAtual ?> de <?= $totalBatalhas ?></h2>
     <p>
-        <strong>Adversários derrotados:</strong> <?= $campanha['vitorias'] ?> | 
+        <strong>Vitórias conquistadas:</strong> <?= $campanha['vitorias'] ?> | 
         <strong>Adversários restantes no catálogo:</strong> <?= count($campanha['inimigos_restantes']) ?>
     </p>
 
@@ -400,34 +521,38 @@ $mensagensLog = $campanha['mensagens'] ?? [];
 
     <hr>
 
-    <!-- ÁREA DE COMBATE: POKÉMON ATIVO VS INIMIGO SORTEADO -->
+    <!-- QUADRO DE COMBATE: POKÉMON ATIVO VS INIMIGO SORTEADO -->
     <table border="1" cellpadding="10" cellspacing="0" width="100%">
         <tr>
-            <th width="50%">SEU POKÉMON (ATIVO)</th>
-            <th width="50%">POKÉMON ADVERSÁRIO (SORTEADO)</th>
+            <th width="50%">SEU POKÉMON EM CAMPO</th>
+            <th width="50%">ADVERSÁRIO SORTEADO</th>
         </tr>
         <tr>
             <td valign="top">
-                <h3><?= htmlspecialchars($pokemonJogador['nome'] ?? $pokemonJogador['name']) ?> (Nv. 5)</h3>
+                <h3><?= htmlspecialchars($nomeJog) ?> (Nv. 5)</h3>
                 <p><strong>Tipo:</strong> <?= ucfirst($pokemonJogador['tipo'] ?? 'normal') ?></p>
                 <p><strong>HP:</strong> <?= $hpAtualJog ?> / <?= $hpMaxJog ?></p>
-                <p><strong>Ataque:</strong> <?= $pokemonJogador['ataque'] ?? $pokemonJogador['attack'] ?? 40 ?> | <strong>Defesa:</strong> <?= $pokemonJogador['defesa'] ?? $pokemonJogador['defense'] ?? 40 ?></p>
-                <p><strong>Status:</strong> <?= $hpAtualJog > 0 ? 'Consciente / Apto' : 'DESMAIADO' ?></p>
+                <p><strong>Ataque:</strong> <?= $pokemonJogador['ataque'] ?? 40 ?> (Mod: x<?= number_format($campanha['mods_jogador']['atk_mult'] ?? 1.0, 1) ?>)</p>
+                <p><strong>Defesa:</strong> <?= $pokemonJogador['defesa'] ?? 40 ?> (Mod: x<?= number_format($campanha['mods_jogador']['def_mult'] ?? 1.0, 1) ?>)</p>
+                <p><strong>Condição:</strong> <?= $campanha['mods_jogador']['condicao'] ?? 'Normal' ?></p>
+                <p><strong>Estado:</strong> <?= $hpAtualJog > 0 ? 'Consciente' : 'DESMAIADO' ?></p>
             </td>
             <td valign="top">
-                <h3><?= htmlspecialchars($pokemonInimigo['nome'] ?? $pokemonInimigo['name']) ?> (Nv. 5)</h3>
+                <h3><?= htmlspecialchars($nomeIni) ?> (Nv. 5)</h3>
                 <p><strong>Tipo:</strong> <?= ucfirst($pokemonInimigo['tipo'] ?? 'normal') ?></p>
                 <p><strong>HP:</strong> <?= $hpAtualIni ?> / <?= $hpMaxIni ?></p>
-                <p><strong>Ataque:</strong> <?= $pokemonInimigo['ataque'] ?? 40 ?> | <strong>Defesa:</strong> <?= $pokemonInimigo['defesa'] ?? 40 ?></p>
-                <p><strong>Status:</strong> <?= $hpAtualIni > 0 ? 'Consciente' : 'DERROTADO' ?></p>
+                <p><strong>Ataque:</strong> <?= $pokemonInimigo['ataque'] ?? 40 ?> (Mod: x<?= number_format($campanha['mods_inimigo']['atk_mult'] ?? 1.0, 1) ?>)</p>
+                <p><strong>Defesa:</strong> <?= $pokemonInimigo['defesa'] ?? 40 ?> (Mod: x<?= number_format($campanha['mods_inimigo']['def_mult'] ?? 1.0, 1) ?>)</p>
+                <p><strong>Condição:</strong> <?= $campanha['mods_inimigo']['condicao'] ?? 'Normal' ?></p>
+                <p><strong>Estado:</strong> <?= $hpAtualIni > 0 ? 'Consciente' : 'DERROTADO' ?></p>
             </td>
         </tr>
     </table>
 
     <hr>
 
-    <!-- NARRADOR DE EVENTOS DA BATALHA -->
-    <h3>Registro de Turnos / Mensagens:</h3>
+    <!-- HISTÓRICO DE MENSAGENS E TURNOS -->
+    <h3>Histórico da Batalha:</h3>
     <ul>
         <?php foreach ($mensagensLog as $msg): ?>
             <li><?= htmlspecialchars($msg) ?></li>
@@ -436,47 +561,183 @@ $mensagensLog = $campanha['mensagens'] ?? [];
 
     <hr>
 
-    <!-- AÇÕES DE COMBATE VIA FORMULÁRIOS PHP PURO -->
-    <h3>Ações Disponíveis:</h3>
+    <!-- ======================================================================
+         MINI MENU: "O que o pokemon deve fazer?"
+         ====================================================================== -->
+    <h2>O que <?= htmlspecialchars($nomeJog) ?> deve fazer?</h2>
 
     <?php if ($statusCampanha === 'em_combate'): ?>
 
-        <?php if ($hpAtualJog > 0): ?>
-            <!-- Ação de Atacar -->
-            <form method="POST" style="display: inline-block; margin-right: 15px;">
-                <input type="hidden" name="acao" value="atacar">
-                <button type="submit">⚔️ Atacar com <?= htmlspecialchars($pokemonJogador['nome'] ?? $pokemonJogador['name']) ?></button>
-            </form>
-        <?php else: ?>
-            <p><strong>Seu Pokémon ativo desmaiou! Você precisa trocá-lo abaixo.</strong></p>
-        <?php endif; ?>
+        <?php if ($hpAtualJog <= 0): ?>
 
-        <!-- Ação de Recuperar HP (comprar poção com Pokédollars) -->
-        <form method="POST" style="display: inline-block; margin-right: 15px;">
-            <input type="hidden" name="acao" value="comprar_pocao">
-            <button type="submit">🧪 Comprar e Usar Poção (+20 HP por P$ 200)</button>
-        </form>
+            <p><strong>Seu Pokémon ativo desmaiou! Você deve trocar por outro Pokémon da sua equipe.</strong></p>
+            <form method="POST">
+                <input type="hidden" name="acao" value="abrir_menu">
+                <input type="hidden" name="menu_alvo" value="trocar">
+                <button type="submit">🔄 Escolher outro Pokémon da Equipe</button>
+            </form>
+
+        <?php elseif ($menuAberto === 'principal'): ?>
+
+            <!-- MINI MENU: LUTAR | POKÉMON (TROCAR) | FUGIR -->
+            <form method="POST" style="display:inline-block; margin-right: 10px;">
+                <input type="hidden" name="acao" value="abrir_menu">
+                <input type="hidden" name="menu_alvo" value="lutar">
+                <button type="submit" style="font-size: 16px; padding: 8px 16px;">⚔️ Lutar</button>
+            </form>
+
+            <form method="POST" style="display:inline-block; margin-right: 10px;">
+                <input type="hidden" name="acao" value="abrir_menu">
+                <input type="hidden" name="menu_alvo" value="trocar">
+                <button type="submit" style="font-size: 16px; padding: 8px 16px;">🔄 Pokémon (Trocar)</button>
+            </form>
+
+            <form method="POST" style="display:inline-block;">
+                <input type="hidden" name="acao" value="fugir">
+                <button type="submit" style="font-size: 16px; padding: 8px 16px;" onclick="return confirm('Deseja realmente fugir do combate e voltar ao menu?');">🏃 Fugir</button>
+            </form>
+
+        <?php elseif ($menuAberto === 'lutar'): ?>
+
+            <!-- SUBMENU: OS 3 TIPOS DE ATAQUE CARREGADOS DO PRÓPRIO POKÉMON -->
+            <h3>Escolha a Categoria do Ataque de <?= htmlspecialchars($nomeJog) ?>:</h3>
+
+            <table border="1" cellpadding="10" cellspacing="0" width="100%">
+                <tr>
+                    <th width="33%">1. ⚔️ Ataque Físico (Physical)</th>
+                    <th width="33%">2. 🔮 Ataque Especial (Special)</th>
+                    <th width="34%">3. 🛡️ Ataque de Status (Efeito)</th>
+                </tr>
+                <tr>
+                    <td valign="top">
+                        <h4><?= htmlspecialchars($movimentosJog['fisico']['nome']) ?> (<?= htmlspecialchars($movimentosJog['fisico']['nomePt'] ?? '') ?>)</h4>
+                        <p><strong>Tipo:</strong> <?= ucfirst($movimentosJog['fisico']['tipo']) ?></p>
+                        <p><strong>Poder Base:</strong> <?= $movimentosJog['fisico']['poder'] ?></p>
+                        <p><em><?= htmlspecialchars($movimentosJog['fisico']['desc']) ?></em></p>
+                        <form method="POST">
+                            <input type="hidden" name="acao" value="executar_ataque">
+                            <input type="hidden" name="tipo_ataque" value="fisico">
+                            <button type="submit">Usar Ataque Físico</button>
+                        </form>
+                    </td>
+
+                    <td valign="top">
+                        <h4><?= htmlspecialchars($movimentosJog['especial']['nome']) ?> (<?= htmlspecialchars($movimentosJog['especial']['nomePt'] ?? '') ?>)</h4>
+                        <p><strong>Tipo:</strong> <?= ucfirst($movimentosJog['especial']['tipo']) ?></p>
+                        <p><strong>Poder Base:</strong> <?= $movimentosJog['especial']['poder'] ?></p>
+                        <p><em><?= htmlspecialchars($movimentosJog['especial']['desc']) ?></em></p>
+                        <form method="POST">
+                            <input type="hidden" name="acao" value="executar_ataque">
+                            <input type="hidden" name="tipo_ataque" value="especial">
+                            <button type="submit">Usar Ataque Especial</button>
+                        </form>
+                    </td>
+
+                    <td valign="top">
+                        <h4><?= htmlspecialchars($movimentosJog['status']['nome']) ?> (<?= htmlspecialchars($movimentosJog['status']['nomePt'] ?? '') ?>)</h4>
+                        <p><strong>Tipo:</strong> <?= ucfirst($movimentosJog['status']['tipo']) ?></p>
+                        <p><strong>Efeito Primário:</strong> <?= ucfirst(str_replace('_', ' ', $movimentosJog['status']['efeito'] ?? 'Status')) ?></p>
+                        <p><em><?= htmlspecialchars($movimentosJog['status']['desc']) ?></em></p>
+                        <form method="POST">
+                            <input type="hidden" name="acao" value="executar_ataque">
+                            <input type="hidden" name="tipo_ataque" value="status">
+                            <button type="submit">Usar Ataque de Status</button>
+                        </form>
+                    </td>
+                </tr>
+            </table>
+
+            <br>
+            <form method="POST">
+                <input type="hidden" name="acao" value="abrir_menu">
+                <input type="hidden" name="menu_alvo" value="principal">
+                <button type="submit">← Voltar às Opções</button>
+            </form>
+
+        <?php elseif ($menuAberto === 'trocar'): ?>
+
+            <!-- SUBMENU DE TROCA DA EQUIPE -->
+            <h3>Escolha qual Pokémon colocar em campo:</h3>
+            <table border="1" cellpadding="8" cellspacing="0" width="100%">
+                <tr>
+                    <th>Slot</th>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>HP Atual / Máximo</th>
+                    <th>Situação</th>
+                    <th>Ação</th>
+                </tr>
+                <?php foreach ($meuTime as $idx => $pk): ?>
+                    <?php 
+                        $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
+                        $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
+                        $desmaiado = ($pkHpAtual <= 0);
+                        $emCampo = ($idx === $ativoIdx);
+                    ?>
+                    <tr>
+                        <td><?= $idx + 1 ?></td>
+                        <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
+                        <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
+                        <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
+                        <td>
+                            <?php if ($emCampo): ?>
+                                <strong>[EM CAMPO]</strong>
+                            <?php elseif ($desmaiado): ?>
+                                <em>[DESMAIADO 💀]</em>
+                            <?php else: ?>
+                                Consciente
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($emCampo): ?>
+                                (Ativo)
+                            <?php elseif ($desmaiado): ?>
+                                <em>Não pode lutar (HP = 0)</em>
+                            <?php else: ?>
+                                <form method="POST" style="margin:0;">
+                                    <input type="hidden" name="acao" value="trocar">
+                                    <input type="hidden" name="novo_idx" value="<?= $idx ?>">
+                                    <button type="submit">Colocar em Campo</button>
+                                </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+
+            <br>
+            <?php if ($hpAtualJog > 0): ?>
+                <form method="POST">
+                    <input type="hidden" name="acao" value="abrir_menu">
+                    <input type="hidden" name="menu_alvo" value="principal">
+                    <button type="submit">← Voltar às Opções</button>
+                </form>
+            <?php endif; ?>
+
+        <?php endif; ?>
 
     <?php elseif ($statusCampanha === 'vitoria_rodada'): ?>
 
-        <p><strong>Vitória! Você venceu a Batalha <?= $batalhaAtual ?>.</strong></p>
+        <p><strong>Vitória! Você derrotou o <?= htmlspecialchars($nomeIni) ?>!</strong></p>
         <form method="POST">
             <input type="hidden" name="acao" value="proxima_batalha">
-            <button type="submit">Avançar para a Próxima Batalha (<?= $batalhaAtual + 1 ?> de <?= $totalBatalhas ?>) →</button>
+            <button type="submit" style="font-size: 16px; padding: 10px 20px;">
+                Avançar para a Próxima Batalha (<?= $batalhaAtual + 1 ?> de <?= $totalBatalhas ?>) →
+            </button>
         </form>
 
     <?php elseif ($statusCampanha === 'campeao'): ?>
 
-        <p><strong>🏆 PARABÉNS! VOCÊ COMPLETOU AS 9 BATALHAS E DERROTOU TODOS OS ADVERSÁRIOS!</strong></p>
+        <p><strong>🏆 PARABÉNS! VOCÊ CONQUISTOU A POKÉARENA E VENCEU AS 9 BATALHAS!</strong></p>
         <form method="POST">
             <input type="hidden" name="acao" value="reiniciar">
-            <button type="submit">Iniciar Nova Campanha de 9 Batalhas</button>
+            <button type="submit">Jogar Novamente do Início</button>
         </form>
 
     <?php elseif ($statusCampanha === 'derrota_sem_pokemon'): ?>
 
         <p><strong>Todos os seus Pokémon desmaiaram!</strong></p>
-        <p>Você ainda tem P$ <?= $usuarioDinheiro ?>. Use a Loja ou Centro Pokémon para recuperá-los:</p>
+        <p>Você ainda possui P$ <?= $usuarioDinheiro ?>. Acesse o PokéMart ou o Centro Pokémon para recuperar a saúde do seu time:</p>
         <p>
             <a href="index.php?rota=loja">Ir para a Loja (PokéMart)</a> | 
             <a href="index.php?rota=centro">Ir para o Centro Pokémon</a>
@@ -486,60 +747,9 @@ $mensagensLog = $campanha['mensagens'] ?? [];
 
     <hr>
 
-    <!-- SELEÇÃO E TROCA DE POKÉMON DA EQUIPE (Validação em PHP puro) -->
-    <h3>Sua Equipe (3 Pokémon) - Troca a Qualquer Momento:</h3>
-    <table border="1" cellpadding="8" cellspacing="0" width="100%">
-        <tr>
-            <th>Posição</th>
-            <th>Nome</th>
-            <th>Tipo</th>
-            <th>HP Atual / Máximo</th>
-            <th>Situação</th>
-            <th>Ação</th>
-        </tr>
-        <?php foreach ($meuTime as $idx => $pk): ?>
-            <?php 
-                $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
-                $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
-                $desmaiado = ($pkHpAtual <= 0);
-                $emCampo = ($idx === $ativoIdx);
-            ?>
-            <tr>
-                <td><?= $idx + 1 ?></td>
-                <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
-                <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
-                <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
-                <td>
-                    <?php if ($emCampo): ?>
-                        <em>[EM CAMPO]</em>
-                    <?php elseif ($desmaiado): ?>
-                        <strong>[DESMAIADO]</strong>
-                    <?php else: ?>
-                        Pronto para Luta
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <?php if ($emCampo): ?>
-                        (Ativo)
-                    <?php elseif ($desmaiado): ?>
-                        <em>Bloqueado (HP = 0)</em>
-                    <?php else: ?>
-                        <form method="POST" style="margin: 0;">
-                            <input type="hidden" name="acao" value="trocar">
-                            <input type="hidden" name="novo_idx" value="<?= $idx ?>">
-                            <button type="submit">Colocar em Campo</button>
-                        </form>
-                    <?php endif; ?>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-    </table>
-
-    <hr>
-
     <form method="POST">
         <input type="hidden" name="acao" value="reiniciar">
-        <button type="submit" onclick="return confirm('Deseja reiniciar toda a campanha de 9 batalhas?');">Reiniciar Campanha do Início</button>
+        <button type="submit" onclick="return confirm('Deseja reiniciar toda a campanha de 9 batalhas?');">Reiniciar Campanha</button>
     </form>
 
 </body>
