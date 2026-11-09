@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                     <img src="assets/img/pokearena_title.png" alt="PokéArena" class="builder-logo">
                     <div class="builder-title-text">
                         <span class="builder-badge-title">CONSTRUTOR DE EQUIPE</span>
-                        <span class="builder-subtitle">Escolha exatamente 3 Pokémon para a sua equipe</span>
+                        <span class="builder-subtitle">Escolha exatamente 6 Pokémon para a sua equipe</span>
                     </div>
                 </div>
 
@@ -55,11 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 
             <!-- Painel do Time Selecionado -->
             <div class="team-panel">
-                <h3>Seu Time (<span id="team-count">0</span>/3)</h3>
+                <h3>Seu Time (<span id="team-count">0</span>/6)</h3>
                 <div class="team-slots" id="team-slots">
                     <div class="slot" id="slot-0"></div>
                     <div class="slot" id="slot-1"></div>
                     <div class="slot" id="slot-2"></div>
+                    <div class="slot" id="slot-3"></div>
+                    <div class="slot" id="slot-4"></div>
+                    <div class="slot" id="slot-5"></div>
                 </div>
                 <button class="btn-ready" id="btn-ready" onclick="iniciarJogo()">Confirmar Time & Iniciar Batalha</button>
             </div>
@@ -216,8 +219,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 return; // Já está no time
             }
 
-            if (meuTime.length >= 3) {
-                alert("Seu time já está cheio (máximo 3)! Exclua um Pokémon antes de adicionar outro.");
+            if (meuTime.length >= 6) {
+                alert("Seu time já está cheio (máximo 6)! Exclua um Pokémon antes de adicionar outro.");
                 return;
             }
 
@@ -274,7 +277,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
             document.getElementById('team-count').innerText = meuTime.length;
             const slots = document.getElementById('team-slots').children;
 
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 6; i++) {
                 if (meuTime[i]) {
                     slots[i].innerHTML = `
                         <img src="${meuTime[i].img}" alt="${meuTime[i].name}" title="${meuTime[i].name}">
@@ -285,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 }
             }
 
-            document.getElementById('btn-ready').style.display = meuTime.length === 3 ? 'inline-block' : 'none';
+            document.getElementById('btn-ready').style.display = meuTime.length === 6 ? 'inline-block' : 'none';
         }
 
         // 5. Separa os 9 Pokémon restantes e envia para a sessão / próxima página
