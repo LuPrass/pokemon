@@ -8,7 +8,7 @@
 class PokeApiService {
 
     // IDs da Pokédex dos 12 Pokémons disponíveis no catálogo do jogo
-    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92];
+    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92,152,155,158];
 
     private $urlBase = "https://pokeapi.co/api/v2/pokemon/";
 
@@ -248,6 +248,21 @@ class PokeApiService {
                 'fisico'   => ['nome' => 'Body Slam', 'nomePt' => 'Pancada Corporal', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 50, 'desc' => 'Impacto físico maciço com todo o peso do corpo.'],
                 'especial' => ['nome' => 'Snore', 'nomePt' => 'Ronco Sônico', 'damage_class' => 'special', 'tipo' => 'normal', 'poder' => 45, 'desc' => 'Onda acústica de energia disparada à distância.'],
                 'status'   => ['nome' => 'Rest', 'nomePt' => 'Descansar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'curar_proprio', 'desc' => 'Cochila e recupera até 35% do próprio HP!']
+            ],
+            152 => [ // Chikorita
+                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto corporal.'],
+                'especial' => ['nome' => 'Razor Leaf', 'nomePt' => 'Folha Navalha', 'damage_class' => 'special', 'tipo' => 'grass', 'poder' => 55, 'desc' => 'Lâminas de folhas afiadas disparadas à distância.'],
+                'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
+            ],
+            155 => [ // Cyndaquil
+                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto corporal.'],
+                'especial' => ['nome' => 'Ember', 'nomePt' => 'Brasas', 'damage_class' => 'special', 'tipo' => 'fire', 'poder' => 40, 'desc' => 'Projéteis de fogo ardente disparados à distância.'],
+                'status'   => ['nome' => 'Smokescreen', 'nomePt' => 'Cortina de Fumaça', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_precisao', 'desc' => 'Reduz a precisão do oponente em 20%.']
+            ],
+            158 => [ // Totodile
+                'fisico'   => ['nome' => 'Scratch', 'nomePt' => 'Arranhão', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto usando garras afiadas.'],
+                'especial' => ['nome' => 'Water Gun', 'nomePt' => 'Jato d\'Água', 'damage_class' => 'special', 'tipo' => 'water', 'poder' => 40, 'desc' => 'Jato de água pressurizada lançado à distância.'],
+                'status'   => ['nome' => 'Leer', 'nomePt' => 'Olhar Encarador', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_def', 'desc' => 'Encarada intimidadora que diminui a Defesa do oponente em 20%.']
             ]
         ];
 
@@ -285,7 +300,8 @@ class PokeApiService {
         return [
             1 => 'bulbasaur', 252 => 'treecko', 4 => 'charmander', 255 => 'torchic',
             7 => 'squirtle', 258 => 'mudkip', 25 => 'pikachu', 179 => 'mareep',
-            133 => 'eevee', 143 => 'snorlax', 63 => 'abra', 92 => 'gastly'
+            133 => 'eevee', 143 => 'snorlax', 63 => 'abra', 92 => 'gastly',
+            152 => 'chikorita', 155 => 'cyndaquil', 158 => 'totodile'
         ];
     }
 
