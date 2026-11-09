@@ -476,7 +476,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($hpRestante <= 0) {
                     $combate['mensagens'][] = "💀 {$nomeNovo} desmaiou logo na entrada!";
-                    $verificarGameOver();
+                    if ($verificarGameOver()) {
+                        $combate['status'] = 'derrota_sem_pokemon';
+                    }
                 }
 
                 $_SESSION['meu_time'] = $meuTime;
@@ -540,6 +542,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // 4. Preparação das Variáveis de Exibição
+unset($pokemonJogador, $pokemonInimigo, $combate);
 $combate = $_SESSION['combate'];
 $batalhaAtual = (int)$combate['batalha_atual'];
 $totalBatalhas = (int)$combate['total_batalhas'];
@@ -863,19 +866,19 @@ $imgIni = !empty($pokemonInimigo['gif']) ? $pokemonInimigo['gif'] :
                                     <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
                                     <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
                                     <td>
-                                        <?php if ($emCampo): ?>
-                                            <span class="badge-status badge-ativo">Em Campo</span>
-                                        <?php elseif ($desmaiado): ?>
+                                        <?php if ($desmaiado): ?>
                                             <span class="badge-status badge-desmaiado">Desmaiado</span>
+                                        <?php elseif ($emCampo): ?>
+                                            <span class="badge-status badge-ativo">Em Campo</span>
                                         <?php else: ?>
                                             <span class="badge-status badge-pronto">Pronto</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($emCampo): ?>
-                                            <em>(Ativo)</em>
-                                        <?php elseif ($desmaiado): ?>
+                                        <?php if ($desmaiado): ?>
                                             <span style="color: #64748b;">Sem HP</span>
+                                        <?php elseif ($emCampo): ?>
+                                            <em>(Ativo)</em>
                                         <?php else: ?>
                                             <form method="POST" style="margin: 0;">
                                                 <input type="hidden" name="acao" value="trocar">
