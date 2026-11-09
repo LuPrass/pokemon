@@ -413,7 +413,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($inimigoPodeAtacar) {
-                $escolhaIa = ['fisico', 'especial', 'status'][rand(0, 2)];
+                // IA do Inimigo: se tiver golpe super eficaz contra o jogador, prioriza usar
+                $melhorGolpe = 'fisico';
+                $tipoJog = $pokemonJogador['tipo'] ?? 'normal';
+                foreach (['fisico', 'especial'] as $t) {
+                    if (!empty($golpesInimigo[$t])) {
+                        $m = $golpesInimigo[$t];
+                        $mult = $calcularMultiplicador($m['tipo'] ?? 'normal', $tipoJog);
+                        if ($mult > 1.0) {
+                            $melhorGolpe = $t;
+                            break;
+                        }
+                    }
+                }
+                // 65% de chance de usar o golpe com vantagem, senao escolhe entre os 3
+                if (rand(1, 100) <= 65) {
+                    $escolhaIa = $melhorGolpe;
+                } else {
+                    $opcoesIa = ['fisico', 'especial', 'status'];
+                    $escolhaIa = $opcoesIa[array_rand($opcoesIa)];
+                }
                 $golpeIni = $golpesInimigo[$escolhaIa] ?? $golpesInimigo['fisico'] ?? reset($golpesInimigo);
 
                 $combate['mensagens'][] = "{$nomeInimigo} adversário usou {$golpeIni['nome']}!";
@@ -528,9 +547,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($combate['inimigos_restantes'][$idxSorteado]);
             $combate['inimigos_restantes'] = array_values($combate['inimigos_restantes']);
 
-            $novoInimigo['hpAtual'] = (int)($novoInimigo['hpMaximo'] ?? $novoInimigo['hp'] ?? 45);
+            // Escalonamento simples de nivel (Batalha 1 = Nv. 5 ate Batalha 9 = Nv. 13)
+            $nivelInimigo = 4 + $combate['batalha_atual'];
+            $fator = $nivelInimigo / 5.0; // Multiplicador proporcional simples
+
+            $novoInimigo['nivel'] = $nivelInimigo;
+            $novoInimigo['hpMaximo'] = (int)round(($novoInimigo['hpMaximo'] ?? 45) * $fator);
+            $novoInimigo['hpAtual'] = $novoInimigo['hpMaximo'];
+            $novoInimigo['ataque'] = (int)round(($novoInimigo['ataque'] ?? 40) * $fator);
+            $novoInimigo['defesa'] = (int)round(($novoInimigo['defesa'] ?? 40) * $fator);
+            $novoInimigo['velocidade'] = (int)round(($novoInimigo['velocidade'] ?? 45) * $fator);
+
             if (empty($novoInimigo['movimentos'])) {
-                $novoInimigo['movimentos'] = PokeApiService::obterMovimentosPokemon((int)($novoInimigo['id'] ?? 0), $novoInimigo['nome'] ?? $novoInimigo['name'] ?? '', $novoInimigo['tipo'] ?? 'normal');
+                $novoInimigo['movimentos'] = PokeApiService::obterMovimentosPokemon((int)($novoInimigo['id'] ?? 0));
             }
 
             $combate['inimigo_atual'] = $novoInimigo;
@@ -542,14 +571,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $combate['mensagens'] = [
                 "Batalha {$combate['batalha_atual']} de {$combate['total_batalhas']} iniciada!",
-                "Um novo adversário sorteado surgiu: " . ($novoInimigo['nome'] ?? $novoInimigo['name']) . "!"
+                "Um novo adversário surgiu: {$novoInimigo['nome']} (Nível {$nivelInimigo})!"
             ];
         }
     }
 
-    // -------------------------------------------------------------
-    // AÇÃO: FUGIR
-    // -------------------------------------------------------------
     elseif ($acao === 'fugir') {
         header("Location: index.php?rota=menu");
         exit;
@@ -635,7 +661,7 @@ $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimento
                 <p><strong>Estado:</strong> <?= $hpAtualJog > 0 ? 'Consciente' : 'DESMAIADO' ?></p>
             </td>
             <td valign="top">
-                <h3><?= htmlspecialchars($nomeIni) ?> (Nv. 5)</h3>
+                <h3><?= htmlspecialchars($nomeIni) ?> (Nv. <?= (int)($pokemonInimigo['nivel'] ?? 5) ?>)</h3>
                 <p><strong>Tipo:</strong> <?= ucfirst($pokemonInimigo['tipo'] ?? 'normal') ?></p>
                 <p><strong>HP:</strong> <?= $hpAtualIni ?> / <?= $hpMaxIni ?></p>
                 <p><strong>Ataque:</strong> <?= $pokemonInimigo['ataque'] ?? 40 ?> (Mod: x<?= number_format($combate['mods_inimigo']['atk_mult'] ?? 1.0, 1) ?>)</p>
