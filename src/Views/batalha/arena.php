@@ -54,16 +54,19 @@ if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])
         $inimigosTime = array_map(function($id) {
             $info = PokeApiService::buscarPorId($id) ?? [];
             return [
-                'id'         => $id,
-                'nome'       => $info['nome'] ?? "Pokémon #{$id}",
-                'tipo'       => $info['tipo'] ?? 'normal',
-                'hpMaximo'   => (int)($info['hp'] ?? 45),
-                'hpAtual'    => (int)($info['hp'] ?? 45),
-                'ataque'     => (int)($info['ataque'] ?? 40),
-                'defesa'     => (int)($info['defesa'] ?? 40),
-                'velocidade' => (int)($info['velocidade'] ?? 45),
-                'nivel'      => 5,
-                'movimentos' => PokeApiService::obterMovimentosPokemon($id, $info['nome'] ?? '', $info['tipo'] ?? 'normal')
+                'id'           => $id,
+                'nome'         => $info['nome'] ?? "Pokémon #{$id}",
+                'tipo'         => $info['tipo'] ?? 'normal',
+                'hpMaximo'     => (int)($info['hp'] ?? 45),
+                'hpAtual'      => (int)($info['hp'] ?? 45),
+                'ataque'       => (int)($info['ataque'] ?? 40),
+                'defesa'       => (int)($info['defesa'] ?? 40),
+                'velocidade'   => (int)($info['velocidade'] ?? 45),
+                'nivel'        => 5,
+                'gif'          => $info['gif'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$id}.gif",
+                'imagem'       => $info['imagemFrente'] ?? ($info['imagem'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{$id}.png"),
+                'imagemFrente' => $info['imagemFrente'] ?? ($info['imagem'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{$id}.png"),
+                'movimentos'   => PokeApiService::obterMovimentosPokemon($id, $info['nome'] ?? '', $info['tipo'] ?? 'normal')
             ];
         }, $idsRestantes);
         $_SESSION['inimigos_time'] = $inimigosTime;
@@ -559,269 +562,346 @@ $nomeIni = $pokemonInimigo['nome'] ?? $pokemonInimigo['name'];
 
 // Lê os movimentos armazenados no próprio Pokémon
 $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimentosPokemon((int)($pokemonJogador['id'] ?? 0), $nomeJog, $pokemonJogador['tipo'] ?? 'normal');
+
+$porcHpJog = max(0, min(100, (int)round(($hpAtualJog / max(1, $hpMaxJog)) * 100)));
+$porcHpIni = max(0, min(100, (int)round(($hpAtualIni / max(1, $hpMaxIni)) * 100)));
+
+$corHpJog = ($porcHpJog > 50) ? '#10b981' : (($porcHpJog > 20) ? '#f59e0b' : '#ef4444');
+$corHpIni = ($porcHpIni > 50) ? '#10b981' : (($porcHpIni > 20) ? '#f59e0b' : '#ef4444');
+
+// IDs para fallbacks de imagem
+$idJog = (int)($pokemonJogador['id'] ?? $pokemonJogador['id_pokedex'] ?? 0);
+$idIni = (int)($pokemonInimigo['id'] ?? $pokemonInimigo['id_pokedex'] ?? 0);
+
+// GIFs dos personagens (PokeAPI Showdown animado e fallbacks seguros)
+$imgJog = !empty($pokemonJogador['gif']) ? $pokemonJogador['gif'] : 
+          (!empty($pokemonJogador['imagemAnimada']) ? $pokemonJogador['imagemAnimada'] : 
+          (!empty($idJog) ? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$idJog}.gif" : 
+          ($pokemonJogador['imagemCostas'] ?? ($pokemonJogador['imagem'] ?? ($pokemonJogador['img'] ?? '')))));
+
+$imgIni = !empty($pokemonInimigo['gif']) ? $pokemonInimigo['gif'] : 
+          (!empty($pokemonInimigo['imagemAnimada']) ? $pokemonInimigo['imagemAnimada'] : 
+          (!empty($idIni) ? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$idIni}.gif" : 
+          ($pokemonInimigo['imagemFrente'] ?? ($pokemonInimigo['imagem'] ?? ($pokemonInimigo['img'] ?? '')))));
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>PokéArena - Batalha (PHP Puro)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéArena - Batalha <?= $batalhaAtual ?> de <?= $totalBatalhas ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/arena.css?v=<?= time() ?>">
 </head>
 <body>
 
-    <h1>POKÉARENA - BATALHA PHP PURO</h1>
-    <p>
-        <strong>Treinador:</strong> <?= htmlspecialchars($usuarioNome) ?> | 
-        <strong>Saldo:</strong> P$ <?= number_format($usuarioDinheiro, 0, ',', '.') ?> | 
-        <a href="index.php?rota=menu">Voltar ao Menu Principal</a>
-    </p>
+    <div class="arena-viewport">
+        <div class="arena-container">
 
-    <hr>
+            <!-- Cabeçalho (Mesmo padrão visual do Builder e Menu) -->
+            <header class="arena-header-card">
+                <div class="arena-brand">
+                    <img src="assets/img/pokearena_title.png" alt="PokéArena" class="arena-logo">
+                    <div class="arena-title-text">
+                        <span class="arena-badge-title">BATALHA <?= $batalhaAtual ?> DE <?= $totalBatalhas ?></span>
+                        <span class="arena-subtitle">Vitórias na Campanha: <b><?= $combate['vitorias'] ?></b></span>
+                    </div>
+                </div>
 
-    <h2>Progresso: Batalha <?= $batalhaAtual ?> de <?= $totalBatalhas ?></h2>
-    <p>
-        <strong>Vitórias conquistadas:</strong> <?= $combate['vitorias'] ?> |
-        <strong>Adversários restantes no catálogo:</strong> <?= count($combate['inimigos_restantes']) ?>
-    </p>
+                <div class="arena-header-acoes">
+                    <div class="treinador-badge">
+                        Treinador: <b><?= htmlspecialchars($usuarioNome) ?></b>
+                    </div>
+                    <div class="saldo-badge">
+                        Saldo: <b>P$ <?= number_format($usuarioDinheiro, 0, ',', '.') ?></b>
+                    </div>
+                    <a href="index.php?rota=menu" class="btn-header-nav btn-nav-blue">Menu</a>
+                    <a href="index.php?rota=loja" class="btn-header-nav btn-nav-green">PokéMart</a>
+                </div>
+            </header>
 
-    <?php if ($avisoErro): ?>
-        <p><strong>[AVISO DE ERRO]:</strong> <?= htmlspecialchars($avisoErro) ?></p>
-    <?php endif; ?>
+            <?php if ($avisoErro): ?>
+                <div style="background: rgba(239, 68, 68, 0.2); border: 1.5px solid #ef4444; color: #fca5a5; padding: 14px 20px; border-radius: 12px; font-weight: 700; text-align: center;">
+                    <?= htmlspecialchars($avisoErro) ?>
+                </div>
+            <?php endif; ?>
 
-    <hr>
+            <!-- Card Principal da Arena (Mesmo padrão dark glass) -->
+            <div class="arena-card">
 
-    <!-- QUADRO DE COMBATE: POKÉMON ATIVO VS INIMIGO SORTEADO -->
-    <table border="1" cellpadding="10" cellspacing="0" width="100%">
-        <tr>
-            <th width="50%">SEU POKÉMON EM CAMPO</th>
-            <th width="50%">ADVERSÁRIO SORTEADO</th>
-        </tr>
-        <tr>
-            <td valign="top">
-                <h3><?= htmlspecialchars($nomeJog) ?> (Nv. 5)</h3>
-                <p><strong>Tipo:</strong> <?= ucfirst($pokemonJogador['tipo'] ?? 'normal') ?></p>
-                <p><strong>HP:</strong> <?= $hpAtualJog ?> / <?= $hpMaxJog ?></p>
-                <p><strong>Ataque:</strong> <?= $pokemonJogador['ataque'] ?? 40 ?> (Mod: x<?= number_format($combate['mods_jogador']['atk_mult'] ?? 1.0, 1) ?>)</p>
-                <p><strong>Defesa:</strong> <?= $pokemonJogador['defesa'] ?? 40 ?> (Mod: x<?= number_format($combate['mods_jogador']['def_mult'] ?? 1.0, 1) ?>)</p>
-                <p><strong>Condição:</strong> <?= $combate['mods_jogador']['condicao'] ?? 'Normal' ?></p>
-                <p><strong>Estado:</strong> <?= $hpAtualJog > 0 ? 'Consciente' : 'DESMAIADO' ?></p>
-            </td>
-            <td valign="top">
-                <h3><?= htmlspecialchars($nomeIni) ?> (Nv. <?= (int)($pokemonInimigo['nivel'] ?? 5) ?>)</h3>
-                <p><strong>Tipo:</strong> <?= ucfirst($pokemonInimigo['tipo'] ?? 'normal') ?></p>
-                <p><strong>HP:</strong> <?= $hpAtualIni ?> / <?= $hpMaxIni ?></p>
-                <p><strong>Ataque:</strong> <?= $pokemonInimigo['ataque'] ?? 40 ?> (Mod: x<?= number_format($combate['mods_inimigo']['atk_mult'] ?? 1.0, 1) ?>)</p>
-                <p><strong>Defesa:</strong> <?= $pokemonInimigo['defesa'] ?? 40 ?> (Mod: x<?= number_format($combate['mods_inimigo']['def_mult'] ?? 1.0, 1) ?>)</p>
-                <p><strong>Condição:</strong> <?= $combate['mods_inimigo']['condicao'] ?? 'Normal' ?></p>
-                <p><strong>Estado:</strong> <?= $hpAtualIni > 0 ? 'Consciente' : 'DERROTADO' ?></p>
-            </td>
-        </tr>
-    </table>
+                <!-- Campo de Batalha (Cenário Central) -->
+                <div class="campo-batalha">
+                    
+                    <!-- LADO OPONENTE -->
+                    <div class="lado lado-oponente">
+                        <div class="caixa-status">
+                            <div class="status-topo">
+                                <span class="status-nome"><?= htmlspecialchars($nomeIni) ?></span>
+                                <span class="status-nivel">Nv. <?= (int)($pokemonInimigo['nivel'] ?? 5) ?></span>
+                            </div>
+                            <div class="hp-linha">
+                                <span class="hp-rotulo">HP</span>
+                                <div class="hp-barra-bg">
+                                    <div class="hp-barra" style="width: <?= $porcHpIni ?>%; background: <?= $corHpIni ?>;"></div>
+                                </div>
+                            </div>
+                            <div class="hp-numeros">
+                                <?= $hpAtualIni ?> / <?= $hpMaxIni ?> HP (<?= ucfirst($pokemonInimigo['tipo'] ?? 'normal') ?>)
+                                <?php if (($combate['mods_inimigo']['condicao'] ?? 'Normal') === 'Paralisado'): ?>
+                                    <span style="color: #f59e0b; font-weight: 800;">[PARALISADO]</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
 
-    <hr>
-
-    <!-- HISTÓRICO DE MENSAGENS SIMPLES E DIRETO -->
-    <h3>Histórico da Batalha:</h3>
-    <?php if (empty($mensagensLog)): ?>
-        <p><em>A batalha começou! Escolha uma ação abaixo.</em></p>
-    <?php else: ?>
-        <ul>
-            <?php foreach ($mensagensLog as $msg): ?>
-                <li><strong><?= htmlspecialchars($msg) ?></strong></li>
-            <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
-
-    <hr>
-
-    <!-- ======================================================================
-         AREA DE COMANDOS E FLUXO DE BATALHA
-         ====================================================================== -->
-    <?php if ($statusCombate === 'vitoria_rodada'): ?>
-
-        <h2>🎉 Batalha Concluída!</h2>
-        <p><strong>Você derrotou <?= htmlspecialchars($nomeIni) ?>!</strong></p>
-        <form method="POST" style="margin: 20px 0;">
-            <input type="hidden" name="acao" value="proxima_batalha">
-            <button type="submit" style="font-size: 18px; padding: 12px 28px; cursor: pointer;">
-                Avançar para a Próxima Batalha (<?= $batalhaAtual + 1 ?> de <?= $totalBatalhas ?>) →
-            </button>
-        </form>
-
-    <?php elseif ($statusCombate === 'campeao'): ?>
-
-        <h2>🏆 PARABÉNS! VOCÊ CONQUISTOU A POKÉARENA!</h2>
-        <p>Você derrotou com sucesso todos os 9 adversários da campanha!</p>
-        <form method="POST">
-            <input type="hidden" name="acao" value="reiniciar">
-            <button type="submit" style="font-size: 16px; padding: 10px 22px;">Jogar Novamente do Início</button>
-        </form>
-
-    <?php elseif ($statusCombate === 'derrota_sem_pokemon'): ?>
-
-        <h2>💀 Fim de Combate: Todos os seus Pokémon desmaiaram!</h2>
-        <p>Você ainda possui P$ <?= number_format($usuarioDinheiro, 0, ',', '.') ?>. Vá até a Loja ou Centro Pokémon para curar sua equipe:</p>
-        <p>
-            <a href="index.php?rota=loja">Ir para a Loja (PokéMart)</a> | 
-            <a href="index.php?rota=centro">Ir para o Centro Pokémon</a>
-        </p>
-
-    <?php elseif ($statusCombate === 'em_combate'): ?>
-
-        <?php if ($hpAtualJog <= 0): ?>
-
-            <!-- Transicao rapida: abre direto a troca se o ativo desmaiou -->
-            <h3>Seu <?= htmlspecialchars($nomeJog) ?> desmaiou! Escolha quem entra em campo:</h3>
-            <table border="1" cellpadding="8" cellspacing="0" width="100%">
-                <tr>
-                    <th>Slot</th>
-                    <th>Nome</th>
-                    <th>Tipo</th>
-                    <th>HP</th>
-                    <th>Ação</th>
-                </tr>
-                <?php foreach ($meuTime as $idx => $pk): ?>
-                    <?php 
-                        $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
-                        $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
-                        $desmaiado = ($pkHpAtual <= 0);
-                        $emCampo = ($idx === $ativoIdx);
-                    ?>
-                    <tr>
-                        <td><?= $idx + 1 ?></td>
-                        <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
-                        <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
-                        <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
-                        <td>
-                            <?php if ($emCampo): ?>
-                                <em>[Em Campo - Desmaiado]</em>
-                            <?php elseif ($desmaiado): ?>
-                                <em>Desmaiado (HP = 0)</em>
-                            <?php else: ?>
-                                <form method="POST" style="margin:0;">
-                                    <input type="hidden" name="acao" value="trocar">
-                                    <input type="hidden" name="novo_idx" value="<?= $idx ?>">
-                                    <button type="submit" style="font-size: 15px; padding: 6px 14px; cursor: pointer;">Entrar em Campo</button>
-                                </form>
+                        <div class="sprite-box">
+                            <?php if (!empty($imgIni)): ?>
+                                <img src="<?= htmlspecialchars($imgIni) ?>" alt="<?= htmlspecialchars($nomeIni) ?>" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/<?= $idIni ?>.png';">
                             <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
+                            <div class="sombra"></div>
+                        </div>
+                    </div>
 
-        <?php elseif ($menuAberto === 'principal'): ?>
+                    <!-- LADO JOGADOR -->
+                    <div class="lado lado-jogador">
+                        <div class="sprite-box">
+                            <?php if (!empty($imgJog)): ?>
+                                <img src="<?= htmlspecialchars($imgJog) ?>" alt="<?= htmlspecialchars($nomeJog) ?>" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/<?= $idJog ?>.png';">
+                            <?php endif; ?>
+                            <div class="sombra"></div>
+                        </div>
 
-            <h2>O que <?= htmlspecialchars($nomeJog) ?> deve fazer?</h2>
-            <!-- MINI MENU: LUTAR | POKÉMON (TROCAR) | FUGIR -->
-            <form method="POST" style="display:inline-block; margin-right: 10px;">
-                <input type="hidden" name="acao" value="abrir_menu">
-                <input type="hidden" name="menu_alvo" value="lutar">
-                <button type="submit" style="font-size: 16px; padding: 8px 18px; cursor: pointer;">⚔️ Lutar</button>
-            </form>
+                        <div class="caixa-status">
+                            <div class="status-topo">
+                                <span class="status-nome"><?= htmlspecialchars($nomeJog) ?></span>
+                                <span class="status-nivel">Nv. 5</span>
+                            </div>
+                            <div class="hp-linha">
+                                <span class="hp-rotulo">HP</span>
+                                <div class="hp-barra-bg">
+                                    <div class="hp-barra" style="width: <?= $porcHpJog ?>%; background: <?= $corHpJog ?>;"></div>
+                                </div>
+                            </div>
+                            <div class="hp-numeros">
+                                <?= $hpAtualJog ?> / <?= $hpMaxJog ?> HP (<?= ucfirst($pokemonJogador['tipo'] ?? 'normal') ?>)
+                                <?php if (($combate['mods_jogador']['condicao'] ?? 'Normal') === 'Paralisado'): ?>
+                                    <span style="color: #f59e0b; font-weight: 800;">[PARALISADO]</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
 
-            <form method="POST" style="display:inline-block; margin-right: 10px;">
-                <input type="hidden" name="acao" value="abrir_menu">
-                <input type="hidden" name="menu_alvo" value="trocar">
-                <button type="submit" style="font-size: 16px; padding: 8px 18px; cursor: pointer;">🔄 Pokémon (Trocar)</button>
-            </form>
+                </div>
 
-            <form method="POST" style="display:inline-block;">
-                <input type="hidden" name="acao" value="fugir">
-                <button type="submit" style="font-size: 16px; padding: 8px 18px; cursor: pointer;" onclick="return confirm('Deseja realmente fugir da batalha?');">🏃 Fugir</button>
-            </form>
+                <!-- Painel Inferior: Log de Combate + Ações -->
+                <div class="painel-combate">
 
-        <?php elseif ($menuAberto === 'lutar'): ?>
+                    <!-- Log da Batalha (Estilo Terminal RPG) -->
+                    <div class="battle-log">
+                        <div class="battle-log-header">Histórico da Batalha</div>
+                        <?php if (empty($mensagensLog)): ?>
+                            <p style="margin: 0; color: #94a3b8; font-size: 0.88rem;"><em>A batalha começou! Escolha uma ação abaixo.</em></p>
+                        <?php else: ?>
+                            <ul class="battle-log-list">
+                                <?php foreach ($mensagensLog as $msg): ?>
+                                    <?php 
+                                        $cor = '#e2e8f0';
+                                        if (str_contains($msg, 'Dano causado:')) $cor = '#34d399';
+                                        elseif (str_contains($msg, 'Dano sofrido:')) $cor = '#f87171';
+                                        elseif (str_contains($msg, 'Vida recuperada:')) $cor = '#38bdf8';
+                                        elseif ($msg === 'É super eficaz!') $cor = '#fbbf24';
+                                        elseif ($msg === 'Um acerto crítico!') $cor = '#60a5fa';
+                                        elseif (str_contains($msg, 'desmaiou')) $cor = '#f43f5e';
+                                    ?>
+                                    <li style="color: <?= $cor ?>;">• <?= htmlspecialchars($msg) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
 
-            <h2>O que <?= htmlspecialchars($nomeJog) ?> deve fazer?</h2>
-            <!-- SUBMENU: ESCOLHA DO ATAQUE (APENAS O NOME DO GOLPE) -->
-            <p><strong>Escolha um ataque:</strong></p>
+                    <!-- Painel de Ações / Comandos -->
+                    <div class="painel-acoes">
 
-            <div style="margin: 15px 0;">
-                <?php foreach (['fisico', 'especial', 'status'] as $chave): ?>
-                    <?php if (!empty($movimentosJog[$chave]['nome'])): ?>
-                        <form method="POST" style="display:inline-block; margin-right: 12px; margin-bottom: 10px;">
-                            <input type="hidden" name="acao" value="executar_ataque">
-                            <input type="hidden" name="tipo_ataque" value="<?= $chave ?>">
-                            <button type="submit" style="font-size: 16px; padding: 10px 22px; cursor: pointer;">
-                                <?= htmlspecialchars($movimentosJog[$chave]['nome']) ?>
-                            </button>
-                        </form>
-                    <?php endif; ?>
-                <?php endforeach; ?>
+                        <?php if ($statusCombate === 'vitoria_rodada'): ?>
+
+                            <div class="banner-fim banner-vitoria">
+                                <h3>🎉 Vitória na Batalha <?= $batalhaAtual ?>!</h3>
+                                <p style="margin: 0; color: #cbd5e1;">Você derrotou o <b><?= htmlspecialchars($nomeIni) ?></b>!</p>
+                                <form method="POST" style="width: 100%;">
+                                    <input type="hidden" name="acao" value="proxima_batalha">
+                                    <button type="submit" class="btn-acao btn-trocar" style="font-size: 1rem;">
+                                        Avançar para a Batalha <?= $batalhaAtual + 1 ?> de <?= $totalBatalhas ?> →
+                                    </button>
+                                </form>
+                            </div>
+
+                        <?php elseif ($statusCombate === 'campeao'): ?>
+
+                            <div class="banner-fim banner-campeao">
+                                <h3>🏆 GRANDE CAMPEÃO!</h3>
+                                <p style="margin: 0; color: #cbd5e1;">Parabéns! Você venceu todos os 9 adversários da PokéArena!</p>
+                                <form method="POST" style="width: 100%;">
+                                    <input type="hidden" name="acao" value="reiniciar">
+                                    <button type="submit" class="btn-acao btn-lutar">Jogar Novamente</button>
+                                </form>
+                            </div>
+
+                        <?php elseif ($statusCombate === 'derrota_sem_pokemon'): ?>
+
+                            <div class="banner-fim banner-derrota">
+                                <h3>💀 Toda a sua equipe desmaiou!</h3>
+                                <p style="margin: 0; color: #cbd5e1;">Você precisa de poções ou curar seu time:</p>
+                                <div style="display: flex; gap: 10px; width: 100%;">
+                                    <a href="index.php?rota=loja" class="btn-acao btn-trocar" style="flex:1;">PokéMart</a>
+                                    <a href="index.php?rota=centro" class="btn-acao btn-voltar" style="flex:1;">Centro</a>
+                                </div>
+                            </div>
+
+                        <?php elseif ($statusCombate === 'em_combate'): ?>
+
+                            <?php if ($hpAtualJog <= 0): ?>
+
+                                <div class="banner-fim banner-derrota" style="padding: 16px;">
+                                    <h4 style="margin: 0; color: #f87171;">Seu Pokémon desmaiou!</h4>
+                                    <p style="margin: 0; color: #cbd5e1; font-size: 0.88rem;">Escolha outro Pokémon consciente na lista abaixo.</p>
+                                </div>
+
+                            <?php elseif ($menuAberto === 'principal'): ?>
+
+                                <!-- Mini Menu de Ações (Estilo Oficial dos Botões do Menu) -->
+                                <div class="acoes-grid">
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="acao" value="abrir_menu">
+                                        <input type="hidden" name="menu_alvo" value="lutar">
+                                        <button type="submit" class="btn-acao btn-lutar">⚔️ Lutar</button>
+                                    </form>
+
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="acao" value="abrir_menu">
+                                        <input type="hidden" name="menu_alvo" value="trocar">
+                                        <button type="submit" class="btn-acao btn-trocar">🔄 Trocar</button>
+                                    </form>
+
+                                    <form method="POST" style="grid-column: span 2; margin:0;">
+                                        <input type="hidden" name="acao" value="fugir">
+                                        <button type="submit" class="btn-acao btn-fugir" onclick="return confirm('Deseja fugir do combate?');">🏃 Fugir</button>
+                                    </form>
+                                </div>
+
+                            <?php elseif ($menuAberto === 'lutar'): ?>
+
+                                <!-- Submenu Lutar: Botões com Nome Específico do Golpe -->
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="acoes-grid">
+                                        <?php foreach (['fisico', 'especial', 'status'] as $chave): ?>
+                                            <?php if (!empty($movimentosJog[$chave]['nome'])): ?>
+                                                <form method="POST" style="margin:0;">
+                                                    <input type="hidden" name="acao" value="executar_ataque">
+                                                    <input type="hidden" name="tipo_ataque" value="<?= $chave ?>">
+                                                    <button type="submit" class="btn-acao btn-golpe">
+                                                        <?= htmlspecialchars($movimentosJog[$chave]['nome']) ?>
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+
+                                        <form method="POST" style="margin:0;">
+                                            <input type="hidden" name="acao" value="abrir_menu">
+                                            <input type="hidden" name="menu_alvo" value="principal">
+                                            <button type="submit" class="btn-acao btn-voltar">← Voltar</button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                            <?php elseif ($menuAberto === 'trocar'): ?>
+
+                                <form method="POST">
+                                    <input type="hidden" name="acao" value="abrir_menu">
+                                    <input type="hidden" name="menu_alvo" value="principal">
+                                    <button type="submit" class="btn-acao btn-voltar">← Voltar ao Combate</button>
+                                </form>
+
+                            <?php endif; ?>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
             </div>
 
-            <form method="POST">
-                <input type="hidden" name="acao" value="abrir_menu">
-                <input type="hidden" name="menu_alvo" value="principal">
-                <button type="submit">← Voltar</button>
-            </form>
+            <!-- TABELA DE TROCA DE EQUIPE (ESTILO DARK GLASS DO BUILDER) -->
+            <?php if ($menuAberto === 'trocar' || $hpAtualJog <= 0): ?>
+                <div class="team-swap-panel">
+                    <div class="team-swap-title">
+                        Equipe Pokémon - Escolha quem entra em campo:
+                    </div>
+                    <table class="swap-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Pokémon</th>
+                                <th>Tipo</th>
+                                <th>HP</th>
+                                <th>Situação</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($meuTime as $idx => $pk): ?>
+                                <?php 
+                                    $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
+                                    $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
+                                    $desmaiado = ($pkHpAtual <= 0);
+                                    $emCampo = ($idx === $ativoIdx);
+                                ?>
+                                <tr>
+                                    <td><strong><?= $idx + 1 ?></strong></td>
+                                    <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
+                                    <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
+                                    <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
+                                    <td>
+                                        <?php if ($emCampo): ?>
+                                            <span class="badge-status badge-ativo">Em Campo</span>
+                                        <?php elseif ($desmaiado): ?>
+                                            <span class="badge-status badge-desmaiado">Desmaiado</span>
+                                        <?php else: ?>
+                                            <span class="badge-status badge-pronto">Pronto</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($emCampo): ?>
+                                            <em>(Ativo)</em>
+                                        <?php elseif ($desmaiado): ?>
+                                            <span style="color: #64748b;">Sem HP</span>
+                                        <?php else: ?>
+                                            <form method="POST" style="margin: 0;">
+                                                <input type="hidden" name="acao" value="trocar">
+                                                <input type="hidden" name="novo_idx" value="<?= $idx ?>">
+                                                <button type="submit" class="btn-acao btn-trocar btn-entrar">Entrar em Campo</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
 
-        <?php elseif ($menuAberto === 'trocar'): ?>
+            <div style="text-align: right; margin-top: 10px;">
+                <form method="POST" style="display: inline-block;">
+                    <input type="hidden" name="acao" value="reiniciar">
+                    <button type="submit" style="background: none; border: none; color: #64748b; text-decoration: underline; cursor: pointer; font-size: 0.82rem;" onclick="return confirm('Deseja reiniciar a campanha de 9 batalhas?');">
+                        Reiniciar Campanha
+                    </button>
+                </form>
+            </div>
 
-            <h2>Trocar Pokémon:</h2>
-            <table border="1" cellpadding="8" cellspacing="0" width="100%">
-                <tr>
-                    <th>Slot</th>
-                    <th>Nome</th>
-                    <th>Tipo</th>
-                    <th>HP</th>
-                    <th>Situação</th>
-                    <th>Ação</th>
-                </tr>
-                <?php foreach ($meuTime as $idx => $pk): ?>
-                    <?php 
-                        $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
-                        $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
-                        $desmaiado = ($pkHpAtual <= 0);
-                        $emCampo = ($idx === $ativoIdx);
-                    ?>
-                    <tr>
-                        <td><?= $idx + 1 ?></td>
-                        <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
-                        <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
-                        <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
-                        <td>
-                            <?php if ($emCampo): ?>
-                                <strong>[EM CAMPO]</strong>
-                            <?php elseif ($desmaiado): ?>
-                                <em>[DESMAIADO 💀]</em>
-                            <?php else: ?>
-                                Consciente
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if ($emCampo): ?>
-                                (Ativo)
-                            <?php elseif ($desmaiado): ?>
-                                <em>Não pode lutar (HP = 0)</em>
-                            <?php else: ?>
-                                <form method="POST" style="margin:0;">
-                                    <input type="hidden" name="acao" value="trocar">
-                                    <input type="hidden" name="novo_idx" value="<?= $idx ?>">
-                                    <button type="submit" style="cursor:pointer;">Colocar em Campo</button>
-                                </form>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-
-            <br>
-            <form method="POST">
-                <input type="hidden" name="acao" value="abrir_menu">
-                <input type="hidden" name="menu_alvo" value="principal">
-                <button type="submit">← Voltar às Opções</button>
-            </form>
-
-        <?php endif; ?>
-
-    <?php endif; ?>
-
-    <hr>
-
-    <form method="POST">
-        <input type="hidden" name="acao" value="reiniciar">
-        <button type="submit" onclick="return confirm('Deseja reiniciar o combate de 9 batalhas?');">Reiniciar combate</button>
-    </form>
+        </div>
+    </div>
 
 </body>
 </html>
