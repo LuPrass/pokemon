@@ -794,22 +794,93 @@ $imgIni = !empty($pokemonInimigo['gif']) ? $pokemonInimigo['gif'] :
 
                             <?php elseif ($menuAberto === 'lutar'): ?>
 
-                                <!-- Submenu Lutar: Botões com Nome Específico do Golpe -->
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div class="acoes-grid">
+                                <!-- Submenu Lutar: Botões com visual estilo PokéRogue (CSS de Eficácia) -->
+                                <div class="painel-lutar-pokeprogue">
+                                    <div class="acoes-grid-golpes">
                                         <?php foreach (['fisico', 'especial', 'status'] as $chave): ?>
                                             <?php if (!empty($movimentosJog[$chave]['nome'])): ?>
+                                                <?php
+                                                    $mov = $movimentosJog[$chave];
+                                                    $nomeGolpe = $mov['nome'];
+                                                    $tipoGolpe = strtolower($mov['tipo'] ?? 'normal');
+                                                    $catGolpe = strtolower($mov['damage_class'] ?? $mov['categoria'] ?? $chave);
+                                                    $poderGolpe = (int)($mov['poder'] ?? 0);
+                                                    $tipoInimigo = strtolower($pokemonInimigo['tipo'] ?? 'normal');
+
+                                                    // Indicador visual de eficácia para o CSS (estilo PokéRogue)
+                                                    if ($catGolpe === 'status') {
+                                                        $badgeTexto = 'Efeito';
+                                                        $badgeClasse = 'eficacia-status';
+                                                        $badgeDesc = 'Movimento de Status';
+                                                    } else {
+                                                        // Segue a mesma tabela de vantagens do jogo
+                                                        $mult = 1.0;
+                                                        if (in_array($tipoGolpe, ['fogo', 'fire'])) {
+                                                            if (in_array($tipoInimigo, ['planta', 'grass'])) $mult = 2.0;
+                                                            elseif (in_array($tipoInimigo, ['agua', 'water', 'fogo', 'fire'])) $mult = 0.5;
+                                                        } elseif (in_array($tipoGolpe, ['agua', 'water'])) {
+                                                            if (in_array($tipoInimigo, ['fogo', 'fire', 'terra', 'ground'])) $mult = 2.0;
+                                                            elseif (in_array($tipoInimigo, ['planta', 'grass', 'agua', 'water'])) $mult = 0.5;
+                                                        } elseif (in_array($tipoGolpe, ['planta', 'grass'])) {
+                                                            if (in_array($tipoInimigo, ['agua', 'water', 'terra', 'ground'])) $mult = 2.0;
+                                                            elseif (in_array($tipoInimigo, ['fogo', 'fire', 'planta', 'grass'])) $mult = 0.5;
+                                                        } elseif (in_array($tipoGolpe, ['eletrico', 'electric'])) {
+                                                            if (in_array($tipoInimigo, ['agua', 'water'])) $mult = 2.0;
+                                                            elseif (in_array($tipoInimigo, ['terra', 'ground'])) $mult = 0.0;
+                                                            elseif (in_array($tipoInimigo, ['eletrico', 'electric', 'planta', 'grass'])) $mult = 0.5;
+                                                        } elseif (in_array($tipoGolpe, ['fantasma', 'ghost']) && in_array($tipoInimigo, ['psiquico', 'psychic'])) {
+                                                            $mult = 2.0;
+                                                        } elseif (in_array($tipoGolpe, ['normal']) && in_array($tipoInimigo, ['fantasma', 'ghost'])) {
+                                                            $mult = 0.0;
+                                                        }
+
+                                                        if ($mult >= 2.0) {
+                                                            $badgeTexto = 'x' . (int)$mult;
+                                                            $badgeClasse = 'eficacia-super';
+                                                            $badgeDesc = 'Superfetivo (2x)';
+                                                        } elseif ($mult == 1.0) {
+                                                            $badgeTexto = 'x1';
+                                                            $badgeClasse = 'eficacia-neutro';
+                                                            $badgeDesc = 'Dano Normal (1x)';
+                                                        } elseif ($mult > 0.0) {
+                                                            $badgeTexto = 'x0.5';
+                                                            $badgeClasse = 'eficacia-pouco';
+                                                            $badgeDesc = 'Pouco Efetivo (0.5x)';
+                                                        } else {
+                                                            $badgeTexto = 'x0';
+                                                            $badgeClasse = 'eficacia-imune';
+                                                            $badgeDesc = 'Imune (0 dano)';
+                                                        }
+                                                    }
+                                                ?>
                                                 <form method="POST" style="margin:0;">
                                                     <input type="hidden" name="acao" value="executar_ataque">
                                                     <input type="hidden" name="tipo_ataque" value="<?= $chave ?>">
-                                                    <button type="submit" class="btn-acao btn-golpe">
-                                                        <?= htmlspecialchars($movimentosJog[$chave]['nome']) ?>
+                                                    <button type="submit" class="btn-golpe-card">
+                                                        <div class="golpe-topo">
+                                                            <span class="golpe-nome"><?= htmlspecialchars($nomeGolpe) ?></span>
+                                                            <span class="badge-eficacia <?= $badgeClasse ?>" title="<?= htmlspecialchars($badgeDesc) ?>">
+                                                                <?= htmlspecialchars($badgeTexto) ?>
+                                                            </span>
+                                                        </div>
+                                                        <div class="golpe-rodape">
+                                                            <span class="badge-tipo-mini badge-tipo-<?= htmlspecialchars($tipoGolpe) ?>">
+                                                                <?= strtoupper(htmlspecialchars($tipoGolpe)) ?>
+                                                            </span>
+                                                            <span class="golpe-poder-info">
+                                                                <?php if ($catGolpe === 'status'): ?>
+                                                                    Efeito
+                                                                <?php else: ?>
+                                                                    Poder: <b><?= $poderGolpe > 0 ? $poderGolpe : 40 ?></b>
+                                                                <?php endif; ?>
+                                                            </span>
+                                                        </div>
                                                     </button>
                                                 </form>
                                             <?php endif; ?>
                                         <?php endforeach; ?>
 
-                                        <form method="POST" style="margin:0;">
+                                        <form method="POST" style="margin:0; grid-column: 1 / -1;">
                                             <input type="hidden" name="acao" value="abrir_menu">
                                             <input type="hidden" name="menu_alvo" value="principal">
                                             <button type="submit" class="btn-acao btn-voltar">← Voltar</button>
