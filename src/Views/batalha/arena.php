@@ -119,135 +119,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pokemonJogador = &$meuTime[$ativoIdx];
     $pokemonInimigo = &$combate['inimigo_atual'];
 
-    // Helper: multiplicador de vantagens elementais e imunidades
-    $calcularMultiplicador = function($tipoAtk, $tipoDef) {
-        $tipoAtk = strtolower(trim($tipoAtk));
-        $tipoDef = strtolower(trim($tipoDef));
+    // 1. Vantagens elementais simples (Fogo > Planta > Agua > Fogo, etc.)
+    $obterVantagemTipo = function($tipoAtaque, $tipoDefesa) {
+        $atk = strtolower(trim($tipoAtaque));
+        $def = strtolower(trim($tipoDefesa));
 
-        $tabela = [
-            'fogo' => [
-                'planta' => 2.0, 'grass' => 2.0,
-                'agua' => 0.5, 'water' => 0.5,
-                'fogo' => 0.5, 'fire' => 0.5
-            ],
-            'fire' => [
-                'grass' => 2.0, 'planta' => 2.0,
-                'water' => 0.5, 'agua' => 0.5,
-                'fire' => 0.5, 'fogo' => 0.5
-            ],
-            'agua' => [
-                'fogo' => 2.0, 'fire' => 2.0, 'terra' => 2.0, 'ground' => 2.0,
-                'planta' => 0.5, 'grass' => 0.5, 'agua' => 0.5, 'water' => 0.5
-            ],
-            'water' => [
-                'fire' => 2.0, 'fogo' => 2.0, 'ground' => 2.0, 'terra' => 2.0,
-                'grass' => 0.5, 'planta' => 0.5, 'water' => 0.5, 'agua' => 0.5
-            ],
-            'planta' => [
-                'agua' => 2.0, 'water' => 2.0, 'terra' => 2.0, 'ground' => 2.0,
-                'fogo' => 0.5, 'fire' => 0.5, 'planta' => 0.5, 'grass' => 0.5
-            ],
-            'grass' => [
-                'water' => 2.0, 'agua' => 2.0, 'ground' => 2.0, 'terra' => 2.0,
-                'fire' => 0.5, 'fogo' => 0.5, 'grass' => 0.5, 'planta' => 0.5
-            ],
-            'eletrico' => [
-                'agua' => 2.0, 'water' => 2.0,
-                'eletrico' => 0.5, 'electric' => 0.5, 'planta' => 0.5, 'grass' => 0.5,
-                'terra' => 0.0, 'ground' => 0.0
-            ],
-            'electric' => [
-                'water' => 2.0, 'agua' => 2.0,
-                'electric' => 0.5, 'eletrico' => 0.5, 'grass' => 0.5, 'planta' => 0.5,
-                'ground' => 0.0, 'terra' => 0.0
-            ],
-            'fantasma' => [
-                'psiquico' => 2.0, 'psychic' => 2.0, 'fantasma' => 2.0, 'ghost' => 2.0,
-                'normal' => 0.0
-            ],
-            'ghost' => [
-                'psychic' => 2.0, 'psiquico' => 2.0, 'ghost' => 2.0, 'fantasma' => 2.0,
-                'normal' => 0.0
-            ],
-            'normal' => [
-                'fantasma' => 0.0, 'ghost' => 0.0
-            ],
-            'psiquico' => [
-                'dark' => 0.0, 'sombrio' => 0.0
-            ],
-            'psychic' => [
-                'dark' => 0.0, 'sombrio' => 0.0
-            ]
-        ];
+        // Fogo ganha de Planta e perde para Agua
+        if (in_array($atk, ['fogo', 'fire'])) {
+            if (in_array($def, ['planta', 'grass'])) return 2.0;
+            if (in_array($def, ['agua', 'water', 'fogo', 'fire'])) return 0.5;
+        }
 
-        return $tabela[$tipoAtk][$tipoDef] ?? 1.0;
+        // Agua ganha de Fogo e perde para Planta
+        if (in_array($atk, ['agua', 'water'])) {
+            if (in_array($def, ['fogo', 'fire', 'terra', 'ground'])) return 2.0;
+            if (in_array($def, ['planta', 'grass', 'agua', 'water'])) return 0.5;
+        }
+
+        // Planta ganha de Agua e perde para Fogo
+        if (in_array($atk, ['planta', 'grass'])) {
+            if (in_array($def, ['agua', 'water', 'terra', 'ground'])) return 2.0;
+            if (in_array($def, ['fogo', 'fire', 'planta', 'grass'])) return 0.5;
+        }
+
+        // Eletrico ganha de Agua e nao afeta Terra
+        if (in_array($atk, ['eletrico', 'electric'])) {
+            if (in_array($def, ['agua', 'water'])) return 2.0;
+            if (in_array($def, ['terra', 'ground'])) return 0.0; // Imunidade
+            if (in_array($def, ['eletrico', 'electric', 'planta', 'grass'])) return 0.5;
+        }
+
+        // Fantasma e Psiquico
+        if (in_array($atk, ['fantasma', 'ghost']) && in_array($def, ['psiquico', 'psychic'])) return 2.0;
+        if (in_array($atk, ['normal']) && in_array($def, ['fantasma', 'ghost'])) return 0.0;
+
+        return 1.0; // Dano neutro
     };
 
-    // Helper: calculo oficial do dano (PokeRogue / 9a Geracao)
-    $calcularDanoCategoria = function($atacante, $defensor, $movimento, $modsAtacante, $modsDefensor) use ($calcularMultiplicador) {
-        $nivel = max(1, (int)($atacante['nivel'] ?? 5));
-        $poder = max(1, (int)($movimento['poder'] ?? 40));
+    // 2. Calculo de dano simples, didatico e equilibrado
+    $calcularDanoCategoria = function($atacante, $defensor, $movimento, $modsAtacante, $modsDefensor) use ($obterVantagemTipo) {
+        $poder   = max(10, (int)($movimento['poder'] ?? 40));
+        $ataque  = (int)($atacante['ataque'] ?? 40) * (float)($modsAtacante['atk_mult'] ?? 1.0);
+        $defesa  = (int)($defensor['defesa'] ?? 40) * (float)($modsDefensor['def_mult'] ?? 1.0);
+        $defesa  = max(1, $defesa); // Evita divisao por zero
 
-        $tipoMov = strtolower(trim($movimento['tipo'] ?? 'normal'));
+        // Dano base simples: (Poder * Ataque) / (Defesa * 2.5)
+        $danoBase = ($poder * $ataque) / ($defesa * 2.5);
+
+        // Vantagem de tipo
+        $tipoGolpe = strtolower(trim($movimento['tipo'] ?? 'normal'));
+        $tipoAlvo  = strtolower(trim($defensor['tipo'] ?? 'normal'));
+        $multTipo  = $obterVantagemTipo($tipoGolpe, $tipoAlvo);
+
+        if ($multTipo == 0.0) {
+            return ['dano' => 0, 'multTipo' => 0.0, 'isCritico' => false];
+        }
+
+        // Bonus se o golpe for do mesmo tipo do atacante (STAB = 1.5x)
         $tipoAtacante = strtolower(trim($atacante['tipo'] ?? 'normal'));
-        $tipoDefensor = strtolower(trim($defensor['tipo'] ?? 'normal'));
+        $multStab = ($tipoGolpe !== 'normal' && $tipoGolpe === $tipoAtacante) ? 1.5 : 1.0;
 
-        // 1. Chance de Acerto Critico (1 em 16 = 6.25%)
-        $isCritico = (rand(1, 16) === 1);
+        // Chance simples de acerto critico (1 chance em 10 = 10%)
+        $isCritico = (rand(1, 10) === 1);
         $multCritico = $isCritico ? 1.5 : 1.0;
 
-        // Se for critico, ignora penalidades negativas de ataque
-        $atkMult = (float)($modsAtacante['atk_mult'] ?? 1.0);
-        if ($isCritico && $atkMult < 1.0) {
-            $atkMult = 1.0;
-        }
+        // Pequena variacao aleatoria (90% a 100%)
+        $variacao = rand(90, 100) / 100.0;
 
-        $defMult = (float)($modsDefensor['def_mult'] ?? 1.0);
-        if ($isCritico && $defMult > 1.0) {
-            $defMult = 1.0;
-        }
-
-        // Categoria do golpe (Fisico vs Especial)
-        $categoria = strtolower($movimento['damage_class'] ?? $movimento['categoria'] ?? 'physical');
-        if ($categoria === 'special' || $categoria === 'especial') {
-            $atkEfetivo = max(1, (int)(($atacante['ataque'] ?? 40) * $atkMult * 1.1));
-            $defEfetiva = max(1, (int)(($defensor['defesa'] ?? 40) * $defMult));
-        } else {
-            $atkEfetivo = max(1, (int)(($atacante['ataque'] ?? 40) * $atkMult));
-            $defEfetiva = max(1, (int)(($defensor['defesa'] ?? 40) * $defMult));
-        }
-
-        // 2. Dano Base oficial
-        $danoBase = ((($nivel * 2 / 5) + 2) * $poder * ($atkEfetivo / $defEfetiva)) / 50 + 2;
-
-        // 3. Multiplicador de Tipo
-        $multTipo = $calcularMultiplicador($tipoMov, $tipoDefensor);
-
-        // Se for imune (0.0x), nao ha dano
-        if ($multTipo == 0.0) {
-            return [
-                'dano'      => 0,
-                'multTipo'  => 0.0,
-                'isCritico' => false,
-                'isStab'    => false
-            ];
-        }
-
-        // 4. STAB (Same Type Attack Bonus - 1.5x)
-        $isStab = ($tipoMov !== 'normal' && $tipoMov === $tipoAtacante);
-        $multStab = $isStab ? 1.5 : 1.0;
-
-        // 5. Variacao Aleatoria oficial (0.85 a 1.00)
-        $variacaoRng = rand(85, 100) / 100.0;
-
-        // 6. Dano Final Total
-        $danoFinal = (int)floor($danoBase * $variacaoRng * $multStab * $multTipo * $multCritico);
+        // Dano final simples arredondado
+        $danoFinal = (int)round($danoBase * $multTipo * $multStab * $multCritico * $variacao);
 
         return [
             'dano'      => max(1, $danoFinal),
             'multTipo'  => $multTipo,
-            'isCritico' => $isCritico,
-            'isStab'    => $isStab
+            'isCritico' => $isCritico
         ];
     };
 
@@ -341,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $novoHp = min($hpMax, $hpAtual + $cura);
                     $pokemonJogador['hpAtual'] = $novoHp;
                     $salvarHpBanco($pokemonJogador);
-                    $combate['mensagens'][] = "[+{$cura} HP]";
+                    $combate['mensagens'][] = "Vida recuperada: +{$cura} HP";
                     $combate['mensagens'][] = "{$nomeJogador} recuperou vida!";
                 } else {
                     $combate['mensagens'][] = "O movimento teve efeito!";
@@ -357,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $hpInimigo = max(0, (int)($pokemonInimigo['hpAtual'] ?? $pokemonInimigo['hpMaximo'] ?? 45) - $dano);
                     $pokemonInimigo['hpAtual'] = $hpInimigo;
 
-                    $combate['mensagens'][] = "[-{$dano} HP]";
+                    $combate['mensagens'][] = "Dano causado: -{$dano} HP";
 
                     if ($res['isCritico']) {
                         $combate['mensagens'][] = "Um acerto crítico!";
@@ -419,7 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach (['fisico', 'especial'] as $t) {
                     if (!empty($golpesInimigo[$t])) {
                         $m = $golpesInimigo[$t];
-                        $mult = $calcularMultiplicador($m['tipo'] ?? 'normal', $tipoJog);
+                        $mult = $obterVantagemTipo($m['tipo'] ?? 'normal', $tipoJog);
                         if ($mult > 1.0) {
                             $melhorGolpe = $t;
                             break;
@@ -463,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $pokemonJogador['hpAtual'] = $hpJog;
                         $salvarHpBanco($pokemonJogador);
 
-                        $combate['mensagens'][] = "[-{$dIni} HP]";
+                        $combate['mensagens'][] = "Dano sofrido: -{$dIni} HP";
 
                         if ($resIni['isCritico']) {
                             $combate['mensagens'][] = "Um acerto crítico!";
@@ -674,33 +619,19 @@ $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimento
 
     <hr>
 
-    <!-- HISTÓRICO DE MENSAGENS (ESTILO LOG POKÉROGUE) -->
+    <!-- HISTÓRICO DE MENSAGENS SIMPLES E DIRETO -->
     <h3>Histórico da Batalha:</h3>
-    <div style="border: 1px solid #aaa; padding: 12px; margin-bottom: 15px; background: #fdfdfd; min-height: 80px; font-family: monospace; font-size: 15px; line-height: 1.6;">
-        <?php if (empty($mensagensLog)): ?>
-            <em>A batalha começou! Escolha uma ação abaixo.</em>
-        <?php else: ?>
+    <?php if (empty($mensagensLog)): ?>
+        <p><em>A batalha começou! Escolha uma ação abaixo.</em></p>
+    <?php else: ?>
+        <ul>
             <?php foreach ($mensagensLog as $msg): ?>
-                <?php 
-                    $estilo = '';
-                    if (str_starts_with($msg, '[-')) {
-                        $estilo = 'color: #d32f2f; font-weight: bold; font-size: 16px;';
-                    } elseif (str_starts_with($msg, '[+')) {
-                        $estilo = 'color: #2e7d32; font-weight: bold; font-size: 16px;';
-                    } elseif ($msg === 'Um acerto crítico!') {
-                        $estilo = 'color: #1976d2; font-weight: bold;';
-                    } elseif ($msg === 'É super eficaz!') {
-                        $estilo = 'color: #d32f2f; font-weight: bold;';
-                    } elseif ($msg === 'Não é muito eficaz...') {
-                        $estilo = 'color: #757575;';
-                    } elseif (str_contains($msg, 'desmaiou')) {
-                        $estilo = 'color: #c2185b; font-weight: bold;';
-                    }
-                ?>
-                <div style="<?= $estilo ?>"><?= htmlspecialchars($msg) ?></div>
+                <li><strong><?= htmlspecialchars($msg) ?></strong></li>
             <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+        </ul>
+    <?php endif; ?>
+
+    <hr>
 
     <!-- ======================================================================
          AREA DE COMANDOS E FLUXO DE BATALHA
