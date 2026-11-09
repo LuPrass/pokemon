@@ -147,7 +147,7 @@ class TimeController {
                     $idPk = (int)($pokemon['id'] ?? $pokemon['id_pokedex'] ?? 0);
                     $nomePk = $pokemon['nome'] ?? $pokemon['name'] ?? '';
                     $tipoPk = $pokemon['tipo'] ?? 'normal';
-                    $pokemon['movimentos'] = PokeApiService::obterMovimentosPadrao($idPk, $nomePk, $tipoPk);
+                    $pokemon['movimentos'] = PokeApiService::obterMovimentosPokemon($idPk, $nomePk, $tipoPk);
                 }
             }
             unset($pokemon);
@@ -158,7 +158,7 @@ class TimeController {
                     $idIni = (int)($inimigo['id'] ?? 0);
                     $nomeIni = $inimigo['nome'] ?? $inimigo['name'] ?? '';
                     $tipoIni = $inimigo['tipo'] ?? 'normal';
-                    $inimigo['movimentos'] = PokeApiService::obterMovimentosPadrao($idIni, $nomeIni, $tipoIni);
+                    $inimigo['movimentos'] = PokeApiService::obterMovimentosPokemon($idIni, $nomeIni, $tipoIni);
                 }
             }
             unset($inimigo);

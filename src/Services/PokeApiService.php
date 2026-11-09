@@ -7,8 +7,8 @@
  */
 class PokeApiService {
 
-    // IDs da Pokédex dos 12 Pokémons disponíveis no catálogo do jogo
-    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92,152,155,158];
+    // IDs da Pokédex dos 15 Pokémons disponíveis no catálogo do jogo
+    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92, 152, 155, 158];
 
     private $urlBase = "https://pokeapi.co/api/v2/pokemon/";
 
@@ -21,7 +21,7 @@ class PokeApiService {
      * com cache em memória e sessão para alto desempenho.
      */
     public function buscarMovimentoNaApi(string $nomeMove): ?array {
-        $slug = strtolower(trim(str_replace(' ', '-', $nomeMove)));
+        $slug = strtolower(trim(str_replace([' ', '_'], '-', $nomeMove)));
         if ($slug === '') return null;
 
         if (isset(self::$cacheMoves[$slug])) {
@@ -52,13 +52,16 @@ class PokeApiService {
         $dados = json_decode($json, true);
         if (!is_array($dados)) return null;
 
+        $classeDano = $dados['damage_class']['name'] ?? 'physical';
         $moveFormatado = [
-            'nome'         => ucfirst(str_replace('-', ' ', $dados['name'])),
-            'categoria'    => $dados['damage_class']['name'] ?? 'physical',
+            'nome'         => ucwords(str_replace('-', ' ', $dados['name'] ?? $slug)),
+            'damage_class' => $classeDano,
+            'categoria'    => $classeDano,
             'tipo'         => $dados['type']['name'] ?? 'normal',
-            'poder'        => (int)($dados['power'] ?? 40),
+            'poder'        => (int)($dados['power'] ?? ($classeDano === 'status' ? 0 : 40)),
             'precisao'     => (int)($dados['accuracy'] ?? 100),
-            'efeito'       => $dados['stat_changes'][0] ?? null
+            'efeito'       => self::extrairEfeitoMove($dados),
+            'desc'         => self::extrairDescricaoMove($dados)
         ];
 
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -66,6 +69,135 @@ class PokeApiService {
         }
 
         return self::$cacheMoves[$slug] = $moveFormatado;
+    }
+
+    /**
+     * Determina o efeito de batalha para golpes de status a partir dos dados da PokéAPI
+     */
+    public static function extrairEfeitoMove(array $dadosMove): string {
+        $nome = strtolower($dadosMove['name'] ?? '');
+
+        $movesCura = ['recover', 'rest', 'soft-boiled', 'roost', 'synthesis', 'morning-sun', 'moonlight', 'slack-off', 'milk-drink', 'heal-order', 'swallow', 'wish'];
+        if (in_array($nome, $movesCura) || (!empty($dadosMove['meta']['healing']) && $dadosMove['meta']['healing'] > 0)) {
+            return 'curar_proprio';
+        }
+
+        foreach (($dadosMove['stat_changes'] ?? []) as $sc) {
+            $statName = $sc['stat']['name'] ?? '';
+            $change = (int)($sc['change'] ?? 0);
+            if ($statName === 'attack' && $change < 0) return 'reduzir_atk';
+            if ($statName === 'defense' && $change < 0) return 'reduzir_def';
+            if ($statName === 'accuracy' && $change < 0) return 'reduzir_precisao';
+        }
+
+        $ailment = strtolower($dadosMove['meta']['ailment']['name'] ?? '');
+        if ($ailment === 'paralysis') return 'paralisar';
+        if ($ailment === 'sleep') return 'dormir';
+        if ($ailment === 'poison') return 'envenenar';
+
+        if (in_array($nome, ['thunder-wave', 'glare', 'stun-spore', 'nuzzle', 'zap-cannon'])) {
+            return 'paralisar';
+        }
+        if (in_array($nome, ['leer', 'tail-whip', 'screech', 'tickle', 'acid-spray'])) {
+            return 'reduzir_def';
+        }
+        if (in_array($nome, ['sand-attack', 'smokescreen', 'flash', 'kinesis', 'mud-slap'])) {
+            return 'reduzir_precisao';
+        }
+
+        return 'reduzir_atk';
+    }
+
+    /**
+     * Extrai descrição curta do movimento a partir das entradas de texto
+     */
+    public static function extrairDescricaoMove(array $dadosMove): string {
+        foreach (($dadosMove['flavor_text_entries'] ?? []) as $entry) {
+            if (($entry['language']['name'] ?? '') === 'en') {
+                return preg_replace('/\s+/', ' ', trim($entry['flavor_text']));
+            }
+        }
+        return 'Movimento carregado da PokéAPI.';
+    }
+
+    /**
+     * Carrega dinamicamente 3 categorias de movimentos para o Pokémon (1 Físico, 1 Especial, 1 Status)
+     */
+    public function carregarMovimentosDaApi(array $movesDoPokemon, string $tipoPokemon = 'normal'): array {
+        $movimentos = [];
+
+        foreach ($movesDoPokemon as $m) {
+            if (isset($movimentos['fisico'], $movimentos['especial'], $movimentos['status'])) {
+                break;
+            }
+
+            $slug = $m['move']['name'] ?? null;
+            if (!$slug) continue;
+
+            $detalhes = $this->buscarMovimentoNaApi($slug);
+            if (!$detalhes) continue;
+
+            $cat = strtolower($detalhes['damage_class'] ?? $detalhes['categoria'] ?? 'physical');
+            if ($cat === 'physical' && !isset($movimentos['fisico'])) {
+                $movimentos['fisico'] = $detalhes;
+            } elseif ($cat === 'special' && !isset($movimentos['especial'])) {
+                $movimentos['especial'] = $detalhes;
+            } elseif ($cat === 'status' && !isset($movimentos['status'])) {
+                $movimentos['status'] = $detalhes;
+            }
+        }
+
+        // Fallbacks caso a requisição falhe ou o Pokémon não possua a categoria em níveis baixos
+        if (!isset($movimentos['fisico'])) {
+            $movimentos['fisico'] = [
+                'nome'         => 'Tackle',
+                'damage_class' => 'physical',
+                'categoria'    => 'physical',
+                'tipo'         => 'normal',
+                'poder'        => 40,
+                'precisao'     => 100,
+                'efeito'       => null,
+                'desc'         => 'Investida física corporal direta.'
+            ];
+        }
+
+        if (!isset($movimentos['especial'])) {
+            $tipoNorm = strtolower(trim($tipoPokemon));
+            $nomeEspec = 'Swift';
+            $tipoEspec = 'normal';
+            if (in_array($tipoNorm, ['fogo', 'fire'])) { $nomeEspec = 'Ember'; $tipoEspec = 'fire'; }
+            elseif (in_array($tipoNorm, ['agua', 'water'])) { $nomeEspec = 'Water Gun'; $tipoEspec = 'water'; }
+            elseif (in_array($tipoNorm, ['planta', 'grass'])) { $nomeEspec = 'Vine Whip'; $tipoEspec = 'grass'; }
+            elseif (in_array($tipoNorm, ['eletrico', 'electric'])) { $nomeEspec = 'Thundershock'; $tipoEspec = 'electric'; }
+            elseif (in_array($tipoNorm, ['psiquico', 'psychic'])) { $nomeEspec = 'Confusion'; $tipoEspec = 'psychic'; }
+            elseif (in_array($tipoNorm, ['fantasma', 'ghost'])) { $nomeEspec = 'Shadow Ball'; $tipoEspec = 'ghost'; }
+
+            $movimentos['especial'] = [
+                'nome'         => $nomeEspec,
+                'damage_class' => 'special',
+                'categoria'    => 'special',
+                'tipo'         => $tipoEspec,
+                'poder'        => 40,
+                'precisao'     => 100,
+                'efeito'       => null,
+                'desc'         => 'Ataque de energia elemental à distância.'
+            ];
+        }
+
+        if (!isset($movimentos['status'])) {
+            $movimentos['status'] = [
+                'nome'         => 'Growl',
+                'damage_class' => 'status',
+                'categoria'    => 'status',
+                'tipo'         => 'normal',
+                'poder'        => 0,
+                'precisao'     => 100,
+                'efeito'       => 'reduzir_atk',
+                'desc'         => 'Rosnado intimidador que diminui o Ataque do oponente.'
+            ];
+        }
+
+        return $movimentos;
     }
 
     /**
@@ -80,6 +212,9 @@ class PokeApiService {
             'ssl' => [
                 'verify_peer'      => false,
                 'verify_peer_name' => false
+            ],
+            'http' => [
+                'timeout' => 3
             ]
         ];
         $contexto = stream_context_create($opcoes);
@@ -91,6 +226,9 @@ class PokeApiService {
         }
 
         $dados = json_decode($json, true);
+        if (!is_array($dados)) {
+            return false;
+        }
 
         $baseStats = [];
         foreach (($dados['stats'] ?? []) as $stat) {
@@ -101,11 +239,13 @@ class PokeApiService {
             }
         }
 
+        $tipoPrincipal = $dados['types'][0]['type']['name'] ?? 'normal';
+
         // Pega as informações formatadas para o jogo
         $pokemon = [
             'id'            => $dados['id'],
             'nome'          => $dados['name'],
-            'tipo'          => $dados['types'][0]['type']['name'] ?? 'normal',
+            'tipo'          => $tipoPrincipal,
             'nivel'         => 5,
             'hp'            => $baseStats['hp'] ?? 0,
             'ataque'        => $baseStats['attack'] ?? 0,
@@ -120,7 +260,7 @@ class PokeApiService {
             'imagem'        => $dados['sprites']['front_default'] ?? '',
             'imagemCostas'  => $dados['sprites']['back_default'] ?? '',
             'imagemArtwork' => $dados['sprites']['other']['official-artwork']['front_default'] ?? ($dados['sprites']['front_default'] ?? ''),
-            'movimentos'    => self::obterMovimentosPadrao((int)$dados['id'], $dados['name'], $dados['types'][0]['type']['name'] ?? 'normal')
+            'movimentos'    => $this->carregarMovimentosDaApi($dados['moves'] ?? [], $tipoPrincipal)
         ];
 
         return $pokemon;
@@ -169,7 +309,7 @@ class PokeApiService {
             'imagemFrente'   => $info['imagem'],
             'imagemCostas'   => $info['imagemCostas'],
             'gif'            => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/' . $info['id'] . '.gif',
-            'movimentos'     => self::obterMovimentosPadrao((int)$info['id'], $info['nome'], $info['tipo'])
+            'movimentos'     => $info['movimentos'] ?? []
         ];
 
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -180,129 +320,12 @@ class PokeApiService {
     }
 
     /**
-     * Mapeia os 3 tipos canônicos de ataque da PokéAPI para cada Pokémon:
-     * - Físico (Physical): dano direto baseado em Atk vs Def
-     * - Especial (Special): dano de energia/feixes baseado em poder elemental
-     * - Status (Efeito): altera atributos (Atk/Def), causa condições ou cura vida
+     * Carrega os movimentos de um Pokémon buscando diretamente na PokéAPI por ID ou nome
      */
-    public static function obterMovimentosPadrao(int $idPokedex, string $nome = '', string $tipo = 'normal'): array {
-        $nomeLimpo = strtolower(trim($nome));
-
-        $catalogoPorId = [
-            1 => [ // Bulbasaur
-                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto corporal.'],
-                'especial' => ['nome' => 'Vine Whip', 'nomePt' => 'Chicote de Vinha', 'damage_class' => 'special', 'tipo' => 'grass', 'poder' => 45, 'desc' => 'Golpe com vinhas carregadas de energia vegetal à distância.'],
-                'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
-            ],
-            252 => [ // Treecko
-                'fisico'   => ['nome' => 'Pound', 'nomePt' => 'Pancada', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Golpe físico com a cauda.'],
-                'especial' => ['nome' => 'Mega Drain', 'nomePt' => 'Mega Dreno', 'damage_class' => 'special', 'tipo' => 'grass', 'poder' => 40, 'desc' => 'Drena energia vegetal do oponente à distância.'],
-                'status'   => ['nome' => 'Leer', 'nomePt' => 'Olhar Encarador', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_def', 'desc' => 'Encarada intimidadora que diminui a Defesa do oponente em 20%.']
-            ],
-            4 => [ // Charmander
-                'fisico'   => ['nome' => 'Scratch', 'nomePt' => 'Arranhão', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto usando garras afiadas.'],
-                'especial' => ['nome' => 'Ember', 'nomePt' => 'Brasas', 'damage_class' => 'special', 'tipo' => 'fire', 'poder' => 40, 'desc' => 'Projéteis de fogo ardente disparados à distância.'],
-                'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
-            ],
-            255 => [ // Torchic
-                'fisico'   => ['nome' => 'Scratch', 'nomePt' => 'Arranhão', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Ataque físico direto usando garras.'],
-                'especial' => ['nome' => 'Ember', 'nomePt' => 'Brasas', 'damage_class' => 'special', 'tipo' => 'fire', 'poder' => 40, 'desc' => 'Lança brasas de fogo concentradas à distância.'],
-                'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
-            ],
-            7 => [ // Squirtle
-                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Impacto físico corporal direto.'],
-                'especial' => ['nome' => 'Water Gun', 'nomePt' => 'Jato d\'Água', 'damage_class' => 'special', 'tipo' => 'water', 'poder' => 40, 'desc' => 'Jato de água pressurizada lançado à distância.'],
-                'status'   => ['nome' => 'Tail Whip', 'nomePt' => 'Chicote de Cauda', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_def', 'desc' => 'Diminui a Defesa do oponente em 20%.']
-            ],
-            258 => [ // Mudkip
-                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Investida corporal direta.'],
-                'especial' => ['nome' => 'Water Gun', 'nomePt' => 'Jato d\'Água', 'damage_class' => 'special', 'tipo' => 'water', 'poder' => 40, 'desc' => 'Disparo de energia aquática à distância.'],
-                'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
-            ],
-            25 => [ // Pikachu
-                'fisico'   => ['nome' => 'Quick Attack', 'nomePt' => 'Ataque Rápido', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Avanço físico em velocidade extrema.'],
-                'especial' => ['nome' => 'Thundershock', 'nomePt' => 'Choque do Trovão', 'damage_class' => 'special', 'tipo' => 'electric', 'poder' => 40, 'desc' => 'Descarga de raios elétricos arremessada à distância.'],
-                'status'   => ['nome' => 'Thunder Wave', 'nomePt' => 'Onda de Trovão', 'damage_class' => 'status', 'tipo' => 'electric', 'efeito' => 'paralisar', 'desc' => 'Paralisa o adversário, diminuindo sua velocidade e chance de ação.']
-            ],
-            179 => [ // Mareep
-                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Investida física corporal.'],
-                'especial' => ['nome' => 'Thundershock', 'nomePt' => 'Choque do Trovão', 'damage_class' => 'special', 'tipo' => 'electric', 'poder' => 40, 'desc' => 'Disparo de energia estática à distância.'],
-                'status'   => ['nome' => 'Thunder Wave', 'nomePt' => 'Onda de Trovão', 'damage_class' => 'status', 'tipo' => 'electric', 'efeito' => 'paralisar', 'desc' => 'Paralisa o adversário, diminuindo sua velocidade e chance de ação.']
-            ],
-            63 => [ // Abra
-                'fisico'   => ['nome' => 'Headbutt', 'nomePt' => 'Cabeçada', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 35, 'desc' => 'Golpe físico direto.'],
-                'especial' => ['nome' => 'Confusion', 'nomePt' => 'Confusão', 'damage_class' => 'special', 'tipo' => 'psychic', 'poder' => 50, 'desc' => 'Feixe de energia mental psíquica pura à distância.'],
-                'status'   => ['nome' => 'Recover', 'nomePt' => 'Recuperar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'curar_proprio', 'desc' => 'Recupera até 30% do próprio HP!']
-            ],
-            92 => [ // Gastly
-                'fisico'   => ['nome' => 'Lick', 'nomePt' => 'Lambida', 'damage_class' => 'physical', 'tipo' => 'ghost', 'poder' => 30, 'desc' => 'Contato físico espectral frio.'],
-                'especial' => ['nome' => 'Shadow Ball', 'nomePt' => 'Bola Sombria', 'damage_class' => 'special', 'tipo' => 'ghost', 'poder' => 50, 'desc' => 'Esfera de energia sombria disparada à distância.'],
-                'status'   => ['nome' => 'Spite', 'nomePt' => 'Rancor', 'damage_class' => 'status', 'tipo' => 'ghost', 'efeito' => 'reduzir_atk', 'desc' => 'Energia negativa que reduz o Ataque do oponente em 20%.']
-            ],
-            133 => [ // Eevee
-                'fisico'   => ['nome' => 'Bite', 'nomePt' => 'Mordida', 'damage_class' => 'physical', 'tipo' => 'dark', 'poder' => 40, 'desc' => 'Mordida física direta com mandíbulas afiadas.'],
-                'especial' => ['nome' => 'Swift', 'nomePt' => 'Ataque Veloz', 'damage_class' => 'special', 'tipo' => 'normal', 'poder' => 45, 'desc' => 'Dispara estrelas de energia luminosa à distância.'],
-                'status'   => ['nome' => 'Tail Whip', 'nomePt' => 'Chicote de Cauda', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_def', 'desc' => 'Diminui a Defesa do oponente em 20%.']
-            ],
-            143 => [ // Snorlax
-                'fisico'   => ['nome' => 'Body Slam', 'nomePt' => 'Pancada Corporal', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 50, 'desc' => 'Impacto físico maciço com todo o peso do corpo.'],
-                'especial' => ['nome' => 'Snore', 'nomePt' => 'Ronco Sônico', 'damage_class' => 'special', 'tipo' => 'normal', 'poder' => 45, 'desc' => 'Onda acústica de energia disparada à distância.'],
-                'status'   => ['nome' => 'Rest', 'nomePt' => 'Descansar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'curar_proprio', 'desc' => 'Cochila e recupera até 35% do próprio HP!']
-            ],
-            152 => [ // Chikorita
-                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto corporal.'],
-                'especial' => ['nome' => 'Razor Leaf', 'nomePt' => 'Folha Navalha', 'damage_class' => 'special', 'tipo' => 'grass', 'poder' => 55, 'desc' => 'Lâminas de folhas afiadas disparadas à distância.'],
-                'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
-            ],
-            155 => [ // Cyndaquil
-                'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto corporal.'],
-                'especial' => ['nome' => 'Ember', 'nomePt' => 'Brasas', 'damage_class' => 'special', 'tipo' => 'fire', 'poder' => 40, 'desc' => 'Projéteis de fogo ardente disparados à distância.'],
-                'status'   => ['nome' => 'Smokescreen', 'nomePt' => 'Cortina de Fumaça', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_precisao', 'desc' => 'Reduz a precisão do oponente em 20%.']
-            ],
-            158 => [ // Totodile
-                'fisico'   => ['nome' => 'Scratch', 'nomePt' => 'Arranhão', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico direto usando garras afiadas.'],
-                'especial' => ['nome' => 'Water Gun', 'nomePt' => 'Jato d\'Água', 'damage_class' => 'special', 'tipo' => 'water', 'poder' => 40, 'desc' => 'Jato de água pressurizada lançado à distância.'],
-                'status'   => ['nome' => 'Leer', 'nomePt' => 'Olhar Encarador', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_def', 'desc' => 'Encarada intimidadora que diminui a Defesa do oponente em 20%.']
-            ]
-        ];
-
-        if (isset($catalogoPorId[$idPokedex])) {
-            return $catalogoPorId[$idPokedex];
-        }
-
-        // Busca por nome se ID não for o principal
-        foreach ($catalogoPorId as $id => $movs) {
-            $pkNome = strtolower(self::listarNomesPadrao()[$id] ?? '');
-            if ($pkNome !== '' && (strpos($nomeLimpo, $pkNome) !== false || strpos($pkNome, $nomeLimpo) !== false)) {
-                return $movs;
-            }
-        }
-
-        // Fallback genérico por tipo
-        $tipoNorm = strtolower(trim($tipo));
-        $golpeEspecial = 'Swift';
-        $tipoEspecial = 'normal';
-        if ($tipoNorm === 'fogo' || $tipoNorm === 'fire') { $golpeEspecial = 'Ember'; $tipoEspecial = 'fire'; }
-        elseif ($tipoNorm === 'agua' || $tipoNorm === 'water') { $golpeEspecial = 'Water Gun'; $tipoEspecial = 'water'; }
-        elseif ($tipoNorm === 'planta' || $tipoNorm === 'grass') { $golpeEspecial = 'Vine Whip'; $tipoEspecial = 'grass'; }
-        elseif ($tipoNorm === 'eletrico' || $tipoNorm === 'electric') { $golpeEspecial = 'Thundershock'; $tipoEspecial = 'electric'; }
-        elseif ($tipoNorm === 'psiquico' || $tipoNorm === 'psychic') { $golpeEspecial = 'Confusion'; $tipoEspecial = 'psychic'; }
-        elseif ($tipoNorm === 'fantasma' || $tipoNorm === 'ghost') { $golpeEspecial = 'Shadow Ball'; $tipoEspecial = 'ghost'; }
-
-        return [
-            'fisico'   => ['nome' => 'Tackle', 'nomePt' => 'Investida', 'damage_class' => 'physical', 'tipo' => 'normal', 'poder' => 40, 'desc' => 'Dano físico corporal direto.'],
-            'especial' => ['nome' => $golpeEspecial, 'nomePt' => $golpeEspecial, 'damage_class' => 'special', 'tipo' => $tipoEspecial, 'poder' => 40, 'desc' => 'Ataque de energia elemental à distância.'],
-            'status'   => ['nome' => 'Growl', 'nomePt' => 'Rosnar', 'damage_class' => 'status', 'tipo' => 'normal', 'efeito' => 'reduzir_atk', 'desc' => 'Diminui o Ataque do oponente em 20%.']
-        ];
-    }
-
-    private static function listarNomesPadrao(): array {
-        return [
-            1 => 'bulbasaur', 252 => 'treecko', 4 => 'charmander', 255 => 'torchic',
-            7 => 'squirtle', 258 => 'mudkip', 25 => 'pikachu', 179 => 'mareep',
-            133 => 'eevee', 143 => 'snorlax', 63 => 'abra', 92 => 'gastly',
-            152 => 'chikorita', 155 => 'cyndaquil', 158 => 'totodile'
-        ];
+    public static function obterMovimentosPokemon($idOuNome): array {
+        $api = new self();
+        $poke = $api->buscarPokemon((string)$idOuNome);
+        return $poke['movimentos'] ?? [];
     }
 
     /**
