@@ -703,45 +703,106 @@ $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimento
     </div>
 
     <!-- ======================================================================
-         MINI MENU: "O que o pokemon deve fazer?"
+         AREA DE COMANDOS E FLUXO DE BATALHA
          ====================================================================== -->
-    <h2>O que <?= htmlspecialchars($nomeJog) ?> deve fazer?</h2>
+    <?php if ($statusCombate === 'vitoria_rodada'): ?>
 
-    <?php if ($statusCombate === 'em_combate'): ?>
+        <h2>🎉 Batalha Concluída!</h2>
+        <p><strong>Você derrotou <?= htmlspecialchars($nomeIni) ?>!</strong></p>
+        <form method="POST" style="margin: 20px 0;">
+            <input type="hidden" name="acao" value="proxima_batalha">
+            <button type="submit" style="font-size: 18px; padding: 12px 28px; cursor: pointer;">
+                Avançar para a Próxima Batalha (<?= $batalhaAtual + 1 ?> de <?= $totalBatalhas ?>) →
+            </button>
+        </form>
+
+    <?php elseif ($statusCombate === 'campeao'): ?>
+
+        <h2>🏆 PARABÉNS! VOCÊ CONQUISTOU A POKÉARENA!</h2>
+        <p>Você derrotou com sucesso todos os 9 adversários da campanha!</p>
+        <form method="POST">
+            <input type="hidden" name="acao" value="reiniciar">
+            <button type="submit" style="font-size: 16px; padding: 10px 22px;">Jogar Novamente do Início</button>
+        </form>
+
+    <?php elseif ($statusCombate === 'derrota_sem_pokemon'): ?>
+
+        <h2>💀 Fim de Combate: Todos os seus Pokémon desmaiaram!</h2>
+        <p>Você ainda possui P$ <?= number_format($usuarioDinheiro, 0, ',', '.') ?>. Vá até a Loja ou Centro Pokémon para curar sua equipe:</p>
+        <p>
+            <a href="index.php?rota=loja">Ir para a Loja (PokéMart)</a> | 
+            <a href="index.php?rota=centro">Ir para o Centro Pokémon</a>
+        </p>
+
+    <?php elseif ($statusCombate === 'em_combate'): ?>
 
         <?php if ($hpAtualJog <= 0): ?>
 
-            <p><strong>Seu Pokémon ativo desmaiou! Você deve trocar por outro Pokémon da sua equipe.</strong></p>
-            <form method="POST">
-                <input type="hidden" name="acao" value="abrir_menu">
-                <input type="hidden" name="menu_alvo" value="trocar">
-                <button type="submit">🔄 Escolher outro Pokémon da Equipe</button>
-            </form>
+            <!-- Transicao rapida: abre direto a troca se o ativo desmaiou -->
+            <h3>Seu <?= htmlspecialchars($nomeJog) ?> desmaiou! Escolha quem entra em campo:</h3>
+            <table border="1" cellpadding="8" cellspacing="0" width="100%">
+                <tr>
+                    <th>Slot</th>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>HP</th>
+                    <th>Ação</th>
+                </tr>
+                <?php foreach ($meuTime as $idx => $pk): ?>
+                    <?php 
+                        $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
+                        $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
+                        $desmaiado = ($pkHpAtual <= 0);
+                        $emCampo = ($idx === $ativoIdx);
+                    ?>
+                    <tr>
+                        <td><?= $idx + 1 ?></td>
+                        <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
+                        <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
+                        <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
+                        <td>
+                            <?php if ($emCampo): ?>
+                                <em>[Em Campo - Desmaiado]</em>
+                            <?php elseif ($desmaiado): ?>
+                                <em>Desmaiado (HP = 0)</em>
+                            <?php else: ?>
+                                <form method="POST" style="margin:0;">
+                                    <input type="hidden" name="acao" value="trocar">
+                                    <input type="hidden" name="novo_idx" value="<?= $idx ?>">
+                                    <button type="submit" style="font-size: 15px; padding: 6px 14px; cursor: pointer;">Entrar em Campo</button>
+                                </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
 
         <?php elseif ($menuAberto === 'principal'): ?>
 
+            <h2>O que <?= htmlspecialchars($nomeJog) ?> deve fazer?</h2>
             <!-- MINI MENU: LUTAR | POKÉMON (TROCAR) | FUGIR -->
             <form method="POST" style="display:inline-block; margin-right: 10px;">
                 <input type="hidden" name="acao" value="abrir_menu">
                 <input type="hidden" name="menu_alvo" value="lutar">
-                <button type="submit" style="font-size: 16px; padding: 8px 16px;">⚔️ Lutar</button>
+                <button type="submit" style="font-size: 16px; padding: 8px 18px; cursor: pointer;">⚔️ Lutar</button>
             </form>
 
             <form method="POST" style="display:inline-block; margin-right: 10px;">
                 <input type="hidden" name="acao" value="abrir_menu">
                 <input type="hidden" name="menu_alvo" value="trocar">
-                <button type="submit" style="font-size: 16px; padding: 8px 16px;">🔄 Pokémon (Trocar)</button>
+                <button type="submit" style="font-size: 16px; padding: 8px 18px; cursor: pointer;">🔄 Pokémon (Trocar)</button>
             </form>
 
             <form method="POST" style="display:inline-block;">
                 <input type="hidden" name="acao" value="fugir">
-                <button type="submit" style="font-size: 16px; padding: 8px 16px;" onclick="return confirm('Deseja realmente fugir do combate e voltar ao menu?');">🏃 Fugir</button>
+                <button type="submit" style="font-size: 16px; padding: 8px 18px; cursor: pointer;" onclick="return confirm('Deseja realmente fugir da batalha?');">🏃 Fugir</button>
             </form>
 
         <?php elseif ($menuAberto === 'lutar'): ?>
 
+            <h2>O que <?= htmlspecialchars($nomeJog) ?> deve fazer?</h2>
             <!-- SUBMENU: ESCOLHA DO ATAQUE (APENAS O NOME DO GOLPE) -->
-            <p><strong>Escolha um ataque para <?= htmlspecialchars($nomeJog) ?>:</strong></p>
+            <p><strong>Escolha um ataque:</strong></p>
 
             <div style="margin: 15px 0;">
                 <?php foreach (['fisico', 'especial', 'status'] as $chave): ?>
@@ -765,14 +826,13 @@ $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimento
 
         <?php elseif ($menuAberto === 'trocar'): ?>
 
-            <!-- SUBMENU DE TROCA DA EQUIPE -->
-            <h3>Escolha qual Pokémon colocar em campo:</h3>
+            <h2>Trocar Pokémon:</h2>
             <table border="1" cellpadding="8" cellspacing="0" width="100%">
                 <tr>
                     <th>Slot</th>
                     <th>Nome</th>
                     <th>Tipo</th>
-                    <th>HP Atual / Máximo</th>
+                    <th>HP</th>
                     <th>Situação</th>
                     <th>Ação</th>
                 </tr>
@@ -806,7 +866,7 @@ $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimento
                                 <form method="POST" style="margin:0;">
                                     <input type="hidden" name="acao" value="trocar">
                                     <input type="hidden" name="novo_idx" value="<?= $idx ?>">
-                                    <button type="submit">Colocar em Campo</button>
+                                    <button type="submit" style="cursor:pointer;">Colocar em Campo</button>
                                 </form>
                             <?php endif; ?>
                         </td>
@@ -815,42 +875,13 @@ $movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimento
             </table>
 
             <br>
-            <?php if ($hpAtualJog > 0): ?>
-                <form method="POST">
-                    <input type="hidden" name="acao" value="abrir_menu">
-                    <input type="hidden" name="menu_alvo" value="principal">
-                    <button type="submit">← Voltar às Opções</button>
-                </form>
-            <?php endif; ?>
+            <form method="POST">
+                <input type="hidden" name="acao" value="abrir_menu">
+                <input type="hidden" name="menu_alvo" value="principal">
+                <button type="submit">← Voltar às Opções</button>
+            </form>
 
         <?php endif; ?>
-
-    <?php elseif ($statusCombate === 'vitoria_rodada'): ?>
-
-        <p><strong>Vitória! Você derrotou o <?= htmlspecialchars($nomeIni) ?>!</strong></p>
-        <form method="POST">
-            <input type="hidden" name="acao" value="proxima_batalha">
-            <button type="submit" style="font-size: 16px; padding: 10px 20px;">
-                Avançar para a Próxima Batalha (<?= $batalhaAtual + 1 ?> de <?= $totalBatalhas ?>) →
-            </button>
-        </form>
-
-    <?php elseif ($statusCombate === 'campeao'): ?>
-
-        <p><strong>🏆 PARABÉNS! VOCÊ CONQUISTOU A POKÉARENA E VENCEU AS 9 BATALHAS!</strong></p>
-        <form method="POST">
-            <input type="hidden" name="acao" value="reiniciar">
-            <button type="submit">Jogar Novamente do Início</button>
-        </form>
-
-    <?php elseif ($statusCombate === 'derrota_sem_pokemon'): ?>
-
-        <p><strong>Todos os seus Pokémon desmaiaram!</strong></p>
-        <p>Você ainda possui P$ <?= $usuarioDinheiro ?>. Acesse o PokéMart ou o Centro Pokémon para recuperar a saúde do seu time:</p>
-        <p>
-            <a href="index.php?rota=loja">Ir para a Loja (PokéMart)</a> | 
-            <a href="index.php?rota=centro">Ir para o Centro Pokémon</a>
-        </p>
 
     <?php endif; ?>
 
