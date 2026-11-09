@@ -328,6 +328,11 @@ class PokeApiService {
         return $poke['movimentos'] ?? [];
     }
 
+    public static function obterMovimentosPadrao($idOuNome, string $nome = '', string $tipoPokemon = 'normal'): array {
+        $api = new self();
+        return $api->carregarMovimentosDaApi([], $tipoPokemon);
+    }
+
     /**
      * Lista todos os Pokémons disponíveis no catálogo
      */
