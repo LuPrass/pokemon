@@ -3,7 +3,37 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!class_exists('Conexao')) {
+    require_once __DIR__ . '/../../../Autoload.php';
+}
+
+$pdo = Conexao::getConnection();
+
+// Usuário atual
+$usuarioId = (int)($_SESSION['usuario_id'] ?? 1);
 $usuarioNome = $_SESSION['usuario'] ?? 'Treinador';
+
+// 1. Itens da mochila: atualmente vazia pois o usuário não adquiriu nenhum item ainda
+$itensMochila = $_SESSION['mochila'] ?? [];
+
+// 2. Busca o time atual do usuário (seja da sessão ou do banco de dados)
+$meuTime = $_SESSION['meu_time'] ?? [];
+
+if (empty($meuTime) && $usuarioId > 0) {
+    $stmtTime = $pdo->prepare("
+        SELECT p.id, p.nome, p.tipo, p.nivel, p.hp_maximo, p.hp_atual, p.status_condicao
+        FROM time t
+        JOIN pokemon p ON t.pokemon_id = p.id
+        WHERE t.usuario_id = :uid
+        ORDER BY t.posicao ASC
+    ");
+    $stmtTime->execute([':uid' => $usuarioId]);
+    $timeBanco = $stmtTime->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($timeBanco)) {
+        $meuTime = $timeBanco;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -19,8 +49,8 @@ $usuarioNome = $_SESSION['usuario'] ?? 'Treinador';
         <h1>🎒 Mochila do Treinador</h1>
         <p>Treinador: <strong><?php echo htmlspecialchars($usuarioNome); ?></strong></p>
         <nav>
-            <a href="index.php?rota=loja">Ir ao PokéMart</a> |
-            <a href="index.php?rota=menu">Menu Principal</a> |
+            <a href="index.php?rota=loja">Ir ao PokéMart</a>
+            <a href="index.php?rota=menu">Menu Principal</a>
             <a href="index.php?rota=batalha">Batalha</a>
         </nav>
     </header>
@@ -28,128 +58,98 @@ $usuarioNome = $_SESSION['usuario'] ?? 'Treinador';
     <hr>
 
     <section>
-        <h2>Compartimentos da Mochila</h2>
+        <h2>Itens na Mochila</h2>
         <p>Os itens comprados no PokéMart (mart.php) serão guardados aqui.</p>
 
-        <!-- Filtros visuais simples -->
-        <div>
-            <label>Filtrar por tipo:</label>
-            <select>
-                <option value="todos">Todos os Itens</option>
-                <option value="restaurador">Restauradores de HP</option>
-                <option value="cura">Cura de Status</option>
-                <option value="reviver">Reviver</option>
-                <option value="evolucao">Pedras de Evolução</option>
-            </select>
-        </div>
-    </section>
-
-    <br>
-
-    <section>
-        <h2>Itens na Mochila</h2>
-
-        <table border="1" cellpadding="8" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Ícone</th>
-                    <th>Nome do Item</th>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
-                    <th>Efeito / Descrição</th>
-                    <th>Ação</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>🧪</td>
-                    <td><strong>Potion</strong></td>
-                    <td>Restaurador</td>
-                    <td>x3</td>
-                    <td>Recupera 20 pontos de HP de um Pokémon.</td>
-                    <td>
-                        <button type="button">Usar</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>🧪</td>
-                    <td><strong>Super Potion</strong></td>
-                    <td>Restaurador</td>
-                    <td>x1</td>
-                    <td>Recupera 50 pontos de HP de um Pokémon.</td>
-                    <td>
-                        <button type="button">Usar</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>💊</td>
-                    <td><strong>Antidote</strong></td>
-                    <td>Cura de Status</td>
-                    <td>x2</td>
-                    <td>Cura a condição de envenenamento.</td>
-                    <td>
-                        <button type="button">Usar</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>💊</td>
-                    <td><strong>Paralyze Heal</strong></td>
-                    <td>Cura de Status</td>
-                    <td>x1</td>
-                    <td>Cura a condição de paralisia.</td>
-                    <td>
-                        <button type="button">Usar</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>💖</td>
-                    <td><strong>Revive</strong></td>
-                    <td>Reviver</td>
-                    <td>x1</td>
-                    <td>Revive um Pokémon desmaiado com 50% de HP.</td>
-                    <td>
-                        <button type="button">Usar</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>✨</td>
-                    <td><strong>Pedra de Evolução</strong></td>
-                    <td>Evolução</td>
-                    <td>x1</td>
-                    <td>Usado para evoluir certas espécies de Pokémon.</td>
-                    <td>
-                        <button type="button">Usar</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <?php if (empty($itensMochila)): ?>
+            <p><em>Sua mochila está vazia. Você ainda não adquiriu nenhum item no PokéMart.</em></p>
+            <p><a href="index.php?rota=loja">🛒 Ir às compras no PokéMart</a></p>
+        <?php else: ?>
+            <table border="1" cellpadding="8" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Ícone</th>
+                        <th>Nome do Item</th>
+                        <th>Tipo</th>
+                        <th>Quantidade</th>
+                        <th>Efeito / Descrição</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($itensMochila as $item): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($item['icone'] ?? '📦'); ?></td>
+                            <td><strong><?php echo htmlspecialchars($item['nome'] ?? 'Item'); ?></strong></td>
+                            <td><?php echo htmlspecialchars(ucfirst($item['tipo'] ?? 'Geral')); ?></td>
+                            <td>x<?php echo (int)($item['quantidade'] ?? 1); ?></td>
+                            <td><?php echo htmlspecialchars($item['descricao'] ?? ''); ?></td>
+                            <td>
+                                <button type="button">Usar</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </section>
 
     <br>
     <hr>
 
-    <!-- Estrutura de escolha de Pokémon para quando a lógica for implementada -->
+    <!-- Área de escolha de Pokémon para uso de item -->
     <section>
-        <h3>Usar Item em um Pokémon (Front-end)</h3>
-        <form>
+        <h3>Usar Item em um Pokémon</h3>
+
+        <?php if (!empty($meuTime)): ?>
+            <form>
+                <p>
+                    <label for="pokemon_alvo">Escolha o Pokémon da sua equipe:</label>
+                    <select id="pokemon_alvo" name="pokemon_id">
+                        <option value="">-- Selecione um Pokémon do seu time --</option>
+                        <?php foreach ($meuTime as $indice => $poke): ?>
+                            <?php
+                                $nome = $poke['nome'] ?? $poke['name'] ?? "Pokémon #" . ($indice + 1);
+                                $nivel = (int)($poke['nivel'] ?? 5);
+                                $hpMax = (int)($poke['hpMaximo'] ?? $poke['hp_maximo'] ?? $poke['hp'] ?? 40);
+                                $hpAtual = (int)($poke['hpAtual'] ?? $poke['hp_atual'] ?? $hpMax);
+                                $status = $poke['statusCondicao'] ?? $poke['status_condicao'] ?? 'Normal';
+                                $tipo = ucfirst($poke['tipo'] ?? 'Normal');
+                            ?>
+                            <option value="<?php echo htmlspecialchars($poke['id'] ?? $indice); ?>">
+                                <?php echo htmlspecialchars($nome); ?> (Nv. <?php echo $nivel; ?> | <?php echo $tipo; ?> | HP: <?php echo $hpAtual; ?>/<?php echo $hpMax; ?> | Status: <?php echo htmlspecialchars($status); ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </p>
+                <p>
+                    <button type="button" disabled title="Você não possui itens na mochila para usar">
+                        Confirmar Uso do Item (Mochila Vazia)
+                    </button>
+                </p>
+            </form>
+        <?php else: ?>
             <p>
-                <label for="pokemon_alvo">Escolha o Pokémon da sua equipe:</label>
-                <select id="pokemon_alvo" name="pokemon_id">
-                    <option value="">-- Selecione um Pokémon --</option>
-                    <option value="1">Pokémon 1</option>
-                    <option value="2">Pokémon 2</option>
-                    <option value="3">Pokémon 3</option>
-                    <option value="4">Pokémon 4</option>
-                    <option value="5">Pokémon 5</option>
-                    <option value="6">Pokémon 6</option>
-                </select>
+                <strong>Aviso:</strong> Você ainda não formou nenhum time de Pokémon.
+                A opção de aplicar itens está <strong>indisponível</strong>.
             </p>
             <p>
-                <button type="button" onclick="alert('A lógica de uso de itens ainda será implementada!')">
-                    Confirmar Uso do Item
-                </button>
+                <a href="index.php?rota=builder">⚔ Montar um time no Builder</a>
             </p>
-        </form>
+            <form>
+                <p>
+                    <label for="pokemon_alvo">Escolha o Pokémon da sua equipe:</label>
+                    <select id="pokemon_alvo" name="pokemon_id" disabled>
+                        <option value="">Nenhum time formado</option>
+                    </select>
+                </p>
+                <p>
+                    <button type="button" disabled>
+                        Confirmar Uso do Item (Indisponível)
+                    </button>
+                </p>
+            </form>
+        <?php endif; ?>
     </section>
 
 </body>
