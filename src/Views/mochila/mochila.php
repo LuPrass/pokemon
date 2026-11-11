@@ -21,7 +21,7 @@ $meuTime = $_SESSION['meu_time'] ?? [];
 
 if (empty($meuTime) && $usuarioId > 0) {
     $stmtTime = $pdo->prepare("
-        SELECT p.id, p.nome, p.tipo, p.nivel, p.hp_maximo, p.hp_atual, p.status_condicao
+        SELECT p.id, p.nome, p.nivel, p.hp_atual, p.status_condicao
         FROM time t
         JOIN pokemon p ON t.pokemon_id = p.id
         WHERE t.usuario_id = :uid
@@ -111,13 +111,11 @@ if (empty($meuTime) && $usuarioId > 0) {
                             <?php
                                 $nome = $poke['nome'] ?? $poke['name'] ?? "Pokémon #" . ($indice + 1);
                                 $nivel = (int)($poke['nivel'] ?? 5);
-                                $hpMax = (int)($poke['hpMaximo'] ?? $poke['hp_maximo'] ?? $poke['hp'] ?? 40);
-                                $hpAtual = (int)($poke['hpAtual'] ?? $poke['hp_atual'] ?? $hpMax);
+                                $hpAtual = (int)($poke['hpAtual'] ?? $poke['hp_atual'] ?? 0);
                                 $status = $poke['statusCondicao'] ?? $poke['status_condicao'] ?? 'Normal';
-                                $tipo = ucfirst($poke['tipo'] ?? 'Normal');
                             ?>
                             <option value="<?php echo htmlspecialchars($poke['id'] ?? $indice); ?>">
-                                <?php echo htmlspecialchars($nome); ?> (Nv. <?php echo $nivel; ?> | <?php echo $tipo; ?> | HP: <?php echo $hpAtual; ?>/<?php echo $hpMax; ?> | Status: <?php echo htmlspecialchars($status); ?>)
+                                <?php echo htmlspecialchars($nome); ?> (Nv. <?php echo $nivel; ?> | HP: <?php echo $hpAtual; ?> | Status: <?php echo htmlspecialchars($status); ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>

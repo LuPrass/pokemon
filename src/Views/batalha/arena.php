@@ -29,7 +29,7 @@ $stmtUser = $pdo->prepare("SELECT nome, dinheiro FROM usuario WHERE id = :id");
 $stmtUser->execute([':id' => $usuarioId]);
 $dadosUser = $stmtUser->fetch(PDO::FETCH_ASSOC);
 $usuarioNome = $dadosUser['nome'] ?? ($_SESSION['usuario'] ?? 'Treinador');
-$usuarioDinheiro = (int)($dadosUser['dinheiro'] ?? 1000);
+$usuarioDinheiro = (int)($dadosUser['dinheiro'] ?? 100);
 
 // Sincroniza dados da equipe do jogador e garante que cada um possua seus movimentos anexados
 $meuTime = array_values($_SESSION['meu_time']);
@@ -225,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($todosDesmaiados) {
-            $custoMinimoCura = 200;
+            $custoMinimoCura = 25;
             if ($usuarioDinheiro < $custoMinimoCura) {
                 unset($_SESSION['combate']);
                 $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui dinheiro suficiente para comprar HP ou curá-los! Você foi retirado da batalha.";
@@ -326,13 +326,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $combate['mensagens'][] = "💥 O {$nomeInimigo} adversário desmaiou!";
             $combate['vitorias']++;
 
-            $recompensa = 300;
-            $stmtMoney = $pdo->prepare("UPDATE usuario SET dinheiro = dinheiro + :recompensa WHERE id = :id");
-            $stmtMoney->execute([':recompensa' => $recompensa, ':id' => $usuarioId]);
-            $usuarioDinheiro += $recompensa;
-            $combate['mensagens'][] = "💰 Recompensa: +{$recompensa} Pokédollars adicionados ao seu saldo!";
-
+            $recompensa = 100;
+            $logSucesso = false;
             try {
+                // Ao inserir no log_batalha, o trigger do banco (trigger_dinheiro_vitoria) credita a recompensa ao usuario
                 $stmtLog = $pdo->prepare("INSERT INTO log_batalha (usuario_id, pokemon_id, adversario, resultado, dinheiro_ganho) VALUES (:usuario_id, :pokemon_id, :adversario, 'vitoria', :dinheiro)");
                 $stmtLog->execute([
                     ':usuario_id' => $usuarioId,
@@ -340,7 +337,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':adversario' => $nomeInimigo,
                     ':dinheiro'   => $recompensa
                 ]);
+                $logSucesso = true;
             } catch (Exception $e) {}
+
+            // Fallback caso ocorra erro no log
+            if (!$logSucesso) {
+                $stmtMoney = $pdo->prepare("UPDATE usuario SET dinheiro = dinheiro + :recompensa WHERE id = :id");
+                $stmtMoney->execute([':recompensa' => $recompensa, ':id' => $usuarioId]);
+            }
+            $usuarioDinheiro += $recompensa;
+            $combate['mensagens'][] = "💰 Recompensa: +{$recompensa} Pokédollars adicionados ao seu saldo!";
 
             if ($combate['batalha_atual'] >= $combate['total_batalhas']) {
                 $combate['status'] = 'campeao';

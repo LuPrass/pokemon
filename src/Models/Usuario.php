@@ -7,7 +7,7 @@ class Usuario {
     private $dataCriacao;
     private $pdo;
 
-    public function __construct($id = null, $nome = '', $dinheiro = 1000, $dataCriacao = null) {
+    public function __construct($id = null, $nome = '', $dinheiro = 100, $dataCriacao = null) {
         $this->id = $id;
         $this->nome = $nome;
         $this->dinheiro = $dinheiro;

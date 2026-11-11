@@ -20,7 +20,7 @@ $usuarioNome = $_SESSION['usuario'] ?? 'Treinador';
 // Busca dados atualizados do usuário (saldo em pokédollars)
 $usuario = new Usuario();
 $usuario->load($usuarioId);
-$saldo = $usuario->getDinheiro() ?? 1000;
+$saldo = $usuario->getDinheiro() ?? 100;
 
 $categorias = [
     'restaurador' => ['nome' => 'Restauradores de HP', 'icone' => '🧪'],

@@ -29,10 +29,10 @@ class BatalhaController extends Controller {
             $batalha = new Batalha($jogador, $inimigo);
             $resultado = $batalha->lutar();
 
-            // Vitória rende 300 Pokédollars (o trigger do banco soma no usuário)
+            // Vitória rende 100 Pokédollars (o trigger do banco soma no usuário)
             $dinheiro = 0;
             if ($resultado == 'vitoria') {
-                $dinheiro = 300;
+                $dinheiro = 100;
             }
 
             $pdo->beginTransaction();

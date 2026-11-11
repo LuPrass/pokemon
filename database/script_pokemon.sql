@@ -17,7 +17,7 @@ CREATE TABLE usuario (
     id INT NOT NULL AUTO_INCREMENT,
     nome VARCHAR(50) NOT NULL,
     senha VARCHAR(255) NOT NULL DEFAULT '',
-    dinheiro INT NOT NULL DEFAULT 1000,
+    dinheiro INT NOT NULL DEFAULT 100,
     data_criacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uk_usuario_nome (nome)
@@ -121,29 +121,29 @@ CREATE TABLE log_loja (
 -- Inserção de todos os itens mínimos exigidos no Poké Mart
 INSERT INTO loja (nome, descricao, preco, tipo) VALUES
 -- Restauradores de Vida (HP)
-('Potion', 'Recupera 20 HP', 200, 'restaurador'),
-('Super Potion', 'Recupera 50 HP', 700, 'restaurador'),
-('Hyper Potion', 'Recupera 200 HP', 1200, 'restaurador'),
-('Max Potion', 'Recupera 100% do HP', 2500, 'restaurador'),
-('Full Restore', 'Recupera 100% do HP e cura todas as condições de status', 3000, 'restaurador'),
+('Potion', 'Recupera 20 HP', 50, 'restaurador'),
+('Super Potion', 'Recupera 50 HP', 100, 'restaurador'),
+('Hyper Potion', 'Recupera 200 HP', 200, 'restaurador'),
+('Max Potion', 'Recupera 100% do HP', 300, 'restaurador'),
+('Full Restore', 'Recupera 100% do HP e cura todas as condições de status', 400, 'restaurador'),
 -- Cura de Condição
-('Antidote', 'Cura envenenamento', 100, 'cura'),
-('Burn Heal', 'Cura queimadura', 250, 'cura'),
-('Ice Heal', 'Cura congelamento', 250, 'cura'),
-('Awakening', 'Cura sono', 250, 'cura'),
-('Paralyze Heal', 'Cura paralisia', 200, 'cura'),
-('Full Heal', 'Cura todas as condições de status', 600, 'cura'),
+('Antidote', 'Cura envenenamento', 25, 'cura'),
+('Burn Heal', 'Cura queimadura', 25, 'cura'),
+('Ice Heal', 'Cura congelamento', 25, 'cura'),
+('Awakening', 'Cura sono', 25, 'cura'),
+('Paralyze Heal', 'Cura paralisia', 25, 'cura'),
+('Full Heal', 'Cura todas as condições de status', 60, 'cura'),
 -- Reviver
-('Revive', 'Revive um Pokémon desmaiado com metade da vida', 1500, 'reviver'),
+('Revive', 'Revive um Pokémon desmaiado com metade da vida', 150, 'reviver'),
 -- Evolução (Item obrigatório para evolução conforme requisito)
-('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 2100, 'evolucao');
+('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 250, 'evolucao');
 
 -- Inserção de Treinadores (Controle de Usuários / Perfis)
 -- Senha de todos os treinadores iniciais: 123456 (armazenada com password_hash)
 INSERT INTO usuario (nome, senha, dinheiro) VALUES
-('Ash', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 1000),
-('Misty', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 1000),
-('Brock', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 1000);
+('Ash', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 100),
+('Misty', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 100),
+('Brock', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 100);
 
 -- Inserção dos Pokémons Iniciais (compatíveis com as classes PHP do projeto)
 -- 10 variáveis: nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao
@@ -274,13 +274,13 @@ DELIMITER ;
 -- ==============================================================================
 
 -- Teste 1: Transação confirmada com sucesso (COMMIT)
--- Ash compra uma Potion (R$ 200), cura o Charmander machucado e registra no log da loja
+-- Ash compra uma Potion (R$ 50), cura o Charmander machucado e registra no log da loja
 START TRANSACTION;
 
 -- 1. Debita o valor do saldo do jogador
 UPDATE usuario 
-SET dinheiro = dinheiro - 200 
-WHERE id = 1 AND dinheiro >= 200;
+SET dinheiro = dinheiro - 50 
+WHERE id = 1 AND dinheiro >= 50;
 
 -- 2. Cura 20 HP do Pokémon
 UPDATE pokemon 
@@ -289,17 +289,17 @@ WHERE id = 1;
 
 -- 3. Registra a compra no log da loja
 INSERT INTO log_loja (usuario_id, item_id, pokemon_id, preco_pago)
-VALUES (1, 1, 1, 200);
+VALUES (1, 1, 1, 50);
 
 COMMIT;
 
 
 -- Teste 2: Transação cancelada / desfeita (ROLLBACK)
--- Simulação de tentativa de compra de Hyper Potion (1200) onde o usuário cancela ou ocorre falha
+-- Simulação de tentativa de compra de Hyper Potion (200) onde o usuário cancela ou ocorre falha
 START TRANSACTION;
 
 UPDATE usuario 
-SET dinheiro = dinheiro - 1200 
+SET dinheiro = dinheiro - 200 
 WHERE id = 1;
 
 UPDATE pokemon 
