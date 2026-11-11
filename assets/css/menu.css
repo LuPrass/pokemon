@@ -296,3 +296,16 @@ html, body {
         font-size: 0.88rem;
     }
 }
+
+/* Botão Mochila (Azul Ciano) */
+.btn-mochila {
+    background: linear-gradient(180deg, #6e02c7 0%, #6921cd 100%);
+    color: #ffffff;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(117, 2, 199, 0.42);
+}
+
+.btn-mochila:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(149, 56, 248, 0.6);
+}

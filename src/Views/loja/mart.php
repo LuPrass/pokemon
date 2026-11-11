@@ -68,6 +68,7 @@ foreach (Item::all($pdo) as $item) {
                         <span class="carteira-label">Saldo:</span>
                         <span class="carteira-valor">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
                     </div>
+                    <a class="btn-nav-mart btn-nav-mochila" href="index.php?rota=mochila" style="background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);">🎒 Mochila</a>
                     <a class="btn-nav-mart btn-nav-batalha" href="index.php?rota=batalha">⚔ Batalha</a>
                     <a class="btn-nav-mart btn-nav-menu" href="index.php?rota=menu">← Menu</a>
                 </div>
