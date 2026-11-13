@@ -8,45 +8,140 @@ class LojaController extends Controller {
         $this->responder(['sucesso' => true, 'itens' => Item::all($pdo)]);
     }
 
-    // Compra um item e usa em um pokémon.
-    // Recebe JSON: { "usuario_id": 1, "item_id": 1, "pokemon_id": 1 }
+    // Compra um item da loja.
+    // Se nenhum pokemon_id for fornecido, guarda na Mochila (sessão).
+    // Se pokemon_id for fornecido, aplica diretamente no Pokémon.
     public function comprar() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $dados = $this->lerJson();
+        if (empty($dados)) {
+            $dados = $_POST;
+        }
+
         $pdo = Conexao::getConnection();
 
         try {
-            $usuario = new Usuario();
-            $item = new Item();
-            $pokemon = new Pokemon();
+            $usuarioId = (int)($_SESSION['usuario_id'] ?? $dados['usuario_id'] ?? 1);
+            $itemId = (int)($dados['item_id'] ?? 0);
+            $pokemonId = !empty($dados['pokemon_id']) ? (int)$dados['pokemon_id'] : null;
 
-            if (!$usuario->load($dados['usuario_id'] ?? 0)) {
+            $usuario = new Usuario();
+            if (!$usuario->load($usuarioId)) {
                 throw new Exception('Usuário não encontrado.');
             }
-            if (!$item->load($dados['item_id'] ?? 0)) {
-                throw new Exception('Item não encontrado.');
+
+            $item = new Item();
+            if (!$item->load($itemId)) {
+                throw new Exception('Item não encontrado na loja.');
             }
-            if (!$pokemon->load($dados['pokemon_id'] ?? 0) || $pokemon->getUsuarioId() != $usuario->getId()) {
-                throw new Exception('Pokémon não encontrado neste perfil.');
+
+            // Verifica se o usuário tem saldo suficiente
+            if ($usuario->getDinheiro() < $item->getPreco()) {
+                throw new SaldoInsuficienteException(
+                    "Saldo insuficiente! Você tem ₽ " . number_format($usuario->getDinheiro(), 0, ',', '.') . 
+                    " e o item " . $item->getNome() . " custa ₽ " . number_format($item->getPreco(), 0, ',', '.') . "."
+                );
             }
 
-            // Valida e aplica o efeito ANTES de cobrar (se der erro, ninguém perde dinheiro)
-            $this->aplicarEfeito($item, $pokemon);
-            $usuario->gastar($item->getPreco());
+            // Caso 1: Compra com aplicação direta em um Pokémon
+            if ($pokemonId !== null) {
+                $pokemon = new Pokemon();
+                if (!$pokemon->load($pokemonId) || $pokemon->getUsuarioId() != $usuario->getId()) {
+                    throw new Exception('Pokémon não encontrado neste perfil.');
+                }
 
-            $pdo->beginTransaction();
-            $usuario->save();
-            $pokemon->save();
-            $log = new LogLoja(null, $usuario->getId(), $item->getId(), $pokemon->getId(), $item->getPreco());
-            $log->save();
-            $pdo->commit();
+                $this->aplicarEfeito($item, $pokemon);
+                $usuario->gastar($item->getPreco());
 
+                $pdo->beginTransaction();
+                $usuario->save();
+                $pokemon->save();
+                $log = new LogLoja(null, $usuario->getId(), $item->getId(), $pokemon->getId(), $item->getPreco());
+                $log->save();
+                $pdo->commit();
+
+                $_SESSION['dinheiro'] = $usuario->getDinheiro();
+
+                $this->responder([
+                    'sucesso' => true,
+                    'mensagem' => $item->getNome() . ' usado em ' . $pokemon->getNome() . '!',
+                    'dinheiro' => $usuario->getDinheiro(),
+                    'saldo_formatado' => number_format($usuario->getDinheiro(), 0, ',', '.'),
+                    'hpAtual' => $pokemon->getHpAtual(),
+                    'status' => $pokemon->getStatusCondicao()
+                ]);
+            } else {
+                // Caso 2: Compra para guardar na Mochila (Padrão do PokéMart)
+                $usuario->gastar($item->getPreco());
+
+                $pdo->beginTransaction();
+                $usuario->save();
+                $log = new LogLoja(null, $usuario->getId(), $item->getId(), null, $item->getPreco());
+                $log->save();
+                $pdo->commit();
+
+                $_SESSION['dinheiro'] = $usuario->getDinheiro();
+
+                // Armazena na Mochila (sessão)
+                if (!isset($_SESSION['mochila']) || !is_array($_SESSION['mochila'])) {
+                    $_SESSION['mochila'] = [];
+                }
+
+                $icones = [
+                    'restaurador' => '🧪',
+                    'cura'        => '💊',
+                    'reviver'     => '💖',
+                    'evolucao'    => '✨'
+                ];
+                $icone = $icones[$item->getTipo()] ?? '📦';
+
+                $jaExiste = false;
+                foreach ($_SESSION['mochila'] as &$itemMochila) {
+                    if ((int)($itemMochila['id'] ?? 0) === (int)$item->getId()) {
+                        $itemMochila['quantidade'] = (int)($itemMochila['quantidade'] ?? 1) + 1;
+                        $jaExiste = true;
+                        break;
+                    }
+                }
+                unset($itemMochila);
+
+                if (!$jaExiste) {
+                    $_SESSION['mochila'][] = [
+                        'id'         => (int)$item->getId(),
+                        'nome'       => $item->getNome(),
+                        'tipo'       => $item->getTipo(),
+                        'icone'      => $icone,
+                        'descricao'  => $item->getDescricao(),
+                        'preco'      => (int)$item->getPreco(),
+                        'quantidade' => 1
+                    ];
+                }
+
+                $this->responder([
+                    'sucesso' => true,
+                    'mensagem' => 'Parabéns! Você comprou 1x ' . $item->getNome() . ' e o item foi guardado na sua Mochila!',
+                    'dinheiro' => $usuario->getDinheiro(),
+                    'saldo_formatado' => number_format($usuario->getDinheiro(), 0, ',', '.'),
+                    'item' => [
+                        'id' => (int)$item->getId(),
+                        'nome' => $item->getNome(),
+                        'tipo' => $item->getTipo(),
+                        'preco' => (int)$item->getPreco()
+                    ]
+                ]);
+            }
+        } catch (SaldoInsuficienteException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->responder([
-                'sucesso' => true,
-                'mensagem' => $item->getNome() . ' usado em ' . $pokemon->getNome() . '!',
-                'dinheiro' => $usuario->getDinheiro(),
-                'hpAtual' => $pokemon->getHpAtual(),
-                'status' => $pokemon->getStatusCondicao()
-            ]);
+                'sucesso' => false,
+                'erro_tipo' => 'saldo_insuficiente',
+                'mensagem' => $e->getMessage()
+            ], 400);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();

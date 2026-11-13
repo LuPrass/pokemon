@@ -66,7 +66,7 @@ foreach (Item::all($pdo) as $item) {
                 <div class="mart-actions">
                     <div class="carteira-hud">
                         <span class="carteira-label">Saldo:</span>
-                        <span class="carteira-valor">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
+                        <span class="carteira-valor" id="carteira-saldo">₽ <?php echo number_format($saldo, 0, ',', '.'); ?></span>
                     </div>
                     <a class="btn-nav-mart btn-nav-mochila" href="index.php?rota=mochila" style="background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);">🎒 Mochila</a>
                     <a class="btn-nav-mart btn-nav-batalha" href="index.php?rota=batalha">⚔ Batalha</a>
@@ -81,7 +81,7 @@ foreach (Item::all($pdo) as $item) {
                         <h2 class="categoria-titulo"><?php echo htmlspecialchars($categoria); ?></h2>
                         <div class="grid-itens">
                             <?php foreach ($itens as $item): ?>
-                                <div class="item-card" data-item-id="<?php echo htmlspecialchars($item['id'] ?? ''); ?>" data-item-tipo="<?php echo htmlspecialchars($item['tipo']); ?>">
+                                <div class="item-card" id="card-item-<?php echo (int)($item['id'] ?? 0); ?>" data-item-id="<?php echo htmlspecialchars($item['id'] ?? ''); ?>" data-item-tipo="<?php echo htmlspecialchars($item['tipo']); ?>">
                                     <div>
                                         <div class="item-topo">
                                             <span class="item-icone"><?php echo $item['icone']; ?></span>
@@ -93,7 +93,12 @@ foreach (Item::all($pdo) as $item) {
                                     </div>
                                     <div class="item-rodape">
                                         <span class="item-preco">₽ <?php echo number_format($item['preco'], 0, ',', '.'); ?></span>
-                                        <button type="button" class="btn-comprar" title="Comprar <?php echo htmlspecialchars($item['nome']); ?>">
+                                        <button type="button" 
+                                                class="btn-comprar" 
+                                                data-id="<?php echo (int)($item['id'] ?? 0); ?>" 
+                                                data-nome="<?php echo htmlspecialchars($item['nome']); ?>" 
+                                                data-preco="<?php echo (int)$item['preco']; ?>"
+                                                title="Comprar <?php echo htmlspecialchars($item['nome']); ?>">
                                             Comprar
                                         </button>
                                     </div>
@@ -107,5 +112,128 @@ foreach (Item::all($pdo) as $item) {
         </div>
     </div>
 
+    <!-- Container de Toasts de Notificação -->
+    <div class="mart-toast-container" id="toast-container"></div>
+
+    <!-- Script de Compra e Integração com a Mochila -->
+    <script>
+        // Dados do Treinador e Saldo Atual
+        let saldoAtual = <?php echo (int)$saldo; ?>;
+        const usuarioId = <?php echo (int)$usuarioId; ?>;
+
+        const elementoSaldo = document.getElementById('carteira-saldo');
+        const toastContainer = document.getElementById('toast-container');
+
+        // Formata valor em padrão Pokédollars brasileiro (ex: 100 -> 100, 1500 -> 1.500)
+        function formatarPokedollars(valor) {
+            return new Intl.NumberFormat('pt-BR').format(valor);
+        }
+
+        // Exibe notificação toast na tela
+        function exibirToast(tipo, titulo, mensagem) {
+            const toast = document.createElement('div');
+            toast.className = `mart-toast ${tipo}`;
+
+            const icone = tipo === 'sucesso' ? '✅' : '⚠️';
+
+            toast.innerHTML = `
+                <span class="mart-toast-icone">${icone}</span>
+                <div class="mart-toast-conteudo">
+                    <strong>${titulo}</strong><br>
+                    <span>${mensagem}</span>
+                </div>
+                <button type="button" class="mart-toast-fechar" aria-label="Fechar">&times;</button>
+            `;
+
+            toast.querySelector('.mart-toast-fechar').addEventListener('click', () => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(50px)';
+                setTimeout(() => toast.remove(), 300);
+            });
+
+            toastContainer.appendChild(toast);
+
+            // Auto-remove após 4.5 segundos
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(50px)';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 4500);
+        }
+
+        // Configura o evento de clique em todos os botões de compra
+        document.querySelectorAll('.btn-comprar').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = parseInt(btn.getAttribute('data-id'), 10);
+                const itemNome = btn.getAttribute('data-nome');
+                const itemPreco = parseInt(btn.getAttribute('data-preco'), 10);
+                const card = document.getElementById(`card-item-${itemId}`);
+
+                // Validação imediata de saldo no Front-End
+                if (saldoAtual < itemPreco) {
+                    if (card) {
+                        card.classList.remove('shake');
+                        void card.offsetWidth; // Força reflow para reiniciar animação
+                        card.classList.add('shake');
+                    }
+                    exibirToast(
+                        'erro',
+                        'Saldo Insuficiente!',
+                        `Você possui ₽ ${formatarPokedollars(saldoAtual)}, mas ${itemNome} custa ₽ ${formatarPokedollars(itemPreco)}. Vença batalhas para ganhar mais dinheiro!`
+                    );
+                    return;
+                }
+
+                // Desabilita temporariamente o botão durante a requisição
+                const textoOriginal = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = 'Comprando...';
+
+                try {
+                    const resposta = await fetch('index.php?rota=comprar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            usuario_id: usuarioId,
+                            item_id: itemId
+                        })
+                    });
+
+                    const dados = await resposta.json();
+
+                    if (!resposta.ok || !dados.sucesso) {
+                        throw new Error(dados.mensagem || 'Não foi possível concluir a compra.');
+                    }
+
+                    // Sucesso na compra! Atualiza o saldo local e na interface
+                    saldoAtual = parseInt(dados.dinheiro, 10);
+                    elementoSaldo.textContent = `₽ ${dados.saldo_formatado || formatarPokedollars(saldoAtual)}`;
+
+                    // Efeito de sucesso na interface
+                    exibirToast(
+                        'sucesso',
+                        'Compra Concluída!',
+                        `Você comprou 1x ${itemNome}! O item já está disponível na sua Mochila.`
+                    );
+
+                } catch (erro) {
+                    if (card) {
+                        card.classList.remove('shake');
+                        void card.offsetWidth;
+                        card.classList.add('shake');
+                    }
+                    exibirToast('erro', 'Aviso', erro.message || 'Erro ao processar compra.');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = textoOriginal;
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -398,3 +398,97 @@ html, body {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================
+   Notificações e Toasts da Loja
+   ========================================= */
+.mart-toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.mart-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 320px;
+    max-width: 440px;
+    padding: 16px 20px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.mart-toast.sucesso {
+    background: rgba(16, 185, 129, 0.95);
+    color: #ffffff;
+    border: 2px solid #34d399;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.5), 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.mart-toast.erro {
+    background: rgba(220, 38, 38, 0.95);
+    color: #ffffff;
+    border: 2px solid #f87171;
+    box-shadow: 0 0 25px rgba(220, 38, 38, 0.5), 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.mart-toast-icone {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.mart-toast-conteudo {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.mart-toast-fechar {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    transition: color 0.15s ease;
+}
+
+.mart-toast-fechar:hover {
+    color: #ffffff;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.shake {
+    animation: shakeEffect 0.4s ease;
+}
+
+@keyframes shakeEffect {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
