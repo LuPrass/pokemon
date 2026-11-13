@@ -67,6 +67,15 @@ class TimeController {
 
             $pdo->beginTransaction();
 
+            // Garante que o usuário possua ao menos o saldo inicial (100) caso tenha ficado zerado em game over anterior
+            $stmtUserDinheiro = $pdo->prepare("SELECT dinheiro FROM usuario WHERE id = :usuario_id");
+            $stmtUserDinheiro->execute([':usuario_id' => $usuarioId]);
+            $dinheiroAtual = (int)$stmtUserDinheiro->fetchColumn();
+            if ($dinheiroAtual < 25) {
+                $stmtFixDinheiro = $pdo->prepare("UPDATE usuario SET dinheiro = 100 WHERE id = :usuario_id");
+                $stmtFixDinheiro->execute([':usuario_id' => $usuarioId]);
+            }
+
             // Remove o time anterior do usuário para atualizar com a nova escalação
             $stmtLimparTime = $pdo->prepare("DELETE FROM time WHERE usuario_id = :usuario_id");
             $stmtLimparTime->execute([':usuario_id' => $usuarioId]);
@@ -83,7 +92,14 @@ class TimeController {
                     throw new PokemonInvalidoException("Dados incompletos para um dos Pokémons selecionados.");
                 }
 
-                // Reutiliza o Pokémon já salvo para este usuário, preservando seus estados.
+                $hpMaximo = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 35);
+                $nivel = (int)($pk['nivel'] ?? 5);
+                $ataque = (int)($pk['ataque'] ?? $pk['attack'] ?? 40);
+                $defesa = (int)($pk['defesa'] ?? $pk['defense'] ?? 40);
+                $velocidade = (int)($pk['velocidade'] ?? $pk['speed'] ?? 50);
+                $prioridade = (int)($pk['prioridade'] ?? 0);
+
+                // Localiza o Pokémon salvo para este usuário e sempre reinicia seus atributos para o padrão
                 $stmtPokemonExistente = $pdo->prepare("
                     SELECT id FROM pokemon
                     WHERE usuario_id = :usuario_id AND LOWER(nome) = LOWER(:nome)
@@ -95,24 +111,43 @@ class TimeController {
                 ]);
                 $pokemonId = $stmtPokemonExistente->fetchColumn();
 
-                if (!$pokemonId) {
+                if ($pokemonId) {
+                    $stmtAtualizarPokemon = $pdo->prepare("
+                        UPDATE pokemon 
+                        SET tipo = :tipo, nivel = :nivel, hp_maximo = :hp_maximo, hp_atual = :hp_atual,
+                            ataque = :ataque, defesa = :defesa, velocidade = :velocidade,
+                            prioridade = :prioridade, status_condicao = 'Normal'
+                        WHERE id = :id AND usuario_id = :usuario_id
+                    ");
+                    $stmtAtualizarPokemon->execute([
+                        ':tipo'            => $pk['tipo'],
+                        ':nivel'           => $nivel,
+                        ':hp_maximo'       => $hpMaximo,
+                        ':hp_atual'        => $hpMaximo,
+                        ':ataque'          => $ataque,
+                        ':defesa'          => $defesa,
+                        ':velocidade'      => $velocidade,
+                        ':prioridade'      => $prioridade,
+                        ':id'              => $pokemonId,
+                        ':usuario_id'      => $usuarioId
+                    ]);
+                } else {
                     $stmtPokemon = $pdo->prepare("
                         INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao)
-                        VALUES (:usuario_id, :nome, :tipo, :nivel, :hp_maximo, :hp_atual, :ataque, :defesa, :velocidade, :prioridade, :status_condicao)
+                        VALUES (:usuario_id, :nome, :tipo, :nivel, :hp_maximo, :hp_atual, :ataque, :defesa, :velocidade, :prioridade, 'Normal')
                     ");
 
                     $stmtPokemon->execute([
                         ':usuario_id'       => $usuarioId,
                         ':nome'             => $pk['nome'],
                         ':tipo'             => $pk['tipo'],
-                        ':nivel'            => $pk['nivel'] ?? 5,
-                        ':hp_maximo'        => $pk['hpMaximo'] ?? 35,
-                        ':hp_atual'         => $pk['hpAtual'] ?? ($pk['hpMaximo'] ?? 35),
-                        ':ataque'           => $pk['ataque'] ?? 40,
-                        ':defesa'           => $pk['defesa'] ?? 40,
-                        ':velocidade'       => $pk['velocidade'] ?? 50,
-                        ':prioridade'       => $pk['prioridade'] ?? 0,
-                        ':status_condicao'  => $pk['statusCondicao'] ?? 'Normal'
+                        ':nivel'            => $nivel,
+                        ':hp_maximo'        => $hpMaximo,
+                        ':hp_atual'         => $hpMaximo,
+                        ':ataque'           => $ataque,
+                        ':defesa'           => $defesa,
+                        ':velocidade'       => $velocidade,
+                        ':prioridade'       => $prioridade
                     ]);
 
                     $pokemonId = $pdo->lastInsertId();
@@ -147,6 +182,13 @@ class TimeController {
                     $idPk = (int)($pokemon['id'] ?? $pokemon['id_pokedex'] ?? 0);
                     $nomePk = $pokemon['nome'] ?? $pokemon['name'] ?? '';
                     $tipoPk = $pokemon['tipo'] ?? 'normal';
+                    $hpMax = (int)($pokemon['hpMaximo'] ?? $pokemon['hp'] ?? 35);
+                    $pokemon['hpMaximo'] = $hpMax;
+                    $pokemon['hpAtual'] = $hpMax;
+                    $pokemon['hp_atual'] = $hpMax;
+                    $pokemon['nivel'] = 5;
+                    $pokemon['statusCondicao'] = 'Normal';
+                    $pokemon['status_condicao'] = 'Normal';
                     $pokemon['movimentos'] = PokeApiService::obterMovimentosPadrao($idPk, $nomePk, $tipoPk);
                 }
             }
@@ -166,6 +208,7 @@ class TimeController {
             $_SESSION['meu_time'] = array_values($timeDaSessao);
             $_SESSION['inimigos_restantes'] = is_array($dados['restantes'] ?? null) ? $dados['restantes'] : [];
             $_SESSION['inimigos_time'] = array_values($inimigosCompletos);
+            unset($_SESSION['combate'], $_SESSION['batalha_iniciada'], $_SESSION['aviso_derrota']);
 
             echo json_encode([
                 'sucesso'  => true,

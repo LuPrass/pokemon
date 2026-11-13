@@ -168,13 +168,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
             $stmtUp->execute([':hp' => $novoHp, ':st' => $novoStatus, ':id' => $pokemonDbId, ':uid' => $usuarioId]);
         }
 
-        // Se estiver em combate ativo, sincroniza o combate
-        if (isset($_SESSION['combate']['pokemon_jogador'])) {
-            $idCombate = (int)($_SESSION['combate']['pokemon_jogador']['pokemon_db_id'] ?? $_SESSION['combate']['pokemon_jogador']['id'] ?? -1);
-            if ($idCombate === $pokemonDbId || $indicePkSessao === 0) {
-                $_SESSION['combate']['pokemon_jogador']['hpAtual'] = $novoHp;
-                $_SESSION['combate']['pokemon_jogador']['statusCondicao'] = $novoStatus;
+        // Se estiver em combate ativo, reativa o combate e coloca o Pokémon revivido/curado em campo!
+        if (isset($_SESSION['combate'])) {
+            $_SESSION['combate']['status'] = 'em_combate';
+            $_SESSION['combate']['menu_aberto'] = 'principal';
+
+            $ativoIdxAtual = (int)($_SESSION['combate']['pokemon_ativo_idx'] ?? 0);
+            $hpAtivo = (int)($_SESSION['meu_time'][$ativoIdxAtual]['hpAtual'] ?? 0);
+            if ($hpAtivo <= 0 || $indicePkSessao === $ativoIdxAtual) {
+                $_SESSION['combate']['pokemon_ativo_idx'] = $indicePkSessao;
             }
+            $_SESSION['combate']['mensagens'][] = "✨ {$nomePoke} foi revivido e está em campo pronto para lutar!";
         }
 
         // Desconta 1 unidade do item na mochila
