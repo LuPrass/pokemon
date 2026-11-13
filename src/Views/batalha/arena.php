@@ -43,6 +43,7 @@ foreach ($meuTime as &$pk) {
 }
 unset($pk);
 $_SESSION['meu_time'] = $meuTime;
+$_SESSION['batalha_iniciada'] = true;
 
 // 2. Inicialização do combate de 9 batalhas (caso não exista)
 if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])) {
@@ -445,6 +446,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $combate['menu_aberto'] = 'principal';
         $_SESSION['meu_time'] = $meuTime;
+$_SESSION['batalha_iniciada'] = true;
     }
 
     elseif ($acao === 'trocar' && ($combate['status'] === 'em_combate' || $combate['status'] === 'derrota_sem_pokemon')) {
@@ -488,6 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $_SESSION['meu_time'] = $meuTime;
+$_SESSION['batalha_iniciada'] = true;
             }
         }
     }
