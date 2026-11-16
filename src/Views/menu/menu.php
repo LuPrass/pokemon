@@ -8,6 +8,8 @@ if (empty($_SESSION['logado'])) {
     header('Location: login.php');
     exit;
 }
+
+$adminsPermitidos = require __DIR__ . '/../../../config/Administradores.php';
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -53,7 +55,7 @@ if (empty($_SESSION['logado'])) {
                 <a class="menu-btn btn-loja" href="index.php?rota=loja">PokéMart</a>
                 <a class="menu-btn btn-mochila" href="index.php?rota=mochila">Mochila</a>
 
-                <?php if (!empty($_SESSION['usuario_id']) && (int)$_SESSION['usuario_id'] === 1): ?>
+                <?php if (in_array($_SESSION['usuario'] ?? '', $adminsPermitidos, true)): ?>
                     <a class="menu-btn btn-logs" href="index.php?rota=logs">Ver Logs</a>
                 <?php endif; ?>
 

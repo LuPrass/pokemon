@@ -1,41 +1,65 @@
 <?php
- require_once __DIR__ . '/../../../Autoload.php';
+require_once __DIR__ . '/../../../Autoload.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// 1. Verificações de segurança e acesso
 if (empty($_SESSION['logado'])) {
     header('Location: login.php');
     exit;
 }
 
-// Verifica se o usuário NÃO está logado OU se o login NÃO é 'adm'
-if (!isset($_SESSION['usuario']) || $_SESSION['usuario'] !== 'adm') {
+$adminsPermitidos = require __DIR__ . '/../../../config/Administradores.php';
+
+if (!in_array($_SESSION['usuario'] ?? '', $adminsPermitidos, true)) {
     header('Location: index.php?rota=menu');
     exit;
 }
 
+// 3. Consultas ao banco de dados
 $pdo = Conexao::getConnection();
 
-$logsBatalha = $pdo->query(
-    "SELECT lb.id, u.nome AS usuario, p.nome AS pokemon, lb.adversario, lb.resultado, lb.dinheiro_ganho, lb.data_batalha
-     FROM log_batalha lb
-     JOIN usuario u ON u.id = lb.usuario_id
-     LEFT JOIN pokemon p ON p.id = lb.pokemon_id
-     ORDER BY lb.id DESC LIMIT 200"
-)->fetchAll(PDO::FETCH_ASSOC);
+function buscarLogs(PDO $pdo, string $sql): array {
+    $consulta = $pdo->query($sql);
+    return $consulta->fetchAll(PDO::FETCH_ASSOC);
+}
 
-$logsLoja = $pdo->query(
-    "SELECT ll.id, u.nome AS usuario, l.nome AS item, p.nome AS pokemon, ll.preco_pago, ll.data_compra
-     FROM log_loja ll
-     JOIN usuario u ON u.id = ll.usuario_id
-     JOIN loja l ON l.id = ll.item_id
-     LEFT JOIN pokemon p ON p.id = ll.pokemon_id
-     ORDER BY ll.id DESC LIMIT 200"
-)->fetchAll(PDO::FETCH_ASSOC);
+$sqlBatalha = "
+    SELECT
+        log_batalha.id,
+        usuario.nome AS usuario,
+        pokemon.nome AS pokemon,
+        log_batalha.adversario,
+        log_batalha.resultado,
+        log_batalha.dinheiro_ganho,
+        log_batalha.data_batalha
+    FROM log_batalha
+    JOIN usuario ON usuario.id = log_batalha.usuario_id
+    LEFT JOIN pokemon ON pokemon.id = log_batalha.pokemon_id
+    ORDER BY log_batalha.id DESC
+    LIMIT 200
+";
 
-function h($v) { return htmlspecialchars((string)$v); }
+$sqlLoja = "
+    SELECT
+        log_loja.id,
+        usuario.nome AS usuario,
+        loja.nome AS item,
+        pokemon.nome AS pokemon,
+        log_loja.preco_pago,
+        log_loja.data_compra
+    FROM log_loja
+    JOIN usuario ON usuario.id = log_loja.usuario_id
+    JOIN loja ON loja.id = log_loja.item_id
+    LEFT JOIN pokemon ON pokemon.id = log_loja.pokemon_id
+    ORDER BY log_loja.id DESC
+    LIMIT 200
+";
+
+$logsBatalha = buscarLogs($pdo, $sqlBatalha);
+$logsLoja    = buscarLogs($pdo, $sqlLoja);
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -66,18 +90,30 @@ function h($v) { return htmlspecialchars((string)$v); }
             <?php else: ?>
                 <div class="logs-table-wrap">
                     <table class="logs-table">
-                        <tr><th>#</th><th>Data</th><th>Treinador</th><th>Pokémon</th><th>Adversário</th><th>Resultado</th><th>Dinheiro ganho</th></tr>
-                        <?php foreach ($logsBatalha as $l): ?>
+                        <thead>
                             <tr>
-                                <td><?= h($l['id']) ?></td>
-                                <td><?= h($l['data_batalha']) ?></td>
-                                <td><?= h($l['usuario']) ?></td>
-                                <td><?= h($l['pokemon'] ?? '-') ?></td>
-                                <td><?= h($l['adversario']) ?></td>
-                                <td><?= h($l['resultado']) ?></td>
-                                <td><?= h($l['dinheiro_ganho']) ?></td>
+                                <th>#</th>
+                                <th>Data</th>
+                                <th>Treinador</th>
+                                <th>Pokémon</th>
+                                <th>Adversário</th>
+                                <th>Resultado</th>
+                                <th>Dinheiro ganho</th>
                             </tr>
-                        <?php endforeach; ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($logsBatalha as $batalha): ?>
+                                <tr>
+                                    <td><?= $batalha['id'] ?></td>
+                                    <td><?= $batalha['data_batalha'] ?></td>
+                                    <td><?= $batalha['usuario'] ?></td>
+                                    <td><?= $batalha['pokemon'] ?? '-' ?></td>
+                                    <td><?= $batalha['adversario'] ?></td>
+                                    <td><?= $batalha['resultado'] ?></td>
+                                    <td><?= $batalha['dinheiro_ganho'] ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
                     </table>
                 </div>
             <?php endif; ?>
@@ -90,17 +126,28 @@ function h($v) { return htmlspecialchars((string)$v); }
             <?php else: ?>
                 <div class="logs-table-wrap">
                     <table class="logs-table">
-                        <tr><th>#</th><th>Data</th><th>Treinador</th><th>Item</th><th>Pokémon alvo</th><th>Preço pago</th></tr>
-                        <?php foreach ($logsLoja as $l): ?>
+                        <thead>
                             <tr>
-                                <td><?= h($l['id']) ?></td>
-                                <td><?= h($l['data_compra']) ?></td>
-                                <td><?= h($l['usuario']) ?></td>
-                                <td><?= h($l['item']) ?></td>
-                                <td><?= h($l['pokemon'] ?? 'Guardado na mochila') ?></td>
-                                <td><?= h($l['preco_pago']) ?></td>
+                                <th>#</th>
+                                <th>Data</th>
+                                <th>Treinador</th>
+                                <th>Item</th>
+                                <th>Pokémon alvo</th>
+                                <th>Preço pago</th>
                             </tr>
-                        <?php endforeach; ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($logsLoja as $compra): ?>
+                                <tr>
+                                    <td><?= $compra['id'] ?></td>
+                                    <td><?= $compra['data_compra'] ?></td>
+                                    <td><?= $compra['usuario'] ?></td>
+                                    <td><?= $compra['item'] ?></td>
+                                    <td><?= $compra['pokemon'] ?? 'Guardado na mochila' ?></td>
+                                    <td><?= $compra['preco_pago'] ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
                     </table>
                 </div>
             <?php endif; ?>

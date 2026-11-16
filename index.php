@@ -14,13 +14,9 @@ $rotas = [
     'menu'              => ['type' => 'view', 'path' => '/src/Views/menu/menu.php'],
     'pokemons'          => ['type' => 'view', 'path' => '/src/Views/pokemons/pokemons.php'],
     'builder'           => ['type' => 'view', 'path' => '/src/Views/time/builder.php'],
-    'time'              => ['type' => 'view', 'path' => '/src/Views/time/builder.php'],
     'batalha'           => ['type' => 'view', 'path' => '/src/Views/batalha/arena.php'],
-    'combate'           => ['type' => 'view', 'path' => '/src/Views/batalha/combate.php'],
     'loja'              => ['type' => 'view', 'path' => '/src/Views/loja/mart.php'],
     'mochila'           => ['type' => 'view', 'path' => '/src/Views/mochila/mochila.php'],
-    'bag'               => ['type' => 'view', 'path' => '/src/Views/mochila/mochila.php'],
-    'centro'            => ['type' => 'view', 'path' => '/src/Views/centro_pokemon/centro.php'],
     'logs'              => ['type' => 'view', 'path' => '/src/Views/logs/historico.php'],
     
     // Controladores
