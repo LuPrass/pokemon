@@ -228,8 +228,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($todosDesmaiados) {
             $custoMinimoCura = 25;
             if ($usuarioDinheiro < $custoMinimoCura) {
-                unset($_SESSION['combate']);
-                $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui dinheiro suficiente para comprar HP ou curá-los! Você foi retirado da batalha.";
+                // Encerra o ciclo: limpa batalha, time e inimigos para montar um novo time
+                unset($_SESSION['combate'], $_SESSION['meu_time'], $_SESSION['inimigos_time'], $_SESSION['batalha_iniciada']);
+                $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui dinheiro suficiente para comprar HP ou curá-los! Você foi retirado da batalha. Monte um novo time para recomeçar.";
                 header("Location: index.php?rota=menu");
                 exit;
             }
@@ -553,6 +554,19 @@ $_SESSION['batalha_iniciada'] = true;
 // 4. Preparação das Variáveis de Exibição
 unset($pokemonJogador, $pokemonInimigo, $combate);
 $combate = $_SESSION['combate'];
+
+// Se o time foi curado (PokéMart/Mochila) depois de ter desmaiado por completo, retoma o combate
+if (($combate['status'] ?? '') === 'derrota_sem_pokemon') {
+    foreach ($meuTime as $pkVivo) {
+        if ((int)($pkVivo['hpAtual'] ?? $pkVivo['hpMaximo'] ?? $pkVivo['hp'] ?? 40) > 0) {
+            $_SESSION['combate']['status'] = 'em_combate';
+            $_SESSION['combate']['menu_aberto'] = 'principal';
+            $combate = $_SESSION['combate'];
+            break;
+        }
+    }
+    unset($pkVivo);
+}
 $batalhaAtual = (int)$combate['batalha_atual'];
 $totalBatalhas = (int)$combate['total_batalhas'];
 $ativoIdx = (int)$combate['pokemon_ativo_idx'];
