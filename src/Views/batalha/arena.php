@@ -65,8 +65,6 @@ if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])
                 'velocidade'   => (int)($info['velocidade'] ?? 45),
                 'nivel'        => 5,
                 'gif'          => $info['gif'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$id}.gif",
-                'imagem'       => $info['imagemFrente'] ?? ($info['imagem'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{$id}.png"),
-                'imagemFrente' => $info['imagemFrente'] ?? ($info['imagem'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{$id}.png"),
                 'movimentos'   => PokeApiService::obterMovimentosPokemon($id, $info['nome'] ?? '', $info['tipo'] ?? 'normal')
             ];
         }, $idsRestantes);
@@ -464,6 +462,9 @@ $_SESSION['batalha_iniciada'] = true;
             } elseif ($novoIdx === $combate['pokemon_ativo_idx']) {
                 $avisoErro = "Este Pokémon já está na batalha!";
             } else {
+                $pokemonAtivoAnterior = $meuTime[$combate['pokemon_ativo_idx']] ?? [];
+                $hpAtivoAnterior = (int)($pokemonAtivoAnterior['hpAtual'] ?? $pokemonAtivoAnterior['hpMaximo'] ?? $pokemonAtivoAnterior['hp'] ?? 40);
+
                 $combate['pokemon_ativo_idx'] = $novoIdx;
                 $combate['status'] = 'em_combate';
                 $combate['menu_aberto'] = 'principal';
@@ -474,19 +475,21 @@ $_SESSION['batalha_iniciada'] = true;
                 $nomeInimigo = $pokemonInimigo['nome'] ?? $pokemonInimigo['name'];
                 $combate['mensagens'] = ["🔄 Você colocou {$nomeNovo} em campo!"];
 
-                $golpesInimigo = $pokemonInimigo['movimentos'] ?? PokeApiService::obterMovimentosPokemon((int)($pokemonInimigo['id'] ?? 0), $nomeInimigo, $pokemonInimigo['tipo'] ?? 'normal');
-                $resIni = $calcularDanoCategoria($pokemonInimigo, $candidato, $golpesInimigo['fisico'], $combate['mods_inimigo'], $combate['mods_jogador']);
-                $danoInimigo = $resIni['dano'];
-                $hpRestante = max(0, $hpCandidato - $danoInimigo);
-                $meuTime[$novoIdx]['hpAtual'] = $hpRestante;
-                $salvarHpBanco($meuTime[$novoIdx]);
+                if ($hpAtivoAnterior > 0) {
+                    $golpesInimigo = $pokemonInimigo['movimentos'] ?? PokeApiService::obterMovimentosPokemon((int)($pokemonInimigo['id'] ?? 0), $nomeInimigo, $pokemonInimigo['tipo'] ?? 'normal');
+                    $resIni = $calcularDanoCategoria($pokemonInimigo, $candidato, $golpesInimigo['fisico'], $combate['mods_inimigo'], $combate['mods_jogador']);
+                    $danoInimigo = $resIni['dano'];
+                    $hpRestante = max(0, $hpCandidato - $danoInimigo);
+                    $meuTime[$novoIdx]['hpAtual'] = $hpRestante;
+                    $salvarHpBanco($meuTime[$novoIdx]);
 
-                $combate['mensagens'][] = "⚔️ {$nomeInimigo} atacou {$nomeNovo} na entrada com {$golpesInimigo['fisico']['nome']} causando {$danoInimigo} de dano! (HP restante: {$hpRestante})";
+                    $combate['mensagens'][] = "⚔️ {$nomeInimigo} atacou {$nomeNovo} na entrada com {$golpesInimigo['fisico']['nome']} causando {$danoInimigo} de dano! (HP restante: {$hpRestante})";
 
-                if ($hpRestante <= 0) {
-                    $combate['mensagens'][] = "💀 {$nomeNovo} desmaiou logo na entrada!";
-                    if ($verificarGameOver()) {
-                        $combate['status'] = 'derrota_sem_pokemon';
+                    if ($hpRestante <= 0) {
+                        $combate['mensagens'][] = "💀 {$nomeNovo} desmaiou logo na entrada!";
+                        if ($verificarGameOver()) {
+                            $combate['status'] = 'derrota_sem_pokemon';
+                        }
                     }
                 }
 
