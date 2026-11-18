@@ -50,8 +50,6 @@ $adminsPermitidos = require __DIR__ . '/../../../config/Administradores.php';
                 <?php else: ?>
                     <a class="menu-btn btn-builder" href="index.php?rota=builder">Construir Time</a>
                 <?php endif; ?>
-
-                <a class="menu-btn btn-pokemons" href="index.php?rota=pokemons">Menu de Pokémons</a>
                 <a class="menu-btn btn-loja" href="index.php?rota=loja">PokéMart</a>
                 <a class="menu-btn btn-mochila" href="index.php?rota=mochila">Mochila</a>
 

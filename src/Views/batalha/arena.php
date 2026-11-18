@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../../../Autoload.php';
+require_once __DIR__ . '/../../Services/PokeApiService.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -14,11 +17,7 @@ if (empty($_SESSION['meu_time'])) {
     exit;
 }
 
-if (!class_exists('Conexao')) {
-    require_once __DIR__ . '/../../../Autoload.php';
-}
 
-require_once __DIR__ . '/../../Services/PokeApiService.php';
 
 // Conexão com o banco de dados
 $pdo = Conexao::getConnection();
@@ -56,15 +55,15 @@ if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])
             $info = PokeApiService::buscarPorId($id) ?? [];
             return [
                 'id'           => $id,
-                'nome'         => $info['nome'] ?? "Pokémon #{$id}",
-                'tipo'         => $info['tipo'] ?? 'normal',
-                'hpMaximo'     => (int)($info['hp'] ?? 45),
-                'hpAtual'      => (int)($info['hp'] ?? 45),
-                'ataque'       => (int)($info['ataque'] ?? 40),
-                'defesa'       => (int)($info['defesa'] ?? 40),
-                'velocidade'   => (int)($info['velocidade'] ?? 45),
+                'nome'         => $info['nome'], 
+                'tipo'         => $info['tipo'] ,
+                'hpMaximo'     => (int)$info['hp'],
+                'hpAtual'      => (int)$info['hp'],
+                'ataque'       => (int)$info['ataque'],
+                'defesa'       => (int)$info['defesa'],
+                'velocidade'   => (int)$info['velocidade'],
                 'nivel'        => 5,
-                'gif'          => $info['gif'] ?? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$id}.gif",
+                'gif'          => $info['gif'] ?? '',
                 'movimentos'   => PokeApiService::obterMovimentosPokemon($id, $info['nome'] ?? '', $info['tipo'] ?? 'normal')
             ];
         }, $idsRestantes);
@@ -515,11 +514,11 @@ $_SESSION['batalha_iniciada'] = true;
             $fator = $nivelInimigo / 5.0; // Multiplicador proporcional simples
 
             $novoInimigo['nivel'] = $nivelInimigo;
-            $novoInimigo['hpMaximo'] = (int)round(($novoInimigo['hpMaximo'] ?? 45) * $fator);
+            $novoInimigo['hpMaximo'] = (int)round(($novoInimigo['hpMaximo']) * $fator);
             $novoInimigo['hpAtual'] = $novoInimigo['hpMaximo'];
-            $novoInimigo['ataque'] = (int)round(($novoInimigo['ataque'] ?? 40) * $fator);
-            $novoInimigo['defesa'] = (int)round(($novoInimigo['defesa'] ?? 40) * $fator);
-            $novoInimigo['velocidade'] = (int)round(($novoInimigo['velocidade'] ?? 45) * $fator);
+            $novoInimigo['ataque'] = (int)round($novoInimigo['ataque'] * $fator);
+            $novoInimigo['defesa'] = (int)round($novoInimigo['defesa']* $fator);
+            $novoInimigo['velocidade'] = (int)round($novoInimigo['velocidade']* $fator);
 
             if (empty($novoInimigo['movimentos'])) {
                 $novoInimigo['movimentos'] = PokeApiService::obterMovimentosPokemon((int)($novoInimigo['id'] ?? 0));
@@ -576,10 +575,10 @@ $ativoIdx = (int)$combate['pokemon_ativo_idx'];
 $pokemonJogador = $meuTime[$ativoIdx] ?? $meuTime[0];
 $pokemonInimigo = $combate['inimigo_atual'];
 
-$hpMaxJog = (int)($pokemonJogador['hpMaximo'] ?? $pokemonJogador['hp'] ?? 40);
+$hpMaxJog = (int)$pokemonJogador['hpMaximo'] ?? $pokemonJogador['hp'];
 $hpAtualJog = (int)($pokemonJogador['hpAtual'] ?? $hpMaxJog);
 
-$hpMaxIni = (int)($pokemonInimigo['hpMaximo'] ?? $pokemonInimigo['hp'] ?? 45);
+$hpMaxIni = (int)$pokemonInimigo['hpMaximo'] ?? $pokemonInimigo['hp'];
 $hpAtualIni = (int)($pokemonInimigo['hpAtual'] ?? $hpMaxIni);
 
 $statusCombate = $combate['status'] ?? 'em_combate';
@@ -598,20 +597,14 @@ $porcHpIni = max(0, min(100, (int)round(($hpAtualIni / max(1, $hpMaxIni)) * 100)
 $corHpJog = ($porcHpJog > 50) ? '#10b981' : (($porcHpJog > 20) ? '#f59e0b' : '#ef4444');
 $corHpIni = ($porcHpIni > 50) ? '#10b981' : (($porcHpIni > 20) ? '#f59e0b' : '#ef4444');
 
-// IDs para fallbacks de imagem
+// IDs dos Pokémon para buscar os sprites na PokéAPI
 $idJog = (int)($pokemonJogador['id'] ?? $pokemonJogador['id_pokedex'] ?? 0);
 $idIni = (int)($pokemonInimigo['id'] ?? $pokemonInimigo['id_pokedex'] ?? 0);
 
-// GIFs dos personagens (PokeAPI Showdown animado e fallbacks seguros)
-$imgJog = !empty($pokemonJogador['gif']) ? $pokemonJogador['gif'] : 
-          (!empty($pokemonJogador['imagemAnimada']) ? $pokemonJogador['imagemAnimada'] : 
-          (!empty($idJog) ? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$idJog}.gif" : 
-          ($pokemonJogador['imagemCostas'] ?? ($pokemonJogador['imagem'] ?? ($pokemonJogador['img'] ?? '')))));
-
-$imgIni = !empty($pokemonInimigo['gif']) ? $pokemonInimigo['gif'] : 
-          (!empty($pokemonInimigo['imagemAnimada']) ? $pokemonInimigo['imagemAnimada'] : 
-          (!empty($idIni) ? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$idIni}.gif" : 
-          ($pokemonInimigo['imagemFrente'] ?? ($pokemonInimigo['imagem'] ?? ($pokemonInimigo['img'] ?? '')))));
+$spriteJogador = $idJog > 0 ? PokeApiService::buscarPorId($idJog) : null;
+$spriteInimigo = $idIni > 0 ? PokeApiService::buscarPorId($idIni) : null;
+$imgJog = $spriteJogador['gif'] ?? '';
+$imgIni = $spriteInimigo['gif'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -686,7 +679,7 @@ $imgIni = !empty($pokemonInimigo['gif']) ? $pokemonInimigo['gif'] :
 
                         <div class="sprite-box">
                             <?php if (!empty($imgIni)): ?>
-                                <img src="<?= htmlspecialchars($imgIni) ?>" alt="<?= htmlspecialchars($nomeIni) ?>" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/<?= $idIni ?>.png';">
+                                <img src="<?= htmlspecialchars($imgIni, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($nomeIni) ?>">
                             <?php endif; ?>
                             <div class="sombra"></div>
                         </div>
@@ -696,7 +689,7 @@ $imgIni = !empty($pokemonInimigo['gif']) ? $pokemonInimigo['gif'] :
                     <div class="lado lado-jogador">
                         <div class="sprite-box">
                             <?php if (!empty($imgJog)): ?>
-                                <img src="<?= htmlspecialchars($imgJog) ?>" alt="<?= htmlspecialchars($nomeJog) ?>" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/<?= $idJog ?>.png';">
+                                <img src="<?= htmlspecialchars($imgJog, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($nomeJog) ?>">
                             <?php endif; ?>
                             <div class="sombra"></div>
                         </div>

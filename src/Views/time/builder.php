@@ -115,14 +115,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
             }
 
             const dados = await resposta.json();
-            const imagemArtwork = dados.sprites.other?.['official-artwork']?.front_default
-                || dados.sprites.front_default;
+            const imagemSprite = dados.sprites.other?.showdown?.front_default
+                || dados.sprites.front_default
+                || '';
 
             return {
                 id: dados.id,
                 nome: dados.name,
-                imagem: imagemArtwork,
-                imagemAnimada: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${dados.id}.gif`,
+                imagem: imagemSprite,
+                imagemAnimada: imagemSprite,
                 tipo: dados.types[0]?.type?.name || 'normal',
                 tipos: dados.types.map(t => t.type.name),
                 stats: Object.fromEntries(
@@ -147,8 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 pokemonStatsCache[poke.id] = {
                     id: poke.id,
                     name: poke.nome,
-                    img: poke.imagemAnimada,
-                    imgEstatica: poke.imagem,
+                    img: poke.imagem,
                     tipo: poke.tipo,
                     tipos: poke.tipos,
                     hp: poke.stats.hp,
@@ -159,13 +159,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 grid.innerHTML += criarCardHTML(poke);
             });
 
+            meuTime = meuTime.map(pokemon => {
+                const id = Number(pokemon.id ?? pokemon.id_pokedex);
+                const sprite = pokemonStatsCache[id]?.img || '';
+                return { ...pokemon, img: sprite };
+            });
+
             atualizarPainelTime();
         }
 
         // 2. Constrói o HTML do Card personalizado por tipo
         function criarCardHTML(poke) {
             const imagem = poke.imagemAnimada;
-            const imagemFallback = poke.imagem;
             const tipoPrincipal = poke.tipo;
             const dadosTipo = MAPA_TIPOS[tipoPrincipal] || { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
 
@@ -196,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 
             return `
                 <div class="pokemon-card card-tipo-${dadosTipo.classe} ${noTime ? 'selected' : ''}" id="card-${poke.id}">
-                    <img src="${imagem}" alt="${poke.nome}" onerror="this.onerror=null; this.src='${imagemFallback}'">
+                    ${imagem ? `<img src="${imagem}" alt="${poke.nome}">` : ''}
                     <h3 class="card-name">${poke.nome}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
@@ -279,8 +284,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
 
             for (let i = 0; i < 6; i++) {
                 if (meuTime[i]) {
+                    const id = Number(meuTime[i].id ?? meuTime[i].id_pokedex);
+                    const imagem = pokemonStatsCache[id]?.img || '';
                     slots[i].innerHTML = `
-                        <img src="${meuTime[i].img}" alt="${meuTime[i].name}" title="${meuTime[i].name}">
+                        ${imagem ? `<img src="${imagem}" alt="${meuTime[i].name}" title="${meuTime[i].name}">` : ''}
                         <span class="slot-nome">${meuTime[i].name}</span>
                     `;
                 } else {
@@ -303,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                 return {
                     id: id,
                     name: p.name || `Pokémon #${id}`,
-                    img: p.img || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+                    img: p.img || '',
                     tipo: p.tipo || 'normal',
                     hp: p.hp || 50,
                     attack: p.attack || 50,

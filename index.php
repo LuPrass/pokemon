@@ -12,7 +12,6 @@ $rotas = [
     'login'             => ['type' => 'view', 'path' => '/login.php'],
     'logout'            => ['type' => 'view', 'path' => '/logout.php'],
     'menu'              => ['type' => 'view', 'path' => '/src/Views/menu/menu.php'],
-    'pokemons'          => ['type' => 'view', 'path' => '/src/Views/pokemons/pokemons.php'],
     'builder'           => ['type' => 'view', 'path' => '/src/Views/time/builder.php'],
     'batalha'           => ['type' => 'view', 'path' => '/src/Views/batalha/arena.php'],
     'loja'              => ['type' => 'view', 'path' => '/src/Views/loja/mart.php'],

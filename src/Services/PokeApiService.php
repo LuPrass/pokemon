@@ -15,6 +15,7 @@ class PokeApiService {
     // Cache em memória (durante a execução da requisição atual)
     private static $cache = [];
     private static $cacheMoves = [];
+    private static $cachePokemon = [];
 
     /**
      * Busca os detalhes de um movimento específico diretamente na PokéAPI (/api/v2/move/{nome})
@@ -204,29 +205,21 @@ class PokeApiService {
      * Busca dados brutos de um pokémon na PokéAPI pelo nome ou ID
      */
     public function buscarPokemon($nome) {
-        $url = $this->urlBase . strtolower(trim((string)$nome));
-
-        // No XAMPP o certificado HTTPS muitas vezes não está configurado,
-        // então desligamos a verificação para o ambiente local
-        $opcoes = [
-            'ssl' => [
-                'verify_peer'      => false,
-                'verify_peer_name' => false
-            ],
-            'http' => [
-                'timeout' => 3
-            ]
-        ];
-        $contexto = stream_context_create($opcoes);
-
-        $json = @file_get_contents($url, false, $contexto);
-
-        if ($json === false) {
+        $chave = strtolower(trim((string)$nome));
+        if ($chave === '') {
             return false;
         }
 
-        $dados = json_decode($json, true);
-        if (!is_array($dados)) {
+        if (isset(self::$cachePokemon[$chave])) {
+            return self::$cachePokemon[$chave];
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['pokemon_api'][$chave])) {
+            return self::$cachePokemon[$chave] = $_SESSION['pokemon_api'][$chave];
+        }
+
+        $dados = $this->requisitarDadosPokemon($chave);
+        if ($dados === null) {
             return false;
         }
 
@@ -240,6 +233,9 @@ class PokeApiService {
         }
 
         $tipoPrincipal = $dados['types'][0]['type']['name'] ?? 'normal';
+        $imagemSprite = $dados['sprites']['other']['showdown']['front_default']
+            ?? $dados['sprites']['front_default']
+            ?? '';
 
         // Pega as informações formatadas para o jogo
         $pokemon = [
@@ -257,13 +253,43 @@ class PokeApiService {
                 'defense'   => $baseStats['defense'] ?? 0,
                 'speed'     => $baseStats['speed'] ?? 0,
             ],
-            'imagem'        => $dados['sprites']['front_default'] ?? '',
+            'imagem'        => $imagemSprite,
             'imagemCostas'  => $dados['sprites']['back_default'] ?? '',
-            'imagemArtwork' => $dados['sprites']['other']['official-artwork']['front_default'] ?? ($dados['sprites']['front_default'] ?? ''),
+            'imagemArtwork' => $imagemSprite,
             'movimentos'    => $this->carregarMovimentosDaApi($dados['moves'] ?? [], $tipoPrincipal)
         ];
 
+        $chavesCache = array_unique([$chave, (string)$dados['id'], strtolower($dados['name'])]);
+        foreach ($chavesCache as $chaveCache) {
+            self::$cachePokemon[$chaveCache] = $pokemon;
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                $_SESSION['pokemon_api'][$chaveCache] = $pokemon;
+            }
+        }
+
         return $pokemon;
+    }
+
+    private function requisitarDadosPokemon(string $chave): ?array {
+        $opcoes = [
+            'ssl' => [
+                'verify_peer'      => false,
+                'verify_peer_name' => false
+            ],
+            'http' => [
+                'timeout' => 3
+            ]
+        ];
+        $contexto = stream_context_create($opcoes);
+        $url = $this->urlBase . rawurlencode($chave);
+        $json = @file_get_contents($url, false, $contexto);
+
+        if ($json === false) {
+            return null;
+        }
+
+        $dados = json_decode($json, true);
+        return is_array($dados) ? $dados : null;
     }
 
     /**
@@ -275,7 +301,9 @@ class PokeApiService {
         }
 
         if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['catalogo_pokeapi'][$id])) {
-            return self::$cache[$id] = $_SESSION['catalogo_pokeapi'][$id];
+            $pokemon = $_SESSION['catalogo_pokeapi'][$id];
+            $pokemon['gif'] = $pokemon['imagemFrente'] ?? '';
+            return self::$cache[$id] = $pokemon;
         }
 
         $api  = new self();
@@ -308,7 +336,7 @@ class PokeApiService {
             'imagemArtwork'  => $info['imagemArtwork'],
             'imagemFrente'   => $info['imagem'],
             'imagemCostas'   => $info['imagemCostas'],
-            'gif'            => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/' . $info['id'] . '.gif',
+            'gif'            => $info['imagem'],
             'movimentos'     => $info['movimentos'] ?? []
         ];
 
