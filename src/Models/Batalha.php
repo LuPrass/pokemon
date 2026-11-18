@@ -5,9 +5,6 @@ class Batalha {
     use TipoNormalTrait, TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait;
     use TipoEletricoTrait, TipoFantasmaTrait, TipoPsiquicoTrait, TipoTerraTrait;
 
-    // Chance (em %) de um ataque causar o status do seu tipo
-    const CHANCE_STATUS = 30;
-
     // Frase mostrada quando o pokémon ganha um status
     const FRASES_STATUS = [
         'Queimado'   => 'foi queimado!',
@@ -68,9 +65,9 @@ class Batalha {
         return $this->resultado;
     }
 
-    // Um turno: os dois atacam (o mais rápido primeiro) e depois o status faz efeito
+    // Um turno: os dois atacam (quem tem maior prioridade e velocidade ataca primeiro)
     public function turno(array $golpeJogador, array $golpeInimigo) {
-        if ($this->jogadorAtacaPrimeiro()) {
+        if ($this->jogadorAtacaPrimeiro($golpeJogador, $golpeInimigo)) {
             $this->agir($this->jogador, $this->inimigo, $golpeJogador);
             if (!$this->inimigo->estaDesmaiado()) {
                 $this->agir($this->inimigo, $this->jogador, $golpeInimigo);
@@ -82,22 +79,30 @@ class Batalha {
             }
         }
 
-        // Queimadura e veneno tiram vida no fim do turno
+        // Queimadura e veneno tiram 10% de HP no fim do turno
         $this->danoDoStatus($this->jogador);
         if (!$this->jogador->estaDesmaiado()) {
             $this->danoDoStatus($this->inimigo);
         }
     }
 
-    // Quem tem maior prioridade (e depois velocidade) ataca primeiro
-    private function jogadorAtacaPrimeiro() {
-        if ($this->jogador->getPrioridade() != $this->inimigo->getPrioridade()) {
-            return $this->jogador->getPrioridade() > $this->inimigo->getPrioridade();
+    // Regra oficial do trabalho:
+    // 1º Quem tiver maior prioridade (do Pokémon ou do Golpe) ataca primeiro.
+    // 2º Se a prioridade for igual, quem tiver maior velocidade ataca primeiro.
+    private function jogadorAtacaPrimeiro(array $golpeJogador = [], array $golpeInimigo = []) {
+        $prioJogador = $this->jogador->getPrioridade() + ($golpeJogador['prioridade'] ?? 0);
+        $prioInimigo = $this->inimigo->getPrioridade() + ($golpeInimigo['prioridade'] ?? 0);
+
+        // 1. Desempate por Prioridade
+        if ($prioJogador != $prioInimigo) {
+            return $prioJogador > $prioInimigo;
         }
+
+        // 2. Desempate por Velocidade
         return $this->velocidade($this->jogador) >= $this->velocidade($this->inimigo);
     }
 
-    // Paralisia deixa o pokémon com metade da velocidade
+    // Paralisia reduz a velocidade pela metade
     private function velocidade(Pokemon $pokemon) {
         if ($pokemon->getStatusCondicao() == 'Paralisado') {
             return $pokemon->getVelocidade() / 2;
@@ -112,33 +117,36 @@ class Batalha {
         }
     }
 
-    // Dormindo, congelado e paralisado podem impedir o pokémon de agir
+    // Dormindo, Congelado e Paralisado bloqueiam o ataque
     private function podeAgir(Pokemon $pokemon) {
         $nome = $pokemon->getNome();
         $status = $pokemon->getStatusCondicao();
+        $ehJogador = ($pokemon === $this->jogador);
 
         if ($status == 'Dormindo') {
-            if (rand(1, 100) <= 33) {
-                $pokemon->setStatusCondicao('Normal');
-                $this->mensagem($nome . " acordou!");
-                return true;
+            if ($ehJogador) {
+                $this->mensagem("💤 " . $nome . " está dormindo e não conseguiu atacar! Use Awakening ou Full Heal.");
+            } else {
+                $this->mensagem("💤 " . $nome . " adversário está dormindo e não pôde atacar!");
             }
-            $this->mensagem($nome . " está dormindo...");
             return false;
         }
 
         if ($status == 'Congelado') {
-            if (rand(1, 100) <= 20) {
-                $pokemon->setStatusCondicao('Normal');
-                $this->mensagem($nome . " descongelou!");
-                return true;
+            if ($ehJogador) {
+                $this->mensagem("❄️ " . $nome . " está congelado e não pode se mover! Use Ice Heal ou Full Heal.");
+            } else {
+                $this->mensagem("❄️ " . $nome . " adversário está congelado e não pôde atacar!");
             }
-            $this->mensagem($nome . " está congelado e não consegue se mover!");
             return false;
         }
 
-        if ($status == 'Paralisado' && rand(1, 100) <= 25) {
-            $this->mensagem($nome . " está paralisado e não conseguiu se mover!");
+        if ($status == 'Paralisado') {
+            if ($ehJogador) {
+                $this->mensagem("⚡ " . $nome . " está paralisado e travou! Use Paralyze Heal ou Full Heal.");
+            } else {
+                $this->mensagem("⚡ " . $nome . " adversário está paralisado e travou!");
+            }
             return false;
         }
 
@@ -152,13 +160,6 @@ class Batalha {
         $categoria = $golpe['categoria'] ?? $golpe['damage_class'] ?? 'physical';
         if ($categoria == 'status') {
             $this->usarGolpeDeStatus($atacante, $defensor, $golpe);
-            return;
-        }
-
-        // Pode errar o golpe
-        $precisao = $golpe['precisao'] ?? 100;
-        if (rand(1, 100) > $precisao) {
-            $this->mensagem("O ataque errou!");
             return;
         }
 
@@ -186,9 +187,9 @@ class Batalha {
             return;
         }
 
-        // O tipo do golpe pode deixar o defensor com um status
+        // Se o golpe for elemental, ele sempre aplica o status correspondente do seu tipo
         $status = self::statusDoTipo($tipoGolpe);
-        if ($status != 'Normal' && rand(1, 100) <= self::CHANCE_STATUS) {
+        if ($status != 'Normal') {
             $this->aplicarStatus($defensor, $status);
         }
     }
@@ -200,10 +201,8 @@ class Batalha {
             $poder = 40;
         }
 
+        // O ataque e a defesa já vêm com os efeitos dos status calculados
         $ataque = $atacante->getAtaqueAtual();
-        if ($atacante->getStatusCondicao() == 'Queimado') {
-            $ataque = $ataque / 2; // queimadura enfraquece o ataque
-        }
         $defesa = max(1, $defensor->getDefesaAtual());
 
         $dano = round(($poder * $ataque) / ($defesa * 5) * $multiplicador);
@@ -243,26 +242,21 @@ class Batalha {
         return true;
     }
 
-    // Queimado perde 1/16 do HP e envenenado perde 1/8
+    // Dano de status: Queimado e Envenenado perdem sempre 10% do HP máximo por turno
     private function danoDoStatus(Pokemon $pokemon) {
         if ($pokemon->estaDesmaiado()) {
             return;
         }
 
         $status = $pokemon->getStatusCondicao();
-        if ($status == 'Queimado') {
-            $dano = (int)floor($pokemon->getHpMaximo() / 16);
-        } elseif ($status == 'Envenenado') {
-            $dano = (int)floor($pokemon->getHpMaximo() / 8);
-        } else {
-            return;
-        }
-
-        $dano = max(1, $dano);
-        $pokemon->receberDano($dano);
-        $this->mensagem($pokemon->getNome() . " perdeu " . $dano . " de HP por estar " . strtolower($status) . ".");
-        if ($pokemon->estaDesmaiado()) {
-            $this->mensagem($pokemon->getNome() . " desmaiou!");
+        if ($status == 'Queimado' || $status == 'Envenenado') {
+            // Perde 10% da vida máxima por turno
+            $dano = max(1, (int)round($pokemon->getHpMaximo() * 0.10));
+            $pokemon->receberDano($dano);
+            $this->mensagem($pokemon->getNome() . " perdeu " . $dano . " de HP por estar " . strtolower($status) . ".");
+            if ($pokemon->estaDesmaiado()) {
+                $this->mensagem($pokemon->getNome() . " desmaiou!");
+            }
         }
     }
 

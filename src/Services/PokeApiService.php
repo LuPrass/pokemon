@@ -61,6 +61,7 @@ class PokeApiService {
             'tipo'         => $dados['type']['name'] ?? 'normal',
             'poder'        => (int)($dados['power'] ?? ($classeDano === 'status' ? 0 : 40)),
             'precisao'     => (int)($dados['accuracy'] ?? 100),
+            'prioridade'   => (int)($dados['priority'] ?? 0),
             'efeito'       => self::extrairEfeitoMove($dados),
             'desc'         => self::extrairDescricaoMove($dados)
         ];

@@ -108,13 +108,20 @@ class Pokemon {
         $this->statusCondicao = $statusCondicao;
     }
 
-    // Ataque e defesa usados na batalha (já com as reduções)
+    // Ataque e defesa usados na batalha
+    // Se estiver com status negativo (Queimado ou Envenenado), o ataque cai pela metade (50%)
     public function getAtaqueAtual() {
-        return (int)round($this->ataque * $this->modAtaque);
+        $atk = $this->ataque * $this->modAtaque;
+
+        if ($this->statusCondicao == 'Queimado' || $this->statusCondicao == 'Envenenado') {
+            $atk = $atk * 0.5;
+        }
+
+        return max(1, (int)round($atk));
     }
 
     public function getDefesaAtual() {
-        return (int)round($this->defesa * $this->modDefesa);
+        return max(1, (int)round($this->defesa * $this->modDefesa));
     }
 
     public function setModificadores($modAtaque, $modDefesa) {
