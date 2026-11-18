@@ -144,9 +144,11 @@ class TimeController {
                     $pokemon['pokemon_db_id'] = $pokemonsPersistidos[$indice];
                 }
                 if (is_array($pokemon)) {
+                    // Deixa o pokémon no formato do jogo (nome, hpMaximo, ataque...)
+                    $pokemon = Pokemon::normalizar($pokemon);
                     $idPk = (int)($pokemon['id'] ?? $pokemon['id_pokedex'] ?? 0);
-                    $nomePk = $pokemon['nome'] ?? $pokemon['name'] ?? '';
-                    $tipoPk = $pokemon['tipo'] ?? 'normal';
+                    $nomePk = $pokemon['nome'];
+                    $tipoPk = $pokemon['tipo'];
                     $pokemon['movimentos'] = PokeApiService::obterMovimentosPadrao($idPk, $nomePk, $tipoPk);
                 }
             }
@@ -155,9 +157,10 @@ class TimeController {
             $inimigosCompletos = is_array($dados['inimigos'] ?? null) ? $dados['inimigos'] : [];
             foreach ($inimigosCompletos as &$inimigo) {
                 if (is_array($inimigo)) {
+                    $inimigo = Pokemon::normalizar($inimigo);
                     $idIni = (int)($inimigo['id'] ?? 0);
-                    $nomeIni = $inimigo['nome'] ?? $inimigo['name'] ?? '';
-                    $tipoIni = $inimigo['tipo'] ?? 'normal';
+                    $nomeIni = $inimigo['nome'];
+                    $tipoIni = $inimigo['tipo'];
                     $inimigo['movimentos'] = PokeApiService::obterMovimentosPadrao($idIni, $nomeIni, $tipoIni);
                 }
             }

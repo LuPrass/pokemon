@@ -95,9 +95,20 @@ class PokeApiService {
         if ($ailment === 'paralysis') return 'paralisar';
         if ($ailment === 'sleep') return 'dormir';
         if ($ailment === 'poison') return 'envenenar';
+        if ($ailment === 'burn') return 'queimar';
+        if ($ailment === 'freeze') return 'congelar';
 
         if (in_array($nome, ['thunder-wave', 'glare', 'stun-spore', 'nuzzle', 'zap-cannon'])) {
             return 'paralisar';
+        }
+        if (in_array($nome, ['hypnosis', 'sleep-powder', 'spore', 'lovely-kiss', 'sing'])) {
+            return 'dormir';
+        }
+        if (in_array($nome, ['poison-powder', 'toxic', 'poison-gas'])) {
+            return 'envenenar';
+        }
+        if (in_array($nome, ['will-o-wisp'])) {
+            return 'queimar';
         }
         if (in_array($nome, ['leer', 'tail-whip', 'screech', 'tickle', 'acid-spray'])) {
             return 'reduzir_def';
@@ -186,6 +197,8 @@ class PokeApiService {
         }
 
         if (!isset($movimentos['status'])) {
+            // O golpe de status padrão combina com o tipo do pokémon
+            $tipoNorm = strtolower(trim($tipoPokemon));
             $movimentos['status'] = [
                 'nome'         => 'Growl',
                 'damage_class' => 'status',
@@ -196,6 +209,28 @@ class PokeApiService {
                 'efeito'       => 'reduzir_atk',
                 'desc'         => 'Rosnado intimidador que diminui o Ataque do oponente.'
             ];
+
+            if (in_array($tipoNorm, ['fogo', 'fire'])) {
+                $movimentos['status']['nome'] = 'Will-O-Wisp';
+                $movimentos['status']['tipo'] = 'fire';
+                $movimentos['status']['efeito'] = 'queimar';
+                $movimentos['status']['desc'] = 'Chamas sinistras que queimam o oponente.';
+            } elseif (in_array($tipoNorm, ['eletrico', 'electric'])) {
+                $movimentos['status']['nome'] = 'Thunder Wave';
+                $movimentos['status']['tipo'] = 'electric';
+                $movimentos['status']['efeito'] = 'paralisar';
+                $movimentos['status']['desc'] = 'Onda elétrica que paralisa o oponente.';
+            } elseif (in_array($tipoNorm, ['planta', 'grass'])) {
+                $movimentos['status']['nome'] = 'Poison Powder';
+                $movimentos['status']['tipo'] = 'poison';
+                $movimentos['status']['efeito'] = 'envenenar';
+                $movimentos['status']['desc'] = 'Pó tóxico que envenena o oponente.';
+            } elseif (in_array($tipoNorm, ['psiquico', 'psychic'])) {
+                $movimentos['status']['nome'] = 'Hypnosis';
+                $movimentos['status']['tipo'] = 'psychic';
+                $movimentos['status']['efeito'] = 'dormir';
+                $movimentos['status']['desc'] = 'Hipnose que faz o oponente dormir.';
+            }
         }
 
         return $movimentos;

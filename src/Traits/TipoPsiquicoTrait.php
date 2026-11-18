@@ -2,11 +2,14 @@
 
 // Vantagens e desvantagens de um pokémon do tipo PSÍQUICO
 trait TipoPsiquicoTrait {
-    public function multiplicadorPsiquico($tipoAlvo) {
-        if ($tipoAlvo == 'luta' || $tipoAlvo == 'fighting') return 2;
-        if ($tipoAlvo == 'veneno' || $tipoAlvo == 'poison') return 2;
-        if ($tipoAlvo == 'psiquico' || $tipoAlvo == 'psychic') return 0.5;
-        if ($tipoAlvo == 'fantasma' || $tipoAlvo == 'ghost') return 0.5;
+    public static function multiplicadorPsiquico($tipoAlvo) {
+        if ($tipoAlvo === 'luta' || $tipoAlvo === 'veneno') return 2;
+        if ($tipoAlvo === 'psiquico' || $tipoAlvo === 'fantasma') return 0.5;
         return 1;
+    }
+
+    // Status que um ataque psíquico pode causar em quem recebe (hipnose)
+    public static function statusPsiquico() {
+        return 'Dormindo';
     }
 }

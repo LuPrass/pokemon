@@ -2,11 +2,33 @@
 
 // Regras da batalha entre dois pokémons (não mexe no banco de dados)
 class Batalha {
-    use TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait, TipoEletricoTrait;
+    use TipoNormalTrait, TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait;
+    use TipoEletricoTrait, TipoFantasmaTrait, TipoPsiquicoTrait, TipoTerraTrait;
+
+    // Chance (em %) de um ataque causar o status do seu tipo
+    const CHANCE_STATUS = 30;
+
+    // Frase mostrada quando o pokémon ganha um status
+    const FRASES_STATUS = [
+        'Queimado'   => 'foi queimado!',
+        'Congelado'  => 'foi congelado!',
+        'Envenenado' => 'foi envenenado!',
+        'Paralisado' => 'foi paralisado!',
+        'Dormindo'   => 'adormeceu!'
+    ];
+
+    // Golpes de status (da PokéAPI) e o status que cada um causa
+    const EFEITOS_STATUS = [
+        'queimar'   => 'Queimado',
+        'congelar'  => 'Congelado',
+        'envenenar' => 'Envenenado',
+        'paralisar' => 'Paralisado',
+        'dormir'    => 'Dormindo'
+    ];
 
     private $jogador;
     private $inimigo;
-    private $turnos = [];
+    private $turnos = []; // tudo o que aconteceu, em texto
     private $resultado = '';
 
     public function __construct(Pokemon $jogador, Pokemon $inimigo) {
@@ -22,7 +44,11 @@ class Batalha {
         return $this->resultado;
     }
 
-    // Faz a luta inteira, turno a turno, até alguém desmaiar
+    private function mensagem($texto) {
+        $this->turnos[] = $texto;
+    }
+
+    // Faz a luta inteira de uma vez, usando um golpe simples para cada lado
     public function lutar() {
         if ($this->jogador->estaDesmaiado()) {
             throw new PokemonDesmaiadoException();
@@ -30,18 +56,7 @@ class Batalha {
 
         $limite = 100; // segurança para nunca ficar em loop infinito
         while (!$this->jogador->estaDesmaiado() && !$this->inimigo->estaDesmaiado() && $limite > 0) {
-            // Quem tem maior prioridade (e depois velocidade) ataca primeiro
-            if ($this->jogadorAtacaPrimeiro()) {
-                $this->atacar($this->jogador, $this->inimigo);
-                if (!$this->inimigo->estaDesmaiado()) {
-                    $this->atacar($this->inimigo, $this->jogador);
-                }
-            } else {
-                $this->atacar($this->inimigo, $this->jogador);
-                if (!$this->jogador->estaDesmaiado()) {
-                    $this->atacar($this->jogador, $this->inimigo);
-                }
-            }
+            $this->turno($this->golpePadrao($this->jogador), $this->golpePadrao($this->inimigo));
             $limite--;
         }
 
@@ -53,50 +68,259 @@ class Batalha {
         return $this->resultado;
     }
 
+    // Um turno: os dois atacam (o mais rápido primeiro) e depois o status faz efeito
+    public function turno(array $golpeJogador, array $golpeInimigo) {
+        if ($this->jogadorAtacaPrimeiro()) {
+            $this->agir($this->jogador, $this->inimigo, $golpeJogador);
+            if (!$this->inimigo->estaDesmaiado()) {
+                $this->agir($this->inimigo, $this->jogador, $golpeInimigo);
+            }
+        } else {
+            $this->agir($this->inimigo, $this->jogador, $golpeInimigo);
+            if (!$this->jogador->estaDesmaiado()) {
+                $this->agir($this->jogador, $this->inimigo, $golpeJogador);
+            }
+        }
+
+        // Queimadura e veneno tiram vida no fim do turno
+        $this->danoDoStatus($this->jogador);
+        if (!$this->jogador->estaDesmaiado()) {
+            $this->danoDoStatus($this->inimigo);
+        }
+    }
+
+    // Quem tem maior prioridade (e depois velocidade) ataca primeiro
     private function jogadorAtacaPrimeiro() {
         if ($this->jogador->getPrioridade() != $this->inimigo->getPrioridade()) {
             return $this->jogador->getPrioridade() > $this->inimigo->getPrioridade();
         }
-        return $this->jogador->getVelocidade() >= $this->inimigo->getVelocidade();
+        return $this->velocidade($this->jogador) >= $this->velocidade($this->inimigo);
     }
 
-    private function atacar(Pokemon $atacante, Pokemon $defensor) {
-        $dano = $this->calcularDano($atacante, $defensor);
-        $defensor->receberDano($dano);
-        $this->turnos[] = $atacante->getNome() . " atacou " . $defensor->getNome() .
-            " e causou " . $dano . " de dano (HP restante: " . $defensor->getHpAtual() . ")";
-    }
-
-    private function calcularDano(Pokemon $atacante, Pokemon $defensor) {
-        $base = ((($atacante->getNivel() * 2 / 5) + 2) * 40 * $atacante->getAtaque() / $defensor->getDefesa()) / 50 + 2;
-        $multiplicador = $this->multiplicador($atacante->getTipo(), $defensor->getTipo());
-        $dano = (int) round($base * $multiplicador);
-        if ($dano < 1) {
-            $dano = 1;
+    // Paralisia deixa o pokémon com metade da velocidade
+    private function velocidade(Pokemon $pokemon) {
+        if ($pokemon->getStatusCondicao() == 'Paralisado') {
+            return $pokemon->getVelocidade() / 2;
         }
-        return $dano;
+        return $pokemon->getVelocidade();
     }
 
-    // Usa o trait do tipo do atacante para descobrir o multiplicador
-    public function multiplicador($tipoAtacante, $tipoAlvo) {
-        $atacante = $this->normalizarTipo($tipoAtacante);
-        $alvo = $this->normalizarTipo($tipoAlvo);
+    // O pokémon tenta usar o golpe (o status pode impedir)
+    public function agir(Pokemon $atacante, Pokemon $defensor, array $golpe) {
+        if ($this->podeAgir($atacante)) {
+            $this->atacar($atacante, $defensor, $golpe);
+        }
+    }
 
-        if ($atacante == 'fogo') return $this->multiplicadorFogo($alvo);
-        if ($atacante == 'agua') return $this->multiplicadorAgua($alvo);
-        if ($atacante == 'planta') return $this->multiplicadorPlanta($alvo);
-        if ($atacante == 'eletrico') return $this->multiplicadorEletrico($alvo);
-        return 1;
+    // Dormindo, congelado e paralisado podem impedir o pokémon de agir
+    private function podeAgir(Pokemon $pokemon) {
+        $nome = $pokemon->getNome();
+        $status = $pokemon->getStatusCondicao();
+
+        if ($status == 'Dormindo') {
+            if (rand(1, 100) <= 33) {
+                $pokemon->setStatusCondicao('Normal');
+                $this->mensagem($nome . " acordou!");
+                return true;
+            }
+            $this->mensagem($nome . " está dormindo...");
+            return false;
+        }
+
+        if ($status == 'Congelado') {
+            if (rand(1, 100) <= 20) {
+                $pokemon->setStatusCondicao('Normal');
+                $this->mensagem($nome . " descongelou!");
+                return true;
+            }
+            $this->mensagem($nome . " está congelado e não consegue se mover!");
+            return false;
+        }
+
+        if ($status == 'Paralisado' && rand(1, 100) <= 25) {
+            $this->mensagem($nome . " está paralisado e não conseguiu se mover!");
+            return false;
+        }
+
+        return true;
+    }
+
+    private function atacar(Pokemon $atacante, Pokemon $defensor, array $golpe) {
+        $this->mensagem($atacante->getNome() . " usou " . ($golpe['nome'] ?? 'Ataque') . "!");
+
+        // Golpe de status não causa dano
+        $categoria = $golpe['categoria'] ?? $golpe['damage_class'] ?? 'physical';
+        if ($categoria == 'status') {
+            $this->usarGolpeDeStatus($atacante, $defensor, $golpe);
+            return;
+        }
+
+        // Pode errar o golpe
+        $precisao = $golpe['precisao'] ?? 100;
+        if (rand(1, 100) > $precisao) {
+            $this->mensagem("O ataque errou!");
+            return;
+        }
+
+        // Vantagem de tipo vem dos traits
+        $tipoGolpe = $golpe['tipo'] ?? $atacante->getTipo();
+        $multiplicador = self::multiplicador($tipoGolpe, $defensor->getTipo());
+        if ($multiplicador == 0) {
+            $this->mensagem("Não afetou " . $defensor->getNome() . "...");
+            return;
+        }
+
+        $dano = $this->calcularDano($atacante, $defensor, $golpe, $multiplicador);
+        $defensor->receberDano($dano);
+        $this->mensagem("Causou " . $dano . " de dano em " . $defensor->getNome() .
+            " (HP: " . $defensor->getHpAtual() . "/" . $defensor->getHpMaximo() . ")");
+
+        if ($multiplicador > 1) {
+            $this->mensagem("É super eficaz!");
+        } elseif ($multiplicador < 1) {
+            $this->mensagem("Não é muito eficaz.");
+        }
+
+        if ($defensor->estaDesmaiado()) {
+            $this->mensagem($defensor->getNome() . " desmaiou!");
+            return;
+        }
+
+        // O tipo do golpe pode deixar o defensor com um status
+        $status = self::statusDoTipo($tipoGolpe);
+        if ($status != 'Normal' && rand(1, 100) <= self::CHANCE_STATUS) {
+            $this->aplicarStatus($defensor, $status);
+        }
+    }
+
+    // Dano = (poder x ataque) / (defesa x 5), vezes a vantagem de tipo
+    private function calcularDano(Pokemon $atacante, Pokemon $defensor, array $golpe, $multiplicador) {
+        $poder = $golpe['poder'] ?? 40;
+        if ($poder <= 0) {
+            $poder = 40;
+        }
+
+        $ataque = $atacante->getAtaqueAtual();
+        if ($atacante->getStatusCondicao() == 'Queimado') {
+            $ataque = $ataque / 2; // queimadura enfraquece o ataque
+        }
+        $defesa = max(1, $defensor->getDefesaAtual());
+
+        $dano = round(($poder * $ataque) / ($defesa * 5) * $multiplicador);
+        return max(1, (int)$dano);
+    }
+
+    private function usarGolpeDeStatus(Pokemon $atacante, Pokemon $defensor, array $golpe) {
+        $efeito = $golpe['efeito'] ?? 'reduzir_atk';
+        $nomeDefensor = $defensor->getNome();
+
+        if ($efeito == 'reduzir_atk') {
+            $defensor->reduzirAtaque();
+            $this->mensagem("O Ataque de " . $nomeDefensor . " caiu!");
+        } elseif ($efeito == 'reduzir_def') {
+            $defensor->reduzirDefesa();
+            $this->mensagem("A Defesa de " . $nomeDefensor . " caiu!");
+        } elseif ($efeito == 'curar_proprio') {
+            $hpAntes = $atacante->getHpAtual();
+            $atacante->curar(max(10, (int)round($atacante->getHpMaximo() * 0.35)));
+            $this->mensagem($atacante->getNome() . " recuperou " . ($atacante->getHpAtual() - $hpAntes) . " HP.");
+        } elseif (isset(self::EFEITOS_STATUS[$efeito])) {
+            if (!$this->aplicarStatus($defensor, self::EFEITOS_STATUS[$efeito])) {
+                $this->mensagem("Mas não teve efeito.");
+            }
+        } else {
+            $this->mensagem("Mas não teve efeito.");
+        }
+    }
+
+    // Só dá o status se o pokémon estiver normal (um status por vez)
+    private function aplicarStatus(Pokemon $pokemon, $status) {
+        if ($pokemon->getStatusCondicao() != 'Normal') {
+            return false;
+        }
+        $pokemon->setStatusCondicao($status);
+        $this->mensagem($pokemon->getNome() . " " . self::FRASES_STATUS[$status]);
+        return true;
+    }
+
+    // Queimado perde 1/16 do HP e envenenado perde 1/8
+    private function danoDoStatus(Pokemon $pokemon) {
+        if ($pokemon->estaDesmaiado()) {
+            return;
+        }
+
+        $status = $pokemon->getStatusCondicao();
+        if ($status == 'Queimado') {
+            $dano = (int)floor($pokemon->getHpMaximo() / 16);
+        } elseif ($status == 'Envenenado') {
+            $dano = (int)floor($pokemon->getHpMaximo() / 8);
+        } else {
+            return;
+        }
+
+        $dano = max(1, $dano);
+        $pokemon->receberDano($dano);
+        $this->mensagem($pokemon->getNome() . " perdeu " . $dano . " de HP por estar " . strtolower($status) . ".");
+        if ($pokemon->estaDesmaiado()) {
+            $this->mensagem($pokemon->getNome() . " desmaiou!");
+        }
+    }
+
+    // Os traits definem as vantagens de cada tipo; aqui selecionamos o trait certo.
+    public static function multiplicador($tipoAtacante, $tipoAlvo) {
+        $atacante = self::normalizarTipo($tipoAtacante);
+        $alvo = self::normalizarTipo($tipoAlvo);
+
+        switch ($atacante) {
+            case 'normal': return self::multiplicadorNormal($alvo);
+            case 'fogo': return self::multiplicadorFogo($alvo);
+            case 'agua': return self::multiplicadorAgua($alvo);
+            case 'planta': return self::multiplicadorPlanta($alvo);
+            case 'eletrico': return self::multiplicadorEletrico($alvo);
+            case 'fantasma': return self::multiplicadorFantasma($alvo);
+            case 'psiquico': return self::multiplicadorPsiquico($alvo);
+            case 'terra': return self::multiplicadorTerra($alvo);
+            default: return 1;
+        }
+    }
+
+    // Também pelos traits: qual status um ataque desse tipo pode causar
+    public static function statusDoTipo($tipoAtacante) {
+        switch (self::normalizarTipo($tipoAtacante)) {
+            case 'normal': return self::statusNormal();
+            case 'fogo': return self::statusFogo();
+            case 'agua': return self::statusAgua();
+            case 'planta': return self::statusPlanta();
+            case 'eletrico': return self::statusEletrico();
+            case 'fantasma': return self::statusFantasma();
+            case 'psiquico': return self::statusPsiquico();
+            case 'terra': return self::statusTerra();
+            default: return 'Normal';
+        }
     }
 
     // Aceita o tipo em português (banco) ou inglês (PokéAPI)
-    private function normalizarTipo($tipo) {
-        $tipo = strtolower(trim($tipo));
+    private static function normalizarTipo($tipo) {
+        $tipos = [
+            'fire' => 'fogo',
+            'water' => 'agua',
+            'grass' => 'planta',
+            'electric' => 'eletrico',
+            'raio' => 'eletrico',
+            'ghost' => 'fantasma',
+            'psychic' => 'psiquico',
+            'ground' => 'terra',
+            'fighting' => 'luta',
+            'poison' => 'veneno'
+        ];
+        $tipo = strtolower(trim((string)$tipo));
+        $tipo = strtr($tipo, [
+            'á' => 'a', 'ã' => 'a', 'â' => 'a',
+            'é' => 'e', 'ê' => 'e', 'í' => 'i',
+            'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
+            'ú' => 'u', 'ç' => 'c'
+        ]);
 
-        if ($tipo == 'fogo' || $tipo == 'fire') return 'fogo';
-        if ($tipo == 'agua' || $tipo == 'água' || $tipo == 'water') return 'agua';
-        if ($tipo == 'planta' || $tipo == 'grass') return 'planta';
-        if ($tipo == 'raio' || $tipo == 'eletrico' || $tipo == 'elétrico' || $tipo == 'electric') return 'eletrico';
-        return $tipo;
+        return $tipos[$tipo] ?? $tipo;
     }
 }
