@@ -161,7 +161,8 @@ class LojaController extends Controller {
         $nome = $item->getNome();
 
         if ($item->getTipo() == 'evolucao') {
-            throw new Exception('A evolução ainda não está disponível.');
+            $pokemon->evoluir();
+            return;
         }
 
         if ($item->getTipo() == 'reviver') {

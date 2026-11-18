@@ -38,6 +38,7 @@ CREATE TABLE pokemon (
     velocidade INT NOT NULL,
     prioridade INT NOT NULL DEFAULT 0,
     status_condicao VARCHAR(20) NOT NULL DEFAULT 'Normal',
+    evoluido TINYINT(1) NOT NULL DEFAULT 0,
     vantagem VARCHAR(100) NULL,
     desvantagem VARCHAR(100) NULL,
     PRIMARY KEY (id),
@@ -136,7 +137,7 @@ INSERT INTO loja (nome, descricao, preco, tipo) VALUES
 -- Reviver
 ('Revive', 'Revive um Pokémon desmaiado com metade da vida', 150, 'reviver'),
 -- Evolução (Item obrigatório para evolução conforme requisito)
-('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 250, 'evolucao');
+('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 400, 'evolucao');
 
 -- Inserção de Treinadores (Controle de Usuários / Perfis)
 -- Senha de todos os treinadores iniciais: 123456 (armazenada com password_hash)

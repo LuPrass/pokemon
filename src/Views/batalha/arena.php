@@ -472,9 +472,15 @@ $imgIni = $spriteInimigo['gif'] ?? '';
                             <div class="sombra"></div>
                         </div>
 
-                        <div class="caixa-status">
+                        <?php $ehEvoluido = !empty($pokemonJogador['evoluido']); ?>
+                        <div class="caixa-status <?= $ehEvoluido ? 'caixa-evoluido' : '' ?>">
                             <div class="status-topo">
-                                <span class="status-nome"><?= htmlspecialchars($nomeJog) ?></span>
+                                <span class="status-nome">
+                                    <?= htmlspecialchars($nomeJog) ?>
+                                    <?php if ($ehEvoluido): ?>
+                                        <span class="badge-evoluido">✨ Evoluído</span>
+                                    <?php endif; ?>
+                                </span>
                                 <span class="status-nivel">Nv. <?= (int)$pokemonJogador['nivel'] ?></span>
                             </div>
                             <div class="hp-linha">
@@ -711,7 +717,12 @@ $imgIni = $spriteInimigo['gif'] ?? '';
                                 ?>
                                 <tr>
                                     <td><strong><?= $idx + 1 ?></strong></td>
-                                    <td><strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong></td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong>
+                                        <?php if (!empty($pk['evoluido'])): ?>
+                                            <span style="color: #f59e0b; font-size: 0.75rem; font-weight: 800;">✨ [EVO]</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
                                     <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
                                     <td>

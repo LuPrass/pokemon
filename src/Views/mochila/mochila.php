@@ -78,9 +78,50 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
     $msgResultado = '';
 
     if ($tipoItem === 'evolucao') {
-        $_SESSION['msg_erro'] = "A evolução ainda não está disponível nesta versão.";
-        header("Location: index.php?rota=mochila");
-        exit;
+        $jaEvoluido = (int)($pkSessao['evoluido'] ?? 0);
+        if ($jaEvoluido === 1) {
+            $_SESSION['msg_erro'] = "{$nomePoke} já atingiu sua evolução e não pode usar a Pedra de Evolução novamente!";
+            header("Location: index.php?rota=mochila");
+            exit;
+        }
+
+        // Instancia o Pokemon para aplicar a evolução oficial
+        $pokeObj = Pokemon::fromArray($pkSessao);
+        try {
+            $pokeObj->evoluir();
+        } catch (Exception $e) {
+            $_SESSION['msg_erro'] = $e->getMessage();
+            header("Location: index.php?rota=mochila");
+            exit;
+        }
+
+        // Sincroniza dados com a sessão
+        $dadosAtualizados = $pokeObj->paraArray();
+        foreach ($dadosAtualizados as $campo => $valor) {
+            $pkSessao[$campo] = $valor;
+        }
+
+        $novoHp = $pokeObj->getHpAtual();
+        $novoStatus = $pokeObj->getStatusCondicao();
+
+        // Salva as novas estatísticas de evolução no banco de dados
+        if ($pokemonDbId > 0) {
+            $stmtUpEvo = $pdo->prepare("UPDATE pokemon SET nome = :nome, nivel = :nivel, hp_maximo = :hp_maximo, hp_atual = :hp_atual, ataque = :ataque, defesa = :defesa, velocidade = :velocidade, evoluido = 1 WHERE id = :id AND usuario_id = :uid");
+            $stmtUpEvo->execute([
+                ':nome'       => $pokeObj->getNome(),
+                ':nivel'      => $pokeObj->getNivel(),
+                ':hp_maximo'  => $pokeObj->getHpMaximo(),
+                ':hp_atual'   => $pokeObj->getHpAtual(),
+                ':ataque'     => $pokeObj->getAtaqueAtual(),
+                ':defesa'     => $pokeObj->getDefesaAtual(),
+                ':velocidade' => $pokeObj->getVelocidade(),
+                ':id'         => $pokemonDbId,
+                ':uid'        => $usuarioId
+            ]);
+        }
+
+        $sucessoUso = true;
+        $msgResultado = "✨ Incrível! {$nomePoke} evoluiu para {$pokeObj->getNome()}! Seus atributos aumentaram!";
     } elseif ($tipoItem === 'reviver') {
         if ($hpAtual > 0) {
             $_SESSION['msg_erro'] = "{$nomePoke} não está desmaiado! Revive só pode ser usado em Pokémon desmaiados.";
@@ -309,9 +350,10 @@ unset($_SESSION['msg_sucesso'], $_SESSION['msg_erro']);
                             $hpMax = (int)($poke['hp_maximo'] ?? $poke['hpMaximo'] ?? 35);
                             $hpAtual = (int)($poke['hp_atual'] ?? $poke['hpAtual'] ?? 0);
                             $status = $poke['status_condicao'] ?? $poke['statusCondicao'] ?? 'Normal';
+                            $evoluido = (int)($poke['evoluido'] ?? 0) === 1 ? ' [Evoluído]' : '';
                         ?>
                         <option value="<?php echo $pokeId; ?>">
-                            <?php echo htmlspecialchars($nome); ?> (Nv. <?php echo $nivel; ?> | HP: <?php echo $hpAtual; ?>/<?php echo $hpMax; ?> | Status: <?php echo htmlspecialchars($status); ?>)
+                            <?php echo htmlspecialchars($nome); ?><?php echo $evoluido; ?> (Nv. <?php echo $nivel; ?> | HP: <?php echo $hpAtual; ?>/<?php echo $hpMax; ?> | Status: <?php echo htmlspecialchars($status); ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>

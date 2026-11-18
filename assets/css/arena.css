@@ -282,9 +282,31 @@ html, body {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* Caixa de status padrao */
 .lado-jogador .caixa-status {
     border-color: #10b981;
     box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+/* Caixa com cor diferenciada para Pokemon evoluido (borda dourada e tom gradiente) */
+.lado-jogador .caixa-status.caixa-evoluido {
+    border-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.95) 0%, rgba(67, 20, 7, 0.92) 100%);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), inset 0 0 12px rgba(245, 158, 11, 0.15);
+}
+
+.badge-evoluido {
+    display: inline-block;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #111827;
+    font-size: 0.68rem;
+    font-weight: 900;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
 }
 
 .lado-oponente .caixa-status {

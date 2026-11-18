@@ -13,11 +13,12 @@ class Pokemon {
     private $velocidade;
     private $prioridade;
     private $statusCondicao;
+    private $evoluido = 0; // 0 = estágio base, 1 = já evoluiu com a Pedra de Evolução
     private $modAtaque = 1.0; // cai quando o adversário usa um golpe que reduz o ataque
     private $modDefesa = 1.0; // cai quando o adversário usa um golpe que reduz a defesa
     private $pdo;
 
-    public function __construct($id = null, $usuarioId = null, $nome = '', $tipo = '', $nivel = 5, $hpMaximo = 1, $hpAtual = 1, $ataque = 1, $defesa = 1, $velocidade = 1, $prioridade = 0, $statusCondicao = 'Normal') {
+    public function __construct($id = null, $usuarioId = null, $nome = '', $tipo = '', $nivel = 5, $hpMaximo = 1, $hpAtual = 1, $ataque = 1, $defesa = 1, $velocidade = 1, $prioridade = 0, $statusCondicao = 'Normal', $evoluido = 0) {
         $this->id = $id;
         $this->usuarioId = $usuarioId;
         $this->nome = $nome;
@@ -30,6 +31,7 @@ class Pokemon {
         $this->velocidade = $velocidade;
         $this->prioridade = $prioridade;
         $this->statusCondicao = $statusCondicao;
+        $this->evoluido = (int)$evoluido;
         $this->pdo = Conexao::getConnection();
     }
 
@@ -80,6 +82,14 @@ class Pokemon {
 
     public function getStatusCondicao() {
         return $this->statusCondicao;
+    }
+
+    public function getEvoluido() {
+        return (int)$this->evoluido;
+    }
+
+    public function setEvoluido($evoluido) {
+        $this->evoluido = (int)$evoluido;
     }
 
     public function setUsuarioId($usuarioId) {
@@ -140,12 +150,35 @@ class Pokemon {
         }
     }
 
+    // Evolui o Pokémon usando a Pedra de Evolução
+    // Regra: só pode evoluir uma única vez. Ganha bônus de atributos (+30% vida e ataque).
+    public function evoluir() {
+        if ($this->evoluido == 1) {
+            throw new Exception($this->nome . ' já atingiu sua evolução e não pode evoluir novamente!');
+        }
+
+        $this->evoluido = 1;
+        $this->nivel += 5; // sobe 5 níveis ao evoluir
+        $this->hpMaximo = (int)round($this->hpMaximo * 1.3);
+        $this->hpAtual = $this->hpMaximo; // restaura a vida cheia ao evoluir
+        $this->ataque = (int)round($this->ataque * 1.3);
+        $this->defesa = (int)round($this->defesa * 1.2);
+        $this->velocidade = (int)round($this->velocidade * 1.2);
+
+        // Se o nome ainda não tiver o indicador, adiciona para ficar claro
+        if (strpos($this->nome, ' (Evoluído)') === false) {
+            $this->nome = $this->nome . ' (Evoluído)';
+        }
+
+        return true;
+    }
+
     public function save() {
         if ($this->id) {
             // Update existing pokemon in the database
             $sql = "UPDATE pokemon SET nome = :nome, tipo = :tipo, nivel = :nivel, hp_maximo = :hp_maximo,
                     hp_atual = :hp_atual, ataque = :ataque, defesa = :defesa, velocidade = :velocidade,
-                    prioridade = :prioridade, status_condicao = :status_condicao
+                    prioridade = :prioridade, status_condicao = :status_condicao, evoluido = :evoluido
                     WHERE id = :id AND usuario_id = :usuario_id";
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute([
@@ -159,13 +192,14 @@ class Pokemon {
                 ':velocidade' => $this->velocidade,
                 ':prioridade' => $this->prioridade,
                 ':status_condicao' => $this->statusCondicao,
+                ':evoluido' => $this->evoluido,
                 ':id' => $this->id,
                 ':usuario_id' => $this->usuarioId
             ]);
         } else {
             // Insert new pokemon into the database
-            $sql = "INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao)
-                    VALUES (:usuario_id, :nome, :tipo, :nivel, :hp_maximo, :hp_atual, :ataque, :defesa, :velocidade, :prioridade, :status_condicao)";
+            $sql = "INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao, evoluido)
+                    VALUES (:usuario_id, :nome, :tipo, :nivel, :hp_maximo, :hp_atual, :ataque, :defesa, :velocidade, :prioridade, :status_condicao, :evoluido)";
             $stmt = $this->pdo->prepare($sql);
             $ok = $stmt->execute([
                 ':usuario_id' => $this->usuarioId,
@@ -178,7 +212,8 @@ class Pokemon {
                 ':defesa' => $this->defesa,
                 ':velocidade' => $this->velocidade,
                 ':prioridade' => $this->prioridade,
-                ':status_condicao' => $this->statusCondicao
+                ':status_condicao' => $this->statusCondicao,
+                ':evoluido' => $this->evoluido
             ]);
 
             if ($ok) {
@@ -204,6 +239,7 @@ class Pokemon {
             $this->velocidade = $dados['velocidade'];
             $this->prioridade = $dados['prioridade'];
             $this->statusCondicao = $dados['status_condicao'];
+            $this->evoluido = (int)($dados['evoluido'] ?? 0);
             return true;
         }
         return false;
@@ -230,6 +266,7 @@ class Pokemon {
         $dados['velocidade'] = (int)($dados['velocidade'] ?? $dados['speed'] ?? 50);
         $dados['prioridade'] = (int)($dados['prioridade'] ?? 0);
         $dados['statusCondicao'] = $dados['statusCondicao'] ?? $dados['status_condicao'] ?? 'Normal';
+        $dados['evoluido'] = (int)($dados['evoluido'] ?? 0);
         $dados['modAtaque'] = (float)($dados['modAtaque'] ?? 1);
         $dados['modDefesa'] = (float)($dados['modDefesa'] ?? 1);
         return $dados;
@@ -240,7 +277,7 @@ class Pokemon {
         $dados = self::normalizar($dados);
         $pokemon = new Pokemon($dados['pokemon_db_id'] ?? null, $_SESSION['usuario_id'] ?? null,
             $dados['nome'], $dados['tipo'], $dados['nivel'], $dados['hpMaximo'], $dados['hpAtual'],
-            $dados['ataque'], $dados['defesa'], $dados['velocidade'], $dados['prioridade'], $dados['statusCondicao']);
+            $dados['ataque'], $dados['defesa'], $dados['velocidade'], $dados['prioridade'], $dados['statusCondicao'], $dados['evoluido']);
         $pokemon->setModificadores($dados['modAtaque'], $dados['modDefesa']);
         return $pokemon;
     }
@@ -248,8 +285,15 @@ class Pokemon {
     // O que muda durante a batalha, para guardar de volta na sessão
     public function paraArray() {
         return [
+            'nome' => $this->nome,
+            'nivel' => $this->nivel,
+            'hpMaximo' => $this->hpMaximo,
             'hpAtual' => $this->hpAtual,
+            'ataque' => $this->ataque,
+            'defesa' => $this->defesa,
+            'velocidade' => $this->velocidade,
             'statusCondicao' => $this->statusCondicao,
+            'evoluido' => $this->evoluido,
             'modAtaque' => $this->modAtaque,
             'modDefesa' => $this->modDefesa
         ];
