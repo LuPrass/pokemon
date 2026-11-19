@@ -306,32 +306,4 @@ class Batalha {
     public static function statusDoTipo($tipoAtacante) {
         return Pokemon::obterStatusPorTipo($tipoAtacante);
     }
-
-    // Aceita o tipo em português (banco) ou inglês (PokéAPI)
-    private static function normalizarTipo($tipo) {
-        $tipos = [
-            'fire' => 'fogo',
-            'water' => 'agua',
-            'grass' => 'planta',
-            'electric' => 'eletrico',
-            'raio' => 'eletrico',
-            'ghost' => 'fantasma',
-            'psychic' => 'psiquico',
-            'ground' => 'terra',
-            'fighting' => 'luta',
-            'poison' => 'veneno'
-        ];
-        $tipo = strtolower(trim((string)$tipo));
-        $tipo = strtr($tipo, [
-            'á' => 'a', 'ã' => 'a', 'â' => 'a',
-            'é' => 'e', 'ê' => 'e', 'í' => 'i',
-            'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
-            'ú' => 'u', 'ç' => 'c'
-        ]);
-
-        if (isset($tipos[$tipo])) {
-            return $tipos[$tipo];
-        }
-        return $tipo;
-    }
 }

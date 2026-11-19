@@ -5,7 +5,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$rota = $_GET['rota'] ?? (isset($_SESSION['logado']) && $_SESSION['logado'] === true ? 'menu' : 'login');
+$rota = 'login';
+if (isset($_GET['rota'])) {
+    $rota = $_GET['rota'];
+} elseif (isset($_SESSION['logado']) && $_SESSION['logado'] === true) {
+    $rota = 'menu';
+}
 
 // Mapa de rotas (Views e Ações)
 $rotas = [
@@ -22,8 +27,7 @@ $rotas = [
     'salvar-time'       => ['type' => 'action', 'class' => TimeController::class, 'method' => 'salvarTime'],
     'usuarios'          => ['type' => 'action', 'class' => UsuarioController::class, 'method' => 'listar'],
     'comprar'           => ['type' => 'action', 'class' => LojaController::class, 'method' => 'comprar'],
-    'lutar'             => ['type' => 'action', 'class' => BatalhaController::class, 'method' => 'lutar'],
-    'curar'             => ['type' => 'action', 'class' => CentroPokemonController::class, 'method' => 'curarTodos'],
+    'lutar'             => ['type' => 'action', 'class' => BatalhaController::class, 'method' => 'lutar']
 ];
 
 // Executa a rota se existir
@@ -33,7 +37,13 @@ if (isset($rotas[$rota])) {
         require_once __DIR__ . $r['path'];
     } else {
         $controller = new $r['class']();
-        $param = $_GET['id'] ?? $_GET['usuario_id'] ?? null;
+        $param = null;
+        if (isset($_GET['id'])) {
+            $param = $_GET['id'];
+        } elseif (isset($_GET['usuario_id'])) {
+            $param = $_GET['usuario_id'];
+        }
+
         if ($param !== null) {
             $controller->{$r['method']}($param);
         } else {

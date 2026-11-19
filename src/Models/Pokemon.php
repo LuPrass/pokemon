@@ -434,6 +434,11 @@ class Pokemon {
 
     // O que muda durante a batalha, para guardar de volta na sessão
     public function paraArray() {
+        $status = 'Normal';
+        if (!empty($this->statusCondicao)) {
+            $status = $this->statusCondicao;
+        }
+
         return [
             'nome' => $this->nome,
             'nivel' => $this->nivel,
@@ -442,8 +447,8 @@ class Pokemon {
             'ataque' => $this->ataque,
             'defesa' => $this->defesa,
             'velocidade' => $this->velocidade,
-            'statusCondicao' => $this->statusCondicao ?: 'Normal',
-            'status_condicao' => $this->statusCondicao ?: 'Normal',
+            'statusCondicao' => $status,
+            'status_condicao' => $status,
             'evoluido' => $this->evoluido,
             'modAtaque' => $this->modAtaque,
             'modDefesa' => $this->modDefesa
