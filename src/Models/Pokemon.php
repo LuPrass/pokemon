@@ -213,7 +213,10 @@ class Pokemon {
             'psíquico' => 'psiquico',
             'ghost' => 'fantasma'
         ];
-        return $mapa[$t] ?? $t;
+        if (isset($mapa[$t])) {
+            return $mapa[$t];
+        }
+        return $t;
     }
 
     // Regras do pokémon
@@ -329,7 +332,11 @@ class Pokemon {
             $this->velocidade = $dados['velocidade'];
             $this->prioridade = $dados['prioridade'];
             $this->statusCondicao = $dados['status_condicao'];
-            $this->evoluido = (int)($dados['evoluido'] ?? 0);
+            if (isset($dados['evoluido'])) {
+                $this->evoluido = (int)$dados['evoluido'];
+            } else {
+                $this->evoluido = 0;
+            }
             return true;
         }
         return false;
@@ -346,23 +353,79 @@ class Pokemon {
         $dados['nome'] = ucfirst($dados['nome']);
         $dados['tipo'] = $dados['tipo'];
         $dados['nivel'] = (int)$dados['nivel'];
-        $dados['hpMaximo'] = (int)$dados['hpMaximo'];
-        $dados['hpAtual'] = (int)$dados['hpAtual'];
+
+        // Pega o HP máximo
+        if (isset($dados['hpMaximo'])) {
+            $dados['hpMaximo'] = (int)$dados['hpMaximo'];
+        } elseif (isset($dados['hp_maximo'])) {
+            $dados['hpMaximo'] = (int)$dados['hp_maximo'];
+        }
+
+        // Pega o HP atual
+        if (isset($dados['hpAtual'])) {
+            $dados['hpAtual'] = (int)$dados['hpAtual'];
+        } elseif (isset($dados['hp_atual'])) {
+            $dados['hpAtual'] = (int)$dados['hp_atual'];
+        } else {
+            $dados['hpAtual'] = $dados['hpMaximo'];
+        }
+
         $dados['ataque'] = (int)$dados['ataque'];
         $dados['defesa'] = (int)$dados['defesa'];
         $dados['velocidade'] = (int)$dados['velocidade'];
-        $dados['prioridade'] = (int)$dados['prioridade'];
-        $dados['statusCondicao'] = $dados['statusCondicao'];
-        $dados['evoluido'] = (int)$dados['evoluido'];
-        $dados['modAtaque'] = (float)$dados['modAtaque'];
-        $dados['modDefesa'] = (float)$dados['modDefesa'];
+
+        if (isset($dados['prioridade'])) {
+            $dados['prioridade'] = (int)$dados['prioridade'];
+        } else {
+            $dados['prioridade'] = 0;
+        }
+
+        // Condição de status
+        if (!empty($dados['statusCondicao'])) {
+            $dados['statusCondicao'] = ucfirst(strtolower($dados['statusCondicao']));
+        } elseif (!empty($dados['status_condicao'])) {
+            $dados['statusCondicao'] = ucfirst(strtolower($dados['status_condicao']));
+        } else {
+            $dados['statusCondicao'] = 'Normal';
+        }
+        $dados['status_condicao'] = $dados['statusCondicao'];
+
+        if (isset($dados['evoluido'])) {
+            $dados['evoluido'] = (int)$dados['evoluido'];
+        } else {
+            $dados['evoluido'] = 0;
+        }
+
+        if (isset($dados['modAtaque'])) {
+            $dados['modAtaque'] = (float)$dados['modAtaque'];
+        } else {
+            $dados['modAtaque'] = 1.0;
+        }
+
+        if (isset($dados['modDefesa'])) {
+            $dados['modDefesa'] = (float)$dados['modDefesa'];
+        } else {
+            $dados['modDefesa'] = 1.0;
+        }
+
         return $dados;
     }
 
     // Cria o objeto Pokemon a partir dos dados guardados na sessão
     public static function fromArray(array $dados) {
         $dados = self::normalizar($dados);
-        $pokemon = new Pokemon($dados['pokemon_db_id'] ?? null, $_SESSION['usuario_id'] ?? null,
+        
+        $pkDbId = null;
+        if (isset($dados['pokemon_db_id'])) {
+            $pkDbId = $dados['pokemon_db_id'];
+        }
+
+        $userId = null;
+        if (isset($_SESSION['usuario_id'])) {
+            $userId = $_SESSION['usuario_id'];
+        }
+
+        $pokemon = new Pokemon($pkDbId, $userId,
             $dados['nome'], $dados['tipo'], $dados['nivel'], $dados['hpMaximo'], $dados['hpAtual'],
             $dados['ataque'], $dados['defesa'], $dados['velocidade'], $dados['prioridade'], $dados['statusCondicao'], $dados['evoluido']);
         $pokemon->setModificadores($dados['modAtaque'], $dados['modDefesa']);
@@ -379,7 +442,8 @@ class Pokemon {
             'ataque' => $this->ataque,
             'defesa' => $this->defesa,
             'velocidade' => $this->velocidade,
-            'statusCondicao' => $this->statusCondicao,
+            'statusCondicao' => $this->statusCondicao ?: 'Normal',
+            'status_condicao' => $this->statusCondicao ?: 'Normal',
             'evoluido' => $this->evoluido,
             'modAtaque' => $this->modAtaque,
             'modDefesa' => $this->modDefesa

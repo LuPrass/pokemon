@@ -863,3 +863,35 @@ html, body {
 .badge-tipo-aco, .badge-tipo-steel { background: #64748b; }
 .badge-tipo-sombrio, .badge-tipo-dark { background: #334155; }
 .badge-tipo-fada, .badge-tipo-fairy { background: #f472b6; }
+
+
+/* Badges de Condições de Status */
+.badge-queimado {
+    background: rgba(249, 115, 22, 0.25);
+    border: 1px solid #f97316;
+    color: #fb923c;
+}
+
+.badge-congelado {
+    background: rgba(14, 165, 233, 0.25);
+    border: 1px solid #0ea5e9;
+    color: #38bdf8;
+}
+
+.badge-paralisado {
+    background: rgba(234, 179, 8, 0.25);
+    border: 1px solid #eab308;
+    color: #facc15;
+}
+
+.badge-envenenado {
+    background: rgba(168, 85, 247, 0.25);
+    border: 1px solid #a855f7;
+    color: #c084fc;
+}
+
+.badge-dormindo {
+    background: rgba(148, 163, 184, 0.25);
+    border: 1px solid #94a3b8;
+    color: #cbd5e1;
+}

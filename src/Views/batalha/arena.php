@@ -21,14 +21,22 @@ if (empty($_SESSION['meu_time'])) {
 
 // Conexão com o banco de dados
 $pdo = Conexao::getConnection();
-$usuarioId = (int)($_SESSION['usuario_id'] ?? 1);
+$usuarioId = (int)$_SESSION['usuario_id'];
 
 // Consulta o saldo atual de dinheiro do usuário no banco
 $stmtUser = $pdo->prepare("SELECT nome, dinheiro FROM usuario WHERE id = :id");
 $stmtUser->execute([':id' => $usuarioId]);
 $dadosUser = $stmtUser->fetch(PDO::FETCH_ASSOC);
-$usuarioNome = $dadosUser['nome'] ?? ($_SESSION['usuario'] ?? 'Treinador');
-$usuarioDinheiro = (int)($dadosUser['dinheiro'] ?? 100);
+
+$usuarioNome = $_SESSION['usuario'];
+if (!empty($dadosUser['nome'])) {
+    $usuarioNome = $dadosUser['nome'];
+}
+
+$usuarioDinheiro = 0;
+if (isset($dadosUser['dinheiro'])) {
+    $usuarioDinheiro = (int)$dadosUser['dinheiro'];
+}
 
 // Deixa o pokémon no formato do jogo (nome, hpMaximo, ataque...) e garante que ele tenha golpes
 function prepararPokemon($pokemon) {
@@ -49,9 +57,29 @@ function escolherGolpe($pokemon) {
     return $golpes[array_rand($golpes)];
 }
 
-// Prepara o time do jogador
+// Mapeamento visual das condições de status para badges estilizados
+$mapaBadgesStatus = [
+    'Queimado'   => ['classe' => 'badge-queimado',   'texto' => '🔥 Queimado'],
+    'Congelado'  => ['classe' => 'badge-congelado',  'texto' => '❄️ Congelado'],
+    'Paralisado' => ['classe' => 'badge-paralisado', 'texto' => '⚡ Paralisado'],
+    'Envenenado' => ['classe' => 'badge-envenenado', 'texto' => '☠️ Envenenado'],
+    'Dormindo'   => ['classe' => 'badge-dormindo',   'texto' => '💤 Dormindo'],
+];
+
+// Prepara o time do jogador e sincroniza status/HP com o banco de dados
 $meuTime = array_values($_SESSION['meu_time']);
 foreach ($meuTime as $i => $pk) {
+    if (!empty($pk['pokemon_db_id'])) {
+        $stmtSync = $pdo->prepare("SELECT hp_atual, status_condicao, nivel FROM pokemon WHERE id = :id AND usuario_id = :uid");
+        $stmtSync->execute([':id' => $pk['pokemon_db_id'], ':uid' => $usuarioId]);
+        $dadosDb = $stmtSync->fetch(PDO::FETCH_ASSOC);
+        if ($dadosDb) {
+            $pk['hpAtual'] = (int)$dadosDb['hp_atual'];
+            $pk['statusCondicao'] = $dadosDb['status_condicao'] ?: 'Normal';
+            $pk['status_condicao'] = $pk['statusCondicao'];
+            $pk['nivel'] = (int)$dadosDb['nivel'];
+        }
+    }
     $meuTime[$i] = prepararPokemon($pk);
 }
 $_SESSION['meu_time'] = $meuTime;
@@ -59,11 +87,17 @@ $_SESSION['batalha_iniciada'] = true;
 
 // 2. Inicialização do combate de 9 batalhas (caso não exista)
 if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])) {
-    $inimigosTime = array_values($_SESSION['inimigos_time'] ?? []);
+    $inimigosTime = [];
+    if (!empty($_SESSION['inimigos_time'])) {
+        $inimigosTime = array_values($_SESSION['inimigos_time']);
+    }
 
     // Se não tem inimigos guardados, usa os pokémons do catálogo que o jogador não escolheu
     if (empty($inimigosTime)) {
-        $idsEscolhidos = array_map(fn($p) => (int)($p['id'] ?? 0), $meuTime);
+        $idsEscolhidos = [];
+        foreach ($meuTime as $p) {
+            $idsEscolhidos[] = (int)$p['id'];
+        }
         foreach (array_diff(PokeApiService::IDS, $idsEscolhidos) as $id) {
             $info = PokeApiService::buscarPorId($id);
             if ($info) {
@@ -85,7 +119,10 @@ if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])
             $indicesVivos[] = $idx;
         }
     }
-    $idxJogadorSorteado = !empty($indicesVivos) ? $indicesVivos[array_rand($indicesVivos)] : 0;
+    $idxJogadorSorteado = 0;
+    if (!empty($indicesVivos)) {
+        $idxJogadorSorteado = $indicesVivos[array_rand($indicesVivos)];
+    }
 
     // Sorteia 1 adversário para a Batalha 1
     $inimigosPool = $inimigosTime;
@@ -114,7 +151,10 @@ if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])
 $avisoErro = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $acao = $_POST['acao'] ?? '';
+    $acao = '';
+    if (isset($_POST['acao'])) {
+        $acao = $_POST['acao'];
+    }
     $combate = &$_SESSION['combate'];
     $ativoIdx = (int)$combate['pokemon_ativo_idx'];
 
@@ -170,7 +210,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // CONTROLE DE NAVEGAÇÃO DO MINI MENU ("O que o pokemon deve fazer?")
     // -------------------------------------------------------------
     if ($acao === 'abrir_menu') {
-        $menuAlvo = $_POST['menu_alvo'] ?? 'principal';
+        $menuAlvo = 'principal';
+        if (isset($_POST['menu_alvo'])) {
+            $menuAlvo = $_POST['menu_alvo'];
+        }
         $combate['menu_aberto'] = $menuAlvo;
     }
 
@@ -178,7 +221,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // AÇÃO DE LUTAR: um turno completo (o jogador e o inimigo atacam)
     // -------------------------------------------------------------
     elseif ($acao === 'executar_ataque' && $combate['status'] === 'em_combate') {
-        $tipoAtaqueEscolhido = $_POST['tipo_ataque'] ?? 'fisico';
+        $tipoAtaqueEscolhido = 'fisico';
+        if (isset($_POST['tipo_ataque'])) {
+            $tipoAtaqueEscolhido = $_POST['tipo_ataque'];
+        }
         if (!in_array($tipoAtaqueEscolhido, ['fisico', 'especial', 'status'], true)) {
             $tipoAtaqueEscolhido = 'fisico';
         }
@@ -187,7 +233,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $inimigo = Pokemon::fromArray($combate['inimigo_atual']);
 
         $golpesJogador = $meuTime[$ativoIdx]['movimentos'];
-        $golpeJogador = $golpesJogador[$tipoAtaqueEscolhido] ?? reset($golpesJogador);
+        if (isset($golpesJogador[$tipoAtaqueEscolhido])) {
+            $golpeJogador = $golpesJogador[$tipoAtaqueEscolhido];
+        } else {
+            $golpeJogador = reset($golpesJogador);
+        }
         $golpeInimigo = escolherGolpe($combate['inimigo_atual']);
 
         // A classe Batalha calcula o dano e os status
@@ -346,9 +396,9 @@ unset($pokemonJogador, $pokemonInimigo, $combate);
 $combate = $_SESSION['combate'];
 
 // Se o time foi curado (PokéMart/Mochila) depois de ter desmaiado por completo, retoma o combate
-if (($combate['status'] ?? '') === 'derrota_sem_pokemon') {
+if (isset($combate['status']) && $combate['status'] === 'derrota_sem_pokemon') {
     foreach ($meuTime as $pkVivo) {
-        if ((int)($pkVivo['hpAtual'] ?? $pkVivo['hpMaximo'] ?? $pkVivo['hp'] ?? 40) > 0) {
+        if ($pkVivo['hpAtual'] > 0) {
             $_SESSION['combate']['status'] = 'em_combate';
             $_SESSION['combate']['menu_aberto'] = 'principal';
             $combate = $_SESSION['combate'];
@@ -360,24 +410,24 @@ if (($combate['status'] ?? '') === 'derrota_sem_pokemon') {
 $batalhaAtual = (int)$combate['batalha_atual'];
 $totalBatalhas = (int)$combate['total_batalhas'];
 $ativoIdx = (int)$combate['pokemon_ativo_idx'];
-$pokemonJogador = $meuTime[$ativoIdx] ?? $meuTime[0];
+$pokemonJogador = $meuTime[$ativoIdx];
 $pokemonInimigo = $combate['inimigo_atual'];
 
-$hpMaxJog = (int)$pokemonJogador['hpMaximo'] ?? $pokemonJogador['hp'];
-$hpAtualJog = (int)($pokemonJogador['hpAtual'] ?? $hpMaxJog);
+$hpMaxJog = (int)$pokemonJogador['hpMaximo'];
+$hpAtualJog = (int)$pokemonJogador['hpAtual'];
 
-$hpMaxIni = (int)$pokemonInimigo['hpMaximo'] ?? $pokemonInimigo['hp'];
-$hpAtualIni = (int)($pokemonInimigo['hpAtual'] ?? $hpMaxIni);
+$hpMaxIni = (int)$pokemonInimigo['hpMaximo'];
+$hpAtualIni = (int)$pokemonInimigo['hpAtual'];
 
-$statusCombate = $combate['status'] ?? 'em_combate';
-$menuAberto = $combate['menu_aberto'] ?? 'principal';
-$mensagensLog = $combate['mensagens'] ?? [];
+$statusCombate = $combate['status'];
+$menuAberto = $combate['menu_aberto'];
+$mensagensLog = $combate['mensagens'];
 
-$nomeJog = $pokemonJogador['nome'] ?? $pokemonJogador['name'];
-$nomeIni = $pokemonInimigo['nome'] ?? $pokemonInimigo['name'];
+$nomeJog = $pokemonJogador['nome'];
+$nomeIni = $pokemonInimigo['nome'];
 
 // Lê os movimentos armazenados no próprio Pokémon
-$movimentosJog = $pokemonJogador['movimentos'] ?? PokeApiService::obterMovimentosPokemon((int)($pokemonJogador['id'] ?? 0), $nomeJog, $pokemonJogador['tipo'] ?? 'normal');
+$movimentosJog = $pokemonJogador['movimentos'];
 
 $porcHpJog = max(0, min(100, (int)round(($hpAtualJog / max(1, $hpMaxJog)) * 100)));
 $porcHpIni = max(0, min(100, (int)round(($hpAtualIni / max(1, $hpMaxIni)) * 100)));
@@ -386,14 +436,25 @@ $corHpJog = ($porcHpJog > 50) ? '#10b981' : (($porcHpJog > 20) ? '#f59e0b' : '#e
 $corHpIni = ($porcHpIni > 50) ? '#10b981' : (($porcHpIni > 20) ? '#f59e0b' : '#ef4444');
 
 // IDs dos Pokémon para buscar os sprites na PokéAPI através do serviço
-$idJog = (int)($pokemonJogador['id'] ?? $pokemonJogador['id_pokedex'] ?? 0);
-$idIni = (int)($pokemonInimigo['id'] ?? $pokemonInimigo['id_pokedex'] ?? 0);
+$idJog = (int)$pokemonJogador['id'];
+$idIni = (int)$pokemonInimigo['id'];
 
 $spriteJogador = $idJog > 0 ? PokeApiService::buscarPorId($idJog) : null;
 $spriteInimigo = $idIni > 0 ? PokeApiService::buscarPorId($idIni) : null;
 
-$imgJog = $spriteJogador['gif'] ?? ($pokemonJogador['img'] ?? '');
-$imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
+$imgJog = '';
+if (!empty($spriteJogador['gif'])) {
+    $imgJog = $spriteJogador['gif'];
+} elseif (!empty($pokemonJogador['img'])) {
+    $imgJog = $pokemonJogador['img'];
+}
+
+$imgIni = '';
+if (!empty($spriteInimigo['gif'])) {
+    $imgIni = $spriteInimigo['gif'];
+} elseif (!empty($pokemonInimigo['img'])) {
+    $imgIni = $pokemonInimigo['img'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -450,7 +511,13 @@ $imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
                         <div class="caixa-status">
                             <div class="status-topo">
                                 <span class="status-nome"><?= htmlspecialchars($nomeIni) ?></span>
-                                <span class="status-nivel">Nv. <?= (int)($pokemonInimigo['nivel'] ?? 5) ?></span>
+                                <?php 
+                                    $stIni = ucfirst(strtolower($pokemonInimigo['statusCondicao']));
+                                    if ($stIni !== 'Normal' && isset($mapaBadgesStatus[$stIni])): 
+                                ?>
+                                    <span class="badge-status <?= $mapaBadgesStatus[$stIni]['classe'] ?>"><?= $mapaBadgesStatus[$stIni]['texto'] ?></span>
+                                <?php endif; ?>
+                                <span class="status-nivel">Nv. <?= (int)$pokemonInimigo['nivel'] ?></span>
                             </div>
                             <div class="hp-linha">
                                 <span class="hp-rotulo">HP</span>
@@ -459,10 +526,7 @@ $imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
                                 </div>
                             </div>
                             <div class="hp-numeros">
-                                <?= $hpAtualIni ?> / <?= $hpMaxIni ?> HP (<?= ucfirst($pokemonInimigo['tipo'] ?? 'normal') ?>)
-                                <?php if ($pokemonInimigo['statusCondicao'] !== 'Normal'): ?>
-                                    <span style="color: #f59e0b; font-weight: 800;">[<?= strtoupper(htmlspecialchars($pokemonInimigo['statusCondicao'])) ?>]</span>
-                                <?php endif; ?>
+                                <?= $hpAtualIni ?> / <?= $hpMaxIni ?> HP (<?= ucfirst($pokemonInimigo['tipo']) ?>)
                             </div>
                         </div>
 
@@ -492,6 +556,12 @@ $imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
                                         <span class="badge-evoluido">✨ Evoluído</span>
                                     <?php endif; ?>
                                 </span>
+                                <?php 
+                                    $stJog = ucfirst(strtolower($pokemonJogador['statusCondicao']));
+                                    if ($stJog !== 'Normal' && isset($mapaBadgesStatus[$stJog])): 
+                                ?>
+                                    <span class="badge-status <?= $mapaBadgesStatus[$stJog]['classe'] ?>"><?= $mapaBadgesStatus[$stJog]['texto'] ?></span>
+                                <?php endif; ?>
                                 <span class="status-nivel">Nv. <?= (int)$pokemonJogador['nivel'] ?></span>
                             </div>
                             <div class="hp-linha">
@@ -501,10 +571,7 @@ $imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
                                 </div>
                             </div>
                             <div class="hp-numeros">
-                                <?= $hpAtualJog ?> / <?= $hpMaxJog ?> HP (<?= ucfirst($pokemonJogador['tipo'] ?? 'normal') ?>)
-                                <?php if ($pokemonJogador['statusCondicao'] !== 'Normal'): ?>
-                                    <span style="color: #f59e0b; font-weight: 800;">[<?= strtoupper(htmlspecialchars($pokemonJogador['statusCondicao'])) ?>]</span>
-                                <?php endif; ?>
+                                <?= $hpAtualJog ?> / <?= $hpMaxJog ?> HP (<?= ucfirst($pokemonJogador['tipo']) ?>)
                             </div>
                         </div>
                     </div>
@@ -615,10 +682,10 @@ $imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
                                                 <?php
                                                     $mov = $movimentosJog[$chave];
                                                     $nomeGolpe = $mov['nome'];
-                                                    $tipoGolpe = strtolower($mov['tipo'] ?? 'normal');
-                                                    $catGolpe = strtolower($mov['damage_class'] ?? $mov['categoria'] ?? $chave);
-                                                    $poderGolpe = (int)($mov['poder'] ?? 0);
-                                                    $tipoInimigo = strtolower($pokemonInimigo['tipo'] ?? 'normal');
+                                                    $tipoGolpe = strtolower($mov['tipo']);
+                                                    $catGolpe = strtolower($mov['damage_class']);
+                                                    $poderGolpe = (int)$mov['poder'];
+                                                    $tipoInimigo = strtolower($pokemonInimigo['tipo']);
 
                                                     // Indicador visual de eficácia para o CSS (estilo PokéRogue)
                                                     if ($catGolpe === 'status') {
@@ -721,31 +788,42 @@ $imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
                         <tbody>
                             <?php foreach ($meuTime as $idx => $pk): ?>
                                 <?php 
-                                    $pkHpMax = (int)($pk['hpMaximo'] ?? $pk['hp'] ?? 40);
-                                    $pkHpAtual = (int)($pk['hpAtual'] ?? $pkHpMax);
+                                    $pkHpMax = (int)$pk['hpMaximo'];
+                                    $pkHpAtual = (int)$pk['hpAtual'];
                                     $desmaiado = ($pkHpAtual <= 0);
                                     $emCampo = ($idx === $ativoIdx);
                                 ?>
                                 <tr>
                                     <td><strong><?= $idx + 1 ?></strong></td>
                                     <td>
-                                        <strong><?= htmlspecialchars($pk['nome'] ?? $pk['name']) ?></strong>
+                                        <strong><?= htmlspecialchars($pk['nome']) ?></strong>
                                         <?php if (!empty($pk['evoluido'])): ?>
                                             <span style="color: #f59e0b; font-size: 0.75rem; font-weight: 800;">✨ [EVO]</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= ucfirst($pk['tipo'] ?? 'normal') ?></td>
+                                    <td><?= ucfirst($pk['tipo']) ?></td>
                                     <td><?= $pkHpAtual ?> / <?= $pkHpMax ?></td>
                                     <td>
+                                        <?php 
+                                            $stNome = ucfirst(strtolower($pk['statusCondicao']));
+                                            $temStatus = ($stNome !== 'Normal' && isset($mapaBadgesStatus[$stNome]));
+                                        ?>
                                         <?php if ($desmaiado): ?>
                                             <span class="badge-status badge-desmaiado">Desmaiado</span>
+                                            <?php if ($temStatus): ?>
+                                                <span class="badge-status <?= $mapaBadgesStatus[$stNome]['classe'] ?>"><?= $mapaBadgesStatus[$stNome]['texto'] ?></span>
+                                            <?php endif; ?>
                                         <?php elseif ($emCampo): ?>
                                             <span class="badge-status badge-ativo">Em Campo</span>
+                                            <?php if ($temStatus): ?>
+                                                <span class="badge-status <?= $mapaBadgesStatus[$stNome]['classe'] ?>"><?= $mapaBadgesStatus[$stNome]['texto'] ?></span>
+                                            <?php endif; ?>
                                         <?php else: ?>
-                                            <span class="badge-status badge-pronto">Pronto</span>
-                                        <?php endif; ?>
-                                        <?php if (!$desmaiado && $pk['statusCondicao'] !== 'Normal'): ?>
-                                            <span style="color: #f59e0b; font-weight: 800;">[<?= strtoupper(htmlspecialchars($pk['statusCondicao'])) ?>]</span>
+                                            <?php if ($temStatus): ?>
+                                                <span class="badge-status <?= $mapaBadgesStatus[$stNome]['classe'] ?>"><?= $mapaBadgesStatus[$stNome]['texto'] ?></span>
+                                            <?php else: ?>
+                                                <span class="badge-status badge-pronto">Pronto</span>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                     <td>

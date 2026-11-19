@@ -43,6 +43,18 @@ class Batalha {
         $this->turnos[] = $texto;
     }
 
+    // Golpe básico padrão caso lute de forma automática
+    private function golpePadrao(Pokemon $pokemon) {
+        return [
+            'nome'         => 'Investida',
+            'tipo'         => strtolower($pokemon->getTipo()),
+            'poder'        => 40,
+            'categoria'    => 'physical',
+            'damage_class' => 'physical',
+            'prioridade'   => 0
+        ];
+    }
+
     // Faz a luta inteira de uma vez, usando um golpe simples para cada lado
     public function lutar() {
         if ($this->jogador->estaDesmaiado()) {
@@ -88,8 +100,18 @@ class Batalha {
     // 1º Quem tiver maior prioridade (do Pokémon ou do Golpe) ataca primeiro.
     // 2º Se a prioridade for igual, quem tiver maior velocidade ataca primeiro.
     private function jogadorAtacaPrimeiro(array $golpeJogador = [], array $golpeInimigo = []) {
-        $prioJogador = $this->jogador->getPrioridade() + ($golpeJogador['prioridade'] ?? 0);
-        $prioInimigo = $this->inimigo->getPrioridade() + ($golpeInimigo['prioridade'] ?? 0);
+        $prioGolpeJog = 0;
+        if (isset($golpeJogador['prioridade'])) {
+            $prioGolpeJog = (int)$golpeJogador['prioridade'];
+        }
+
+        $prioGolpeIni = 0;
+        if (isset($golpeInimigo['prioridade'])) {
+            $prioGolpeIni = (int)$golpeInimigo['prioridade'];
+        }
+
+        $prioJogador = $this->jogador->getPrioridade() + $prioGolpeJog;
+        $prioInimigo = $this->inimigo->getPrioridade() + $prioGolpeIni;
 
         // 1. Desempate por Prioridade
         if ($prioJogador != $prioInimigo) {
@@ -152,17 +174,31 @@ class Batalha {
     }
 
     private function atacar(Pokemon $atacante, Pokemon $defensor, array $golpe) {
-        $this->mensagem($atacante->getNome() . " usou " . ($golpe['nome'] ?? 'Ataque') . "!");
+        $nomeGolpe = 'Ataque';
+        if (!empty($golpe['nome'])) {
+            $nomeGolpe = $golpe['nome'];
+        }
+        $this->mensagem($atacante->getNome() . " usou " . $nomeGolpe . "!");
 
         // Golpe de status não causa dano
-        $categoria = $golpe['categoria'] ?? $golpe['damage_class'] ?? 'physical';
+        $categoria = 'physical';
+        if (!empty($golpe['damage_class'])) {
+            $categoria = $golpe['damage_class'];
+        } elseif (!empty($golpe['categoria'])) {
+            $categoria = $golpe['categoria'];
+        }
+
         if ($categoria == 'status') {
             $this->usarGolpeDeStatus($atacante, $defensor, $golpe);
             return;
         }
 
         // Vantagem de tipo vem dos traits
-        $tipoGolpe = $golpe['tipo'] ?? $atacante->getTipo();
+        $tipoGolpe = $atacante->getTipo();
+        if (!empty($golpe['tipo'])) {
+            $tipoGolpe = $golpe['tipo'];
+        }
+
         $multiplicador = self::multiplicador($tipoGolpe, $defensor->getTipo());
         if ($multiplicador == 0) {
             $this->mensagem("Não afetou " . $defensor->getNome() . "...");
@@ -194,9 +230,9 @@ class Batalha {
 
     // Dano = (poder x ataque) / (defesa x 5), vezes a vantagem de tipo
     private function calcularDano(Pokemon $atacante, Pokemon $defensor, array $golpe, $multiplicador) {
-        $poder = $golpe['poder'] ?? 40;
-        if ($poder <= 0) {
-            $poder = 40;
+        $poder = 40;
+        if (isset($golpe['poder']) && (int)$golpe['poder'] > 0) {
+            $poder = (int)$golpe['poder'];
         }
 
         // O ataque e a defesa já vêm com os efeitos dos status calculados
@@ -208,7 +244,10 @@ class Batalha {
     }
 
     private function usarGolpeDeStatus(Pokemon $atacante, Pokemon $defensor, array $golpe) {
-        $efeito = $golpe['efeito'] ?? 'reduzir_atk';
+        $efeito = 'reduzir_atk';
+        if (!empty($golpe['efeito'])) {
+            $efeito = $golpe['efeito'];
+        }
         $nomeDefensor = $defensor->getNome();
 
         if ($efeito == 'reduzir_atk') {
@@ -290,6 +329,9 @@ class Batalha {
             'ú' => 'u', 'ç' => 'c'
         ]);
 
-        return $tipos[$tipo] ?? $tipo;
+        if (isset($tipos[$tipo])) {
+            return $tipos[$tipo];
+        }
+        return $tipo;
     }
 }
