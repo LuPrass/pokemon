@@ -306,34 +306,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
             const idsEscolhidos = meuTime.map(p => p.id);
             const idsRestantes = pokemonDisponiveis.filter(id => !idsEscolhidos.includes(id));
             const inimigosCompletos = idsRestantes.map(id => {
-                const p = pokemonStatsCache[id] || {};
+                const p = pokemonStatsCache[id];
                 return {
                     id: id,
-                    name: p.name || `Pokémon #${id}`,
-                    img: p.img || '',
-                    tipo: p.tipo || 'normal',
-                    hp: p.hp || 50,
-                    attack: p.attack || 50,
-                    defense: p.defense || 50,
-                    speed: p.speed || 50
+                    nome: p.name,
+                    img: p.img,
+                    tipo: p.tipo,
+                    nivel: 5,
+                    hpMaximo: p.hp,
+                    hpAtual: p.hp,
+                    ataque: p.attack,
+                    defesa: p.defense,
+                    velocidade: p.speed,
+                    prioridade: 0,
+                    statusCondicao: 'Normal',
+                    evoluido: 0,
+                    modAtaque: 1.0,
+                    modDefesa: 1.0
                 };
             });
 
             try {
                 const timeParaSalvar = meuTime.map(p => {
-                    const stats = pokemonStatsCache[p.id] || {};
-                    const hpMaximo = p.hpMaximo ?? p.hp ?? stats.hp ?? 35;
+                    const stats = pokemonStatsCache[p.id];
                     return {
-                        nome: p.name || p.nome,
-                        tipo: p.tipo || stats.tipo || 'normal',
-                        nivel: p.nivel ?? 5,
-                        hpMaximo: hpMaximo,
-                        hpAtual: p.hpAtual ?? hpMaximo,
-                        ataque: p.ataque ?? p.attack ?? stats.attack ?? 40,
-                        defesa: p.defesa ?? p.defense ?? stats.defense ?? 40,
-                        velocidade: p.velocidade ?? p.speed ?? stats.speed ?? 50,
-                        prioridade: p.prioridade ?? 0,
-                        statusCondicao: p.statusCondicao || 'Normal'
+                        id: p.id,
+                        nome: p.name,
+                        img: p.img,
+                        tipo: p.tipo,
+                        nivel: 5,
+                        hpMaximo: stats.hp,
+                        hpAtual: stats.hp,
+                        ataque: stats.attack,
+                        defesa: stats.defense,
+                        velocidade: stats.speed,
+                        prioridade: 0,
+                        statusCondicao: 'Normal',
+                        evoluido: 0,
+                        modAtaque: 1.0,
+                        modDefesa: 1.0
                     };
                 });
                 const response = await fetch('index.php?rota=salvar-time', {
@@ -341,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         time: timeParaSalvar,
-                        meuTime: meuTime,
+                        meuTime: timeParaSalvar,
                         restantes: idsRestantes,
                         inimigos: inimigosCompletos
                     })

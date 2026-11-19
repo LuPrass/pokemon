@@ -258,24 +258,21 @@ class Pokemon {
         return $stmt->execute([':id' => $this->id]);
     }
 
-    // Os dados do pokémon podem vir em português (banco) ou em inglês (JavaScript/PokéAPI).
-    // Aqui tudo fica no mesmo formato: nome, hpMaximo, hpAtual, ataque, defesa...
+    // Padroniza os dados do Pokémon diretamente
     public static function normalizar(array $dados) {
-        $hpMaximo = (int)($dados['hpMaximo'] ?? $dados['hp'] ?? 35);
-
-        $dados['nome'] = ucfirst($dados['nome'] ?? $dados['name'] ?? '');
-        $dados['tipo'] = $dados['tipo'] ?? 'normal';
-        $dados['nivel'] = (int)($dados['nivel'] ?? 5);
-        $dados['hpMaximo'] = $hpMaximo;
-        $dados['hpAtual'] = (int)($dados['hpAtual'] ?? $hpMaximo);
-        $dados['ataque'] = (int)($dados['ataque'] ?? $dados['attack'] ?? 40);
-        $dados['defesa'] = (int)($dados['defesa'] ?? $dados['defense'] ?? 40);
-        $dados['velocidade'] = (int)($dados['velocidade'] ?? $dados['speed'] ?? 50);
-        $dados['prioridade'] = (int)($dados['prioridade'] ?? 0);
-        $dados['statusCondicao'] = $dados['statusCondicao'] ?? $dados['status_condicao'] ?? 'Normal';
-        $dados['evoluido'] = (int)($dados['evoluido'] ?? 0);
-        $dados['modAtaque'] = (float)($dados['modAtaque'] ?? 1);
-        $dados['modDefesa'] = (float)($dados['modDefesa'] ?? 1);
+        $dados['nome'] = ucfirst($dados['nome']);
+        $dados['tipo'] = $dados['tipo'];
+        $dados['nivel'] = (int)$dados['nivel'];
+        $dados['hpMaximo'] = (int)$dados['hpMaximo'];
+        $dados['hpAtual'] = (int)$dados['hpAtual'];
+        $dados['ataque'] = (int)$dados['ataque'];
+        $dados['defesa'] = (int)$dados['defesa'];
+        $dados['velocidade'] = (int)$dados['velocidade'];
+        $dados['prioridade'] = (int)$dados['prioridade'];
+        $dados['statusCondicao'] = $dados['statusCondicao'];
+        $dados['evoluido'] = (int)$dados['evoluido'];
+        $dados['modAtaque'] = (float)$dados['modAtaque'];
+        $dados['modDefesa'] = (float)$dados['modDefesa'];
         return $dados;
     }
 
