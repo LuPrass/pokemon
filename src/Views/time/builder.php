@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Redireciona para o login se a sessão não estiver ativa
+// Redireciona para o login se não estiver logado
 if (empty($_SESSION['logado'])) {
     header('Location: login.php');
     exit;
@@ -11,8 +11,8 @@ if (empty($_SESSION['logado'])) {
 
 require_once __DIR__ . '/../../Services/PokeApiService.php';
 
-// Se o time já foi salvo e não foi clicado em "Modificar Time", impede a alteração e redireciona para a batalha
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
+// Se já tem time e não está modificando, vai direto para a batalha
+if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
     header('Location: index.php?rota=batalha');
     exit;
 }
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
     <div class="builder-viewport">
         <div class="builder-container">
 
-            <!-- Barra superior / Cabeçalho em tela cheia -->
+            <!-- Barra superior / Cabeçalho -->
             <header class="builder-header-card">
                 <div class="builder-brand">
                     <img src="assets/img/pokearena_title.png" alt="PokéArena" class="builder-logo">
@@ -74,77 +74,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
     </div>
 
     <script>
-        // IDs centralizados no catálogo dos Pokémon
+        // Lista dos IDs dos 15 Pokémon disponíveis
         const pokemonDisponiveis = <?php echo json_encode(PokeApiService::IDS); ?>;
-        let meuTime = <?php echo (!empty($_SESSION['meu_time']) && !empty($_GET['modificar'])) ? json_encode(array_values($_SESSION['meu_time'])) : '[]'; ?>;
+
+        // Se o usuário veio da opção "Modificar Time", recupera o time atual
+        <?php
+        $timeInicial = [];
+        if (!empty($_SESSION['meu_time']) && !empty($_GET['modificar'])) {
+            $timeInicial = array_values($_SESSION['meu_time']);
+        }
+        ?>
+        let meuTime = <?php echo json_encode($timeInicial); ?>;
+
+        // Guarda os dados carregados da PokeAPI para reutilizar sem fazer novas requisições
         const pokemonStatsCache = {};
 
-        // Mapeamento e tradução visual dos tipos
+        // Mapeamento dos tipos para português, ícone e classe CSS
         const MAPA_TIPOS = {
-            'grass': { nome: 'Planta', icone: '🌿', classe: 'grass' },
-            'fire': { nome: 'Fogo', icone: '🔥', classe: 'fire' },
-            'water': { nome: 'Água', icone: '💧', classe: 'water' },
+            'grass':    { nome: 'Planta',   icone: '🌿', classe: 'grass' },
+            'fire':     { nome: 'Fogo',     icone: '🔥', classe: 'fire' },
+            'water':    { nome: 'Água',     icone: '💧', classe: 'water' },
             'electric': { nome: 'Elétrico', icone: '⚡', classe: 'electric' },
-            'normal': { nome: 'Normal', icone: '⚪', classe: 'normal' },
-            'psychic': { nome: 'Psíquico', icone: '🔮', classe: 'psychic' },
-            'ghost': { nome: 'Fantasma', icone: '👻', classe: 'ghost' },
-            'poison': { nome: 'Venenoso', icone: '☠️', classe: 'poison' },
-            'ground': { nome: 'Terra', icone: '🏜️', classe: 'ground' },
-            'rock': { nome: 'Pedra', icone: '🪨', classe: 'rock' },
-            'bug': { nome: 'Inseto', icone: '🐛', classe: 'bug' },
-            'dragon': { nome: 'Dragão', icone: '🐉', classe: 'dragon' },
-            'ice': { nome: 'Gelo', icone: '❄️', classe: 'ice' },
-            'fighting': { nome: 'Lutador', icone: '🥊', classe: 'fighting' }
+            'normal':   { nome: 'Normal',   icone: '⚪', classe: 'normal' },
+            'psychic':  { nome: 'Psíquico', icone: '🔮', classe: 'psychic' },
+            'ghost':    { nome: 'Fantasma', icone: '👻', classe: 'ghost' },
+            'poison':   { nome: 'Venenoso', icone: '☠️', classe: 'poison' },
+            'ground':   { nome: 'Terra',    icone: '🏜️', classe: 'ground' },
+            'rock':     { nome: 'Pedra',    icone: '🪨', classe: 'rock' },
+            'bug':      { nome: 'Inseto',   icone: '🐛', classe: 'bug' },
+            'dragon':   { nome: 'Dragão',   icone: '🐉', classe: 'dragon' },
+            'ice':      { nome: 'Gelo',     icone: '❄️', classe: 'ice' },
+            'fighting': { nome: 'Lutador',  icone: '🥊', classe: 'fighting' }
         };
 
-        // Tradução dos atributos
-        const traduzirStat = (name) => {
-            const traducoes = { 
-                'hp': 'HP', 
-                'attack': 'Ataque', 
-                'defense': 'Defesa', 
-                'speed': 'Velocidade' 
-            };
-            return traducoes[name] || name;
-        };
+        // Tradução simples dos atributos
+        function traduzirStat(nome) {
+            if (nome === 'hp') return 'HP';
+            if (nome === 'attack') return 'Ataque';
+            if (nome === 'defense') return 'Defesa';
+            if (nome === 'speed') return 'Velocidade';
+            return nome;
+        }
 
+        // 1. Busca os dados de um Pokémon na PokeAPI
         async function buscarPokemon(id) {
-            const resposta = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-            if (!resposta.ok) {
-                throw new Error(`Pokémon não encontrado: ${id}`);
+            const resposta = await fetch('https://pokeapi.co/api/v2/pokemon/' + id);
+            const dados = await resposta.json();
+
+            // Pega a imagem animada (showdown) ou a imagem padrão
+            let imagem = '';
+            if (dados.sprites.other && dados.sprites.other.showdown && dados.sprites.other.showdown.front_default) {
+                imagem = dados.sprites.other.showdown.front_default;
+            } else if (dados.sprites.front_default) {
+                imagem = dados.sprites.front_default;
             }
 
-            const dados = await resposta.json();
-            const imagemSprite = dados.sprites.other?.showdown?.front_default
-                || dados.sprites.front_default
-                || '';
+            // Pega o tipo principal do Pokémon
+            let tipo = 'normal';
+            if (dados.types && dados.types.length > 0) {
+                tipo = dados.types[0].type.name;
+            }
+
+            // Pega a lista de todos os tipos
+            let tipos = [];
+            for (let i = 0; i < dados.types.length; i++) {
+                tipos.push(dados.types[i].type.name);
+            }
+
+            // Organiza os atributos em um objeto simples
+            let stats = {};
+            for (let i = 0; i < dados.stats.length; i++) {
+                const item = dados.stats[i];
+                stats[item.stat.name] = item.base_stat;
+            }
 
             return {
                 id: dados.id,
                 nome: dados.name,
-                imagem: imagemSprite,
-                imagemAnimada: imagemSprite,
-                tipo: dados.types[0]?.type?.name || 'normal',
-                tipos: dados.types.map(t => t.type.name),
-                stats: Object.fromEntries(
-                    dados.stats.map(stat => [stat.stat.name, stat.base_stat])
-                )
+                imagem: imagem,
+                tipo: tipo,
+                tipos: tipos,
+                stats: stats
             };
         }
 
-        // Busca os 12 Pokémon em paralelo e mantém a ordem do catálogo.
+        // 2. Carrega todos os Pokémon da lista e monta a tela
         async function carregarOpcoes() {
             const grid = document.getElementById('pokemon-grid');
-            const resultados = await Promise.all(
-                pokemonDisponiveis.map(id =>
-                    buscarPokemon(id).catch(error => {
-                        console.error(`Erro ao buscar Pokémon ID ${id}`, error);
-                        return null;
-                    })
-                )
-            );
 
-            resultados.filter(Boolean).forEach(poke => {
+            // Dispara a busca de todos os Pokémon da lista
+            const promessas = pokemonDisponiveis.map(id => buscarPokemon(id));
+            const pokemons = await Promise.all(promessas);
+
+            // Adiciona cada Pokémon no cache e cria seu card na tela
+            for (let i = 0; i < pokemons.length; i++) {
+                const poke = pokemons[i];
                 pokemonStatsCache[poke.id] = {
                     id: poke.id,
                     name: poke.nome,
@@ -157,37 +181,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                     speed: poke.stats.speed
                 };
                 grid.innerHTML += criarCardHTML(poke);
-            });
+            }
 
-            meuTime = meuTime.map(pokemon => {
-                const id = Number(pokemon.id ?? pokemon.id_pokedex);
-                const sprite = pokemonStatsCache[id]?.img || '';
-                return { ...pokemon, img: sprite };
-            });
+            // Se já tínhamos um time salvo na sessão, atualiza as imagens
+            for (let i = 0; i < meuTime.length; i++) {
+                const id = Number(meuTime[i].id);
+                if (pokemonStatsCache[id]) {
+                    meuTime[i].img = pokemonStatsCache[id].img;
+                }
+            }
 
             atualizarPainelTime();
         }
 
-        // 2. Constrói o HTML do Card personalizado por tipo
+        // 3. Monta o card HTML de um Pokémon
         function criarCardHTML(poke) {
-            const imagem = poke.imagemAnimada;
+            const imagem = poke.imagem;
             const tipoPrincipal = poke.tipo;
-            const dadosTipo = MAPA_TIPOS[tipoPrincipal] || { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
+
+            let dadosTipo = MAPA_TIPOS[tipoPrincipal];
+            if (!dadosTipo) {
+                dadosTipo = { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
+            }
 
             const statsDesejados = ['hp', 'attack', 'defense', 'speed'];
             let statsHTML = '';
 
-            statsDesejados.forEach(nome => {
-                if (poke.stats[nome] !== undefined) {
+            for (let i = 0; i < statsDesejados.length; i++) {
+                const nome = statsDesejados[i];
+                const valor = poke.stats[nome];
+
+                if (valor !== undefined) {
                     const nomePt = traduzirStat(nome);
-                    const porc = Math.min((poke.stats[nome] / 150) * 100, 100);
-                    const corBarra = nome === 'hp' ? '#10b981' : (nome === 'attack' ? '#f97316' : (nome === 'defense' ? '#0ea5e9' : '#f59e0b'));
+
+                    let porc = (valor / 150) * 100;
+                    if (porc > 100) {
+                        porc = 100;
+                    }
+
+                    let corBarra = '#f59e0b'; // amarelo para velocidade
+                    if (nome === 'hp') {
+                        corBarra = '#10b981'; // verde
+                    } else if (nome === 'attack') {
+                        corBarra = '#f97316'; // laranja
+                    } else if (nome === 'defense') {
+                        corBarra = '#0ea5e9'; // azul
+                    }
 
                     statsHTML += `
                         <div style="margin-bottom: 8px;">
                             <div class="stat-row">
                                 <strong>${nomePt}</strong>
-                                <span>${poke.stats[nome]}</span>
+                                <span>${valor}</span>
                             </div>
                             <div class="stat-bar-bg">
                                 <div class="stat-bar-fill" style="width: ${porc}%; background: ${corBarra}"></div>
@@ -195,12 +240,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                         </div>
                     `;
                 }
-            });
+            }
 
-            const noTime = meuTime.some(p => Number(p.id) === Number(poke.id));
+            // Verifica se este Pokémon já está no time
+            let noTime = false;
+            for (let i = 0; i < meuTime.length; i++) {
+                if (Number(meuTime[i].id) === Number(poke.id)) {
+                    noTime = true;
+                    break;
+                }
+            }
+
+            const classeCard = noTime ? 'selected' : '';
+            const textoBtnAdd = noTime ? '✓ No Time' : '+ Adicionar';
+            const desabilitarAdd = noTime ? 'disabled' : '';
+            const desabilitarDel = noTime ? '' : 'disabled';
 
             return `
-                <div class="pokemon-card card-tipo-${dadosTipo.classe} ${noTime ? 'selected' : ''}" id="card-${poke.id}">
+                <div class="pokemon-card card-tipo-${dadosTipo.classe} ${classeCard}" id="card-${poke.id}">
                     ${imagem ? `<img src="${imagem}" alt="${poke.nome}">` : ''}
                     <h3 class="card-name">${poke.nome}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
@@ -208,36 +265,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                         ${statsHTML}
                     </div>
                     <div class="card-botoes">
-                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.nome}', '${imagem}', '${tipoPrincipal}', event)" ${noTime ? 'disabled' : ''}>${noTime ? '✓ No Time' : '+ Adicionar'}</button>
-                        <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" ${noTime ? '' : 'disabled'}>✕ Excluir</button>
+                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.nome}', '${imagem}', '${tipoPrincipal}', event)" ${desabilitarAdd}>${textoBtnAdd}</button>
+                        <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" ${desabilitarDel}>✕ Excluir</button>
                     </div>
                 </div>
             `;
         }
 
-        // 3. Adiciona Pokémon ao time
+        // 4. Adiciona o Pokémon selecionado ao time
         function adicionarAoTime(id, name, img, tipo, event) {
-            if (event) event.stopPropagation();
-
-            const index = meuTime.findIndex(p => Number(p.id) === Number(id));
-            if (index > -1) {
-                return; // Já está no time
+            if (event) {
+                event.stopPropagation();
             }
 
+            // Verifica se o Pokémon já está no time
+            for (let i = 0; i < meuTime.length; i++) {
+                if (Number(meuTime[i].id) === Number(id)) {
+                    return;
+                }
+            }
+
+            // Limite de 6 Pokémon por time
             if (meuTime.length >= 6) {
-                alert("Seu time já está cheio (máximo 6)! Exclua um Pokémon antes de adicionar outro.");
+                alert("Seu time já está cheio (máximo 6 Pokémon)! Remova um antes de adicionar outro.");
                 return;
             }
 
-            const stats = pokemonStatsCache[id] || {};
-            meuTime.push({ id, name, img, tipo: tipo || stats.tipo || 'normal', ...stats });
+            const stats = pokemonStatsCache[id];
+            meuTime.push({
+                id: id,
+                name: name,
+                img: img,
+                tipo: tipo,
+                hp: stats.hp,
+                attack: stats.attack,
+                defense: stats.defense,
+                speed: stats.speed
+            });
 
-            // Atualiza os botões e estado visual do card
-            const cardEl = document.getElementById(`card-${id}`);
-            const btnAdd = document.getElementById(`btn-add-${id}`);
-            const btnDel = document.getElementById(`btn-del-${id}`);
+            // Atualiza os botões e visual do card
+            const cardEl = document.getElementById('card-' + id);
+            const btnAdd = document.getElementById('btn-add-' + id);
+            const btnDel = document.getElementById('btn-del-' + id);
 
-            if (cardEl) cardEl.classList.add('selected');
+            if (cardEl) {
+                cardEl.classList.add('selected');
+            }
             if (btnAdd) {
                 btnAdd.disabled = true;
                 btnAdd.innerText = "✓ No Time";
@@ -249,23 +322,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
             atualizarPainelTime();
         }
 
-        // 4. Remove/Exclui Pokémon do time
+        // 5. Remove um Pokémon do time
         function removerDoTime(id, event) {
-            if (event) event.stopPropagation();
+            if (event) {
+                event.stopPropagation();
+            }
 
-            const index = meuTime.findIndex(p => Number(p.id) === Number(id));
+            let index = -1;
+            for (let i = 0; i < meuTime.length; i++) {
+                if (Number(meuTime[i].id) === Number(id)) {
+                    index = i;
+                    break;
+                }
+            }
+
             if (index === -1) {
-                return; // Não está no time
+                return;
             }
 
             meuTime.splice(index, 1);
 
-            // Atualiza os botões e estado visual do card
-            const cardEl = document.getElementById(`card-${id}`);
-            const btnAdd = document.getElementById(`btn-add-${id}`);
-            const btnDel = document.getElementById(`btn-del-${id}`);
+            // Atualiza os botões e visual do card
+            const cardEl = document.getElementById('card-' + id);
+            const btnAdd = document.getElementById('btn-add-' + id);
+            const btnDel = document.getElementById('btn-del-' + id);
 
-            if (cardEl) cardEl.classList.remove('selected');
+            if (cardEl) {
+                cardEl.classList.remove('selected');
+            }
             if (btnAdd) {
                 btnAdd.disabled = false;
                 btnAdd.innerText = "+ Adicionar";
@@ -277,37 +361,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
             atualizarPainelTime();
         }
 
-        // 4. Atualiza os slots superiores
+        // 6. Atualiza a barra de slots do time no topo da página
         function atualizarPainelTime() {
             document.getElementById('team-count').innerText = meuTime.length;
             const slots = document.getElementById('team-slots').children;
 
             for (let i = 0; i < 6; i++) {
-                if (meuTime[i]) {
-                    const id = Number(meuTime[i].id ?? meuTime[i].id_pokedex);
-                    const imagem = pokemonStatsCache[id]?.img || '';
+                if (i < meuTime.length) {
+                    const pokemon = meuTime[i];
                     slots[i].innerHTML = `
-                        ${imagem ? `<img src="${imagem}" alt="${meuTime[i].name}" title="${meuTime[i].name}">` : ''}
-                        <span class="slot-nome">${meuTime[i].name}</span>
+                        <img src="${pokemon.img}" alt="${pokemon.name}">
+                        <span class="slot-nome">${pokemon.name}</span>
                     `;
                 } else {
                     slots[i].innerHTML = '';
                 }
             }
 
-            document.getElementById('btn-ready').style.display = meuTime.length === 6 ? 'inline-block' : 'none';
+            // Exibe o botão de confirmação apenas quando tiver exatamente 6
+            const btnReady = document.getElementById('btn-ready');
+            if (meuTime.length === 6) {
+                btnReady.style.display = 'inline-block';
+            } else {
+                btnReady.style.display = 'none';
+            }
         }
 
-        // 5. Separa os 9 Pokémon restantes e envia para a sessão / próxima página
+        // 7. Envia o time escolhido e os adversários para o servidor salvar
         async function iniciarJogo() {
             const botaoConfirmar = document.getElementById('btn-ready');
             botaoConfirmar.disabled = true;
 
-            const idsEscolhidos = meuTime.map(p => p.id);
-            const idsRestantes = pokemonDisponiveis.filter(id => !idsEscolhidos.includes(id));
-            const inimigosCompletos = idsRestantes.map(id => {
+            // Pega os IDs escolhidos para o time
+            let idsEscolhidos = [];
+            for (let i = 0; i < meuTime.length; i++) {
+                idsEscolhidos.push(meuTime[i].id);
+            }
+
+            // Identifica os outros Pokémon que serão os inimigos
+            let idsRestantes = [];
+            for (let i = 0; i < pokemonDisponiveis.length; i++) {
+                const id = pokemonDisponiveis[i];
+                if (!idsEscolhidos.includes(id)) {
+                    idsRestantes.push(id);
+                }
+            }
+
+            // Monta a lista completa de adversários
+            let inimigosCompletos = [];
+            for (let i = 0; i < idsRestantes.length; i++) {
+                const id = idsRestantes[i];
                 const p = pokemonStatsCache[id];
-                return {
+                inimigosCompletos.push({
                     id: id,
                     nome: p.name,
                     img: p.img,
@@ -323,31 +428,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                     evoluido: 0,
                     modAtaque: 1.0,
                     modDefesa: 1.0
-                };
-            });
+                });
+            }
+
+            // Monta a lista do nosso time com os valores corretos
+            let timeParaSalvar = [];
+            for (let i = 0; i < meuTime.length; i++) {
+                const p = meuTime[i];
+                const stats = pokemonStatsCache[p.id];
+                timeParaSalvar.push({
+                    id: p.id,
+                    nome: p.name,
+                    img: p.img,
+                    tipo: p.tipo,
+                    nivel: 5,
+                    hpMaximo: stats.hp,
+                    hpAtual: stats.hp,
+                    ataque: stats.attack,
+                    defesa: stats.defense,
+                    velocidade: stats.speed,
+                    prioridade: 0,
+                    statusCondicao: 'Normal',
+                    evoluido: 0,
+                    modAtaque: 1.0,
+                    modDefesa: 1.0
+                });
+            }
 
             try {
-                const timeParaSalvar = meuTime.map(p => {
-                    const stats = pokemonStatsCache[p.id];
-                    return {
-                        id: p.id,
-                        nome: p.name,
-                        img: p.img,
-                        tipo: p.tipo,
-                        nivel: 5,
-                        hpMaximo: stats.hp,
-                        hpAtual: stats.hp,
-                        ataque: stats.attack,
-                        defesa: stats.defense,
-                        velocidade: stats.speed,
-                        prioridade: 0,
-                        statusCondicao: 'Normal',
-                        evoluido: 0,
-                        modAtaque: 1.0,
-                        modDefesa: 1.0
-                    };
-                });
-                const response = await fetch('index.php?rota=salvar-time', {
+                const resposta = await fetch('index.php?rota=salvar-time', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -358,18 +467,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SESSION['meu_time']) && emp
                     })
                 });
 
-                const result = await response.json();
-                if (!response.ok || !result.sucesso) {
-                    throw new Error(result.mensagem || 'Não foi possível salvar seu time.');
+                const resultado = await resposta.json();
+                if (resultado.sucesso) {
+                    window.location.href = resultado.redirect;
+                } else {
+                    alert(resultado.mensagem);
+                    botaoConfirmar.disabled = false;
                 }
-                window.location.href = result.redirect;
-            } catch (err) {
-                alert(err.message || 'Erro ao salvar o time. Tente novamente.');
+            } catch (erro) {
+                alert('Erro ao salvar o time. Tente novamente.');
                 botaoConfirmar.disabled = false;
             }
         }
 
-        // Inicializa o carregamento dos Pokémon ao abrir a página
+        // Inicia o carregamento dos Pokémon ao abrir a página
         carregarOpcoes();
     </script>
 </body>
