@@ -1,107 +1,62 @@
 <?php
 
-/**
- * TimeController
- * Gerencia o salvamento e consulta do time Pokémon do usuário
- */
-class TimeController {
+// Controlador responsável por salvar a escalação do time escolhido pelo usuário
+class TimeController extends Controller {
 
-    /**
-     * Recebe requisição assíncrona POST em JSON e salva o time no banco via PDO
-     */
-    public function salvarTime(): void {
-        header('Content-Type: application/json; charset=utf-8');
+    // Salva o time no banco de dados e guarda na sessão para a batalha
+    public function salvarTime() {
+        $pdo = null;
 
         try {
-            $dados = json_decode(file_get_contents('php://input'), true);
-
-            if (!is_array($dados)) {
-                throw new Exception("Dados da requisição inválidos ou usuário não informado.");
+            // 1. Verifica se o usuário está logado
+            if (empty($_SESSION['logado'])) {
+                $this->responder(['sucesso' => false, 'mensagem' => 'Faça login antes de salvar seu time.'], 401);
             }
 
-            if (empty($_SESSION['logado']) || $_SESSION['logado'] !== true) {
-                http_response_code(401);
-                echo json_encode([
-                    'sucesso' => false,
-                    'mensagem' => 'Faça login antes de salvar seu time.'
-                ]);
-                exit;
+            $usuarioId = (int)($_SESSION['usuario_id'] ?? 1);
+            $dados = $this->lerJson();
+            $pokemons = $dados['time'] ?? [];
+
+            // 2. Validações da quantidade de Pokémons (1 a 6)
+            if (empty($pokemons)) {
+                throw new Exception("Você precisa escolher pelo menos 1 Pokémon para o time.");
             }
 
-            $usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
-            if ($usuarioId <= 0 || !isset($dados['time']) || !is_array($dados['time'])) {
-                throw new Exception("Dados da requisição inválidos ou usuário não informado.");
-            }
-
-            $pokemons = $dados['time'];
-
-            // Validação de limite máximo de 6 Pokémons
             if (count($pokemons) > 6) {
                 throw new TimeCheioException();
             }
 
-            if (count($pokemons) === 0) {
-                throw new Exception("Você precisa selecionar pelo menos 1 Pokémon para o time.");
-            }
-
             $pdo = Conexao::getConnection();
-            $stmtUsuario = $pdo->prepare("SELECT id FROM usuario WHERE id = :usuario_id");
-            $stmtUsuario->execute([':usuario_id' => $usuarioId]);
-            if (!$stmtUsuario->fetchColumn()) {
-                $stmtUsuario = $pdo->prepare("SELECT id FROM usuario WHERE nome = :nome");
-                $stmtUsuario->execute([':nome' => $_SESSION['usuario'] ?? '']);
-                $usuarioIdBanco = $stmtUsuario->fetchColumn();
-
-                if (!$usuarioIdBanco) {
-                    http_response_code(401);
-                    echo json_encode([
-                        'sucesso' => false,
-                        'mensagem' => 'Seu perfil não foi encontrado no banco. Saia da conta e entre novamente para atualizar a sessão.'
-                    ]);
-                    exit;
-                }
-
-                $usuarioId = (int)$usuarioIdBanco;
-                $_SESSION['usuario_id'] = $usuarioId;
-            }
-
             $pdo->beginTransaction();
 
-            // Remove o time anterior do usuário para atualizar com a nova escalação
-            $stmtLimparTime = $pdo->prepare("DELETE FROM time WHERE usuario_id = :usuario_id");
-            $stmtLimparTime->execute([':usuario_id' => $usuarioId]);
+            // 3. Remove a escalação anterior desse treinador
+            $stmtLimpar = $pdo->prepare("DELETE FROM time WHERE usuario_id = :usuario_id");
+            $stmtLimpar->execute([':usuario_id' => $usuarioId]);
 
             $posicao = 1;
-            $pokemonsPersistidos = [];
+            $pokemonsSalvos = [];
+
+            // 4. Cadastra ou atualiza cada Pokémon e vincula na tabela time
             foreach ($pokemons as $pk) {
-                // Valida atributos obrigatórios
-                if (
-                    !is_array($pk)
-                    || empty($pk['nome'])
-                    || empty($pk['tipo'])
-                ) {
-                    throw new PokemonInvalidoException("Dados incompletos para um dos Pokémons selecionados.");
+                if (empty($pk['nome']) || empty($pk['tipo'])) {
+                    throw new PokemonInvalidoException("Dados incompletos para um dos Pokémons.");
                 }
 
-                // Reutiliza o Pokémon já salvo para este usuário, preservando seus estados.
-                $stmtPokemonExistente = $pdo->prepare("
-                    SELECT id FROM pokemon
-                    WHERE usuario_id = :usuario_id AND LOWER(nome) = LOWER(:nome)
-                    ORDER BY id LIMIT 1
-                ");
-                $stmtPokemonExistente->execute([
+                // Verifica se o usuário já tem esse Pokémon cadastrado
+                $stmtBusca = $pdo->prepare("SELECT id FROM pokemon WHERE usuario_id = :usuario_id AND LOWER(nome) = LOWER(:nome) LIMIT 1");
+                $stmtBusca->execute([
                     ':usuario_id' => $usuarioId,
-                    ':nome' => $pk['nome']
+                    ':nome'       => $pk['nome']
                 ]);
-                $pokemonId = $stmtPokemonExistente->fetchColumn();
+                $pokemonId = $stmtBusca->fetchColumn();
 
+                // Se não existir, cadastra no banco
                 if (!$pokemonId) {
-                    $stmtPokemon = $pdo->prepare("
+                    $stmtNovo = $pdo->prepare("
                         INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao)
                         VALUES (:usuario_id, :nome, :tipo, :nivel, :hp_maximo, :hp_atual, :ataque, :defesa, :velocidade, :prioridade, :status_condicao)
                     ");
-
-                    $stmtPokemon->execute([
+                    $stmtNovo->execute([
                         ':usuario_id'       => $usuarioId,
                         ':nome'             => $pk['nome'],
                         ':tipo'             => $pk['tipo'],
@@ -114,20 +69,17 @@ class TimeController {
                         ':prioridade'       => $pk['prioridade'] ?? 0,
                         ':status_condicao'  => $pk['statusCondicao'] ?? 'Normal'
                     ]);
-
                     $pokemonId = $pdo->lastInsertId();
                 }
-                $pokemonsPersistidos[] = $pokemonId;
 
-                // Insere na tabela 'time' com a posição (1 a 6)
-                $stmtTime = $pdo->prepare("
-                    INSERT INTO time (usuario_id, pokemon_id, posicao)
-                    VALUES (:usuario_id, :pokemon_id, :posicao)
-                ");
+                $pokemonsSalvos[] = $pokemonId;
+
+                // Salva a vaga no time (posição de 1 a 6)
+                $stmtTime = $pdo->prepare("INSERT INTO time (usuario_id, pokemon_id, posicao) VALUES (:usuario_id, :pokemon_id, :posicao)");
                 $stmtTime->execute([
-                    ':usuario_id'  => $usuarioId,
-                    ':pokemon_id'  => $pokemonId,
-                    ':posicao'     => $posicao
+                    ':usuario_id' => $usuarioId,
+                    ':pokemon_id' => $pokemonId,
+                    ':posicao'    => $posicao
                 ]);
 
                 $posicao++;
@@ -135,65 +87,47 @@ class TimeController {
 
             $pdo->commit();
 
-            $timeDaSessao = $dados['meuTime'] ?? $pokemons;
-            if (!is_array($timeDaSessao) || count($timeDaSessao) !== count($pokemonsPersistidos)) {
-                $timeDaSessao = $pokemons;
-            }
-            foreach ($timeDaSessao as $indice => &$pokemon) {
-                if (is_array($pokemon) && isset($pokemonsPersistidos[$indice])) {
-                    $pokemon['pokemon_db_id'] = $pokemonsPersistidos[$indice];
+            // 5. Prepara os dados para a sessão da batalha
+            $meuTime = $dados['meuTime'] ?? $pokemons;
+            foreach ($meuTime as $i => &$poke) {
+                $poke = Pokemon::normalizar($poke);
+                if (isset($pokemonsSalvos[$i])) {
+                    $poke['pokemon_db_id'] = $pokemonsSalvos[$i];
                 }
-                if (is_array($pokemon)) {
-                    // Deixa o pokémon no formato do jogo (nome, hpMaximo, ataque...)
-                    $pokemon = Pokemon::normalizar($pokemon);
-                    $idPk = (int)($pokemon['id'] ?? $pokemon['id_pokedex'] ?? 0);
-                    $nomePk = $pokemon['nome'];
-                    $tipoPk = $pokemon['tipo'];
-                    $pokemon['movimentos'] = PokeApiService::obterMovimentosPadrao($idPk, $nomePk, $tipoPk);
-                }
+                $poke['movimentos'] = PokeApiService::obterMovimentosPadrao($poke['id'] ?? 0, $poke['nome'], $poke['tipo']);
             }
-            unset($pokemon);
+            unset($poke);
 
-            $inimigosCompletos = is_array($dados['inimigos'] ?? null) ? $dados['inimigos'] : [];
-            foreach ($inimigosCompletos as &$inimigo) {
-                if (is_array($inimigo)) {
-                    $inimigo = Pokemon::normalizar($inimigo);
-                    $idIni = (int)($inimigo['id'] ?? 0);
-                    $nomeIni = $inimigo['nome'];
-                    $tipoIni = $inimigo['tipo'];
-                    $inimigo['movimentos'] = PokeApiService::obterMovimentosPadrao($idIni, $nomeIni, $tipoIni);
-                }
+            // Prepara os 9 adversários da arena
+            $inimigos = $dados['inimigos'] ?? [];
+            foreach ($inimigos as &$ini) {
+                $ini = Pokemon::normalizar($ini);
+                $ini['movimentos'] = PokeApiService::obterMovimentosPadrao($ini['id'] ?? 0, $ini['nome'], $ini['tipo']);
             }
-            unset($inimigo);
+            unset($ini);
 
-            $_SESSION['meu_time'] = array_values($timeDaSessao);
-            $_SESSION['inimigos_restantes'] = is_array($dados['restantes'] ?? null) ? $dados['restantes'] : [];
-            $_SESSION['inimigos_time'] = array_values($inimigosCompletos);
+            // Guarda na sessão para iniciar a arena
+            $_SESSION['meu_time'] = array_values($meuTime);
+            $_SESSION['inimigos_restantes'] = $dados['restantes'] ?? [];
+            $_SESSION['inimigos_time'] = array_values($inimigos);
 
-            echo json_encode([
+            $this->responder([
                 'sucesso'  => true,
                 'mensagem' => 'Time salvo com sucesso!',
                 'redirect' => 'index.php?rota=batalha'
             ]);
+
         } catch (TimeCheioException | PokemonInvalidoException $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
+            if ($pdo && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            http_response_code(400);
-            echo json_encode([
-                'sucesso'  => false,
-                'mensagem' => $e->getMessage()
-            ]);
+            $this->responder(['sucesso' => false, 'mensagem' => $e->getMessage()], 400);
+
         } catch (Exception $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
+            if ($pdo && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            http_response_code(500);
-            echo json_encode([
-                'sucesso'  => false,
-                'mensagem' => 'Erro interno ao salvar time: ' . $e->getMessage()
-            ]);
+            $this->responder(['sucesso' => false, 'mensagem' => $e->getMessage()], 500);
         }
-        exit;
     }
 }
