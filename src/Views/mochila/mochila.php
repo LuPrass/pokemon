@@ -72,7 +72,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
     $hpMax = (int)($pkSessao['hpMaximo'] ?? $pkSessao['hp_maximo'] ?? 35);
     $hpAtual = (int)($pkSessao['hpAtual'] ?? $pkSessao['hp_atual'] ?? $hpMax);
     $statusAtual = $pkSessao['statusCondicao'] ?? $pkSessao['status_condicao'] ?? 'Normal';
-    $pokemonDbId = (int)($pkSessao['pokemon_db_id'] ?? $pkSessao['id'] ?? 0);
+    $pokemonDbId = (int)($pkSessao['pokemon_db_id'] ?? 0);
 
     $sucessoUso = false;
     $msgResultado = '';
@@ -207,6 +207,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
         if ($pokemonDbId > 0) {
             $stmtUp = $pdo->prepare("UPDATE pokemon SET hp_atual = :hp, status_condicao = :st WHERE id = :id AND usuario_id = :uid");
             $stmtUp->execute([':hp' => $novoHp, ':st' => $novoStatus, ':id' => $pokemonDbId, ':uid' => $usuarioId]);
+
+            // Marca na compra (log_loja) em qual Pokémon o item foi usado.
+            // Pega a compra mais antiga desse item que ainda estava guardada na mochila.
+            $stmtLogLoja = $pdo->prepare("UPDATE log_loja SET pokemon_id = :pokemon_id WHERE usuario_id = :uid AND item_id = :item_id AND pokemon_id IS NULL ORDER BY id ASC LIMIT 1");
+            $stmtLogLoja->execute([':pokemon_id' => $pokemonDbId, ':uid' => $usuarioId, ':item_id' => $itemId]);
         }
 
         // Se estiver em combate ativo, sincroniza o combate

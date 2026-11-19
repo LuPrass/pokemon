@@ -118,14 +118,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $combate = &$_SESSION['combate'];
     $ativoIdx = (int)$combate['pokemon_ativo_idx'];
 
-    // Salva o HP e o status do pokémon no banco
+    // Salva o HP, o status e o nível do pokémon no banco
     $salvarNoBanco = function($pk) use ($pdo, $usuarioId) {
-        $stmt = $pdo->prepare("UPDATE pokemon SET hp_atual = :hp, status_condicao = :status WHERE usuario_id = :usuario_id AND LOWER(nome) = LOWER(:nome)");
+        $stmt = $pdo->prepare("UPDATE pokemon SET hp_atual = :hp, status_condicao = :status, nivel = :nivel WHERE id = :id AND usuario_id = :usuario_id");
         $stmt->execute([
             ':hp'         => $pk['hpAtual'],
             ':status'     => $pk['statusCondicao'],
+            ':nivel'      => $pk['nivel'],
+            ':id'         => $pk['pokemon_db_id'],
+            ':usuario_id' => $usuarioId
+        ]);
+    };
+
+    // Registra o resultado da batalha (vitoria ou derrota) na tabela log_batalha
+    // Obs: quando é vitória, o trigger do banco soma o dinheiro no saldo do usuário
+    $registrarBatalha = function($pk, $adversario, $resultado, $dinheiro) use ($pdo, $usuarioId) {
+        $stmt = $pdo->prepare("INSERT INTO log_batalha (usuario_id, pokemon_id, adversario, resultado, dinheiro_ganho) VALUES (:usuario_id, :pokemon_id, :adversario, :resultado, :dinheiro)");
+        $stmt->execute([
             ':usuario_id' => $usuarioId,
-            ':nome'       => $pk['nome']
+            ':pokemon_id' => $pk['pokemon_db_id'],
+            ':adversario' => $adversario,
+            ':resultado'  => $resultado,
+            ':dinheiro'   => $dinheiro
         ]);
     };
 
@@ -189,25 +203,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($inimigo->estaDesmaiado()) {
             $combate['vitorias']++;
 
-            $recompensa = 100;
-            $logSucesso = false;
-            try {
-                // Ao inserir no log_batalha, o trigger do banco (trigger_dinheiro_vitoria) credita a recompensa ao usuario
-                $stmtLog = $pdo->prepare("INSERT INTO log_batalha (usuario_id, pokemon_id, adversario, resultado, dinheiro_ganho) VALUES (:usuario_id, :pokemon_id, :adversario, 'vitoria', :dinheiro)");
-                $stmtLog->execute([
-                    ':usuario_id' => $usuarioId,
-                    ':pokemon_id' => $meuTime[$ativoIdx]['pokemon_db_id'] ?? null,
-                    ':adversario' => $combate['inimigo_atual']['nome'],
-                    ':dinheiro'   => $recompensa
-                ]);
-                $logSucesso = true;
-            } catch (Exception $e) {}
+            // O Pokémon que venceu sobe 1 nível
+            $jogador->subirNivel();
+            $meuTime[$ativoIdx]['nivel'] = $jogador->getNivel();
+            $salvarNoBanco($meuTime[$ativoIdx]);
+            $combate['mensagens'][] = "⬆️ {$jogador->getNome()} subiu para o nível {$jogador->getNivel()}!";
 
-            // Fallback caso ocorra erro no log
-            if (!$logSucesso) {
-                $stmtMoney = $pdo->prepare("UPDATE usuario SET dinheiro = dinheiro + :recompensa WHERE id = :id");
-                $stmtMoney->execute([':recompensa' => $recompensa, ':id' => $usuarioId]);
-            }
+            $recompensa = 100;
+            $registrarBatalha($meuTime[$ativoIdx], $combate['inimigo_atual']['nome'], 'vitoria', $recompensa);
             $usuarioDinheiro += $recompensa;
             $combate['mensagens'][] = "💰 Recompensa: +{$recompensa} Pokédollars adicionados ao seu saldo!";
 
@@ -218,6 +221,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $combate['status'] = 'vitoria_rodada';
             }
         } elseif ($jogador->estaDesmaiado()) {
+            // Nosso Pokémon desmaiou: fica registrado como derrota
+            $registrarBatalha($meuTime[$ativoIdx], $combate['inimigo_atual']['nome'], 'derrota', 0);
+
             if ($verificarGameOver()) {
                 $combate['status'] = 'derrota_sem_pokemon';
             } else {
@@ -267,8 +273,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $combate['inimigo_atual'] = array_merge($combate['inimigo_atual'], $inimigo->paraArray());
                 $salvarNoBanco($meuTime[$novoIdx]);
 
-                if ($novo->estaDesmaiado() && $verificarGameOver()) {
-                    $combate['status'] = 'derrota_sem_pokemon';
+                if ($novo->estaDesmaiado()) {
+                    $registrarBatalha($meuTime[$novoIdx], $combate['inimigo_atual']['nome'], 'derrota', 0);
+
+                    if ($verificarGameOver()) {
+                        $combate['status'] = 'derrota_sem_pokemon';
+                    }
                 }
             }
 
@@ -375,14 +385,15 @@ $porcHpIni = max(0, min(100, (int)round(($hpAtualIni / max(1, $hpMaxIni)) * 100)
 $corHpJog = ($porcHpJog > 50) ? '#10b981' : (($porcHpJog > 20) ? '#f59e0b' : '#ef4444');
 $corHpIni = ($porcHpIni > 50) ? '#10b981' : (($porcHpIni > 20) ? '#f59e0b' : '#ef4444');
 
-// IDs dos Pokémon para buscar os sprites na PokéAPI
+// IDs dos Pokémon para buscar os sprites na PokéAPI através do serviço
 $idJog = (int)($pokemonJogador['id'] ?? $pokemonJogador['id_pokedex'] ?? 0);
 $idIni = (int)($pokemonInimigo['id'] ?? $pokemonInimigo['id_pokedex'] ?? 0);
 
 $spriteJogador = $idJog > 0 ? PokeApiService::buscarPorId($idJog) : null;
 $spriteInimigo = $idIni > 0 ? PokeApiService::buscarPorId($idIni) : null;
-$imgJog = $spriteJogador['gif'] ?? '';
-$imgIni = $spriteInimigo['gif'] ?? '';
+
+$imgJog = $spriteJogador['gif'] ?? ($pokemonJogador['img'] ?? '');
+$imgIni = $spriteInimigo['gif'] ?? ($pokemonInimigo['img'] ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">

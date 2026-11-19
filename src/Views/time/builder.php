@@ -16,6 +16,10 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
     header('Location: index.php?rota=batalha');
     exit;
 }
+
+// Carrega o catálogo dos 15 Pokémon diretamente pelo PokeApiService (Back-end)
+// Assim, não fazemos requisições duplicadas para a PokeAPI pelo JavaScript
+$catalogoPokemon = PokeApiService::listar();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -74,8 +78,9 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
     </div>
 
     <script>
-        // Lista dos IDs dos 15 Pokémon disponíveis
-        const pokemonDisponiveis = <?php echo json_encode(PokeApiService::IDS); ?>;
+        // O catálogo dos 15 Pokémon vem 100% pronto do PokeApiService (PHP)
+        // Sem necessidade de chamar fetch() na PokéAPI pelo navegador
+        const listaPokemon = <?php echo json_encode($catalogoPokemon); ?>;
 
         // Se o usuário veio da opção "Modificar Time", recupera o time atual
         <?php
@@ -86,7 +91,7 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
         ?>
         let meuTime = <?php echo json_encode($timeInicial); ?>;
 
-        // Guarda os dados carregados da PokeAPI para reutilizar sem fazer novas requisições
+        // Guarda os dados carregados para reutilizar sem recarregar a tela
         const pokemonStatsCache = {};
 
         // Mapeamento dos tipos para português, ícone e classe CSS
@@ -107,79 +112,25 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             'fighting': { nome: 'Lutador',  icone: '🥊', classe: 'fighting' }
         };
 
-        // Tradução simples dos atributos
-        function traduzirStat(nome) {
-            if (nome === 'hp') return 'HP';
-            if (nome === 'attack') return 'Ataque';
-            if (nome === 'defense') return 'Defesa';
-            if (nome === 'speed') return 'Velocidade';
-            return nome;
-        }
-
-        // 1. Busca os dados de um Pokémon na PokeAPI
-        async function buscarPokemon(id) {
-            const resposta = await fetch('https://pokeapi.co/api/v2/pokemon/' + id);
-            const dados = await resposta.json();
-
-            // Pega a imagem animada (showdown) ou a imagem padrão
-            let imagem = '';
-            if (dados.sprites.other && dados.sprites.other.showdown && dados.sprites.other.showdown.front_default) {
-                imagem = dados.sprites.other.showdown.front_default;
-            } else if (dados.sprites.front_default) {
-                imagem = dados.sprites.front_default;
-            }
-
-            // Pega o tipo principal do Pokémon
-            let tipo = 'normal';
-            if (dados.types && dados.types.length > 0) {
-                tipo = dados.types[0].type.name;
-            }
-
-            // Pega a lista de todos os tipos
-            let tipos = [];
-            for (let i = 0; i < dados.types.length; i++) {
-                tipos.push(dados.types[i].type.name);
-            }
-
-            // Organiza os atributos em um objeto simples
-            let stats = {};
-            for (let i = 0; i < dados.stats.length; i++) {
-                const item = dados.stats[i];
-                stats[item.stat.name] = item.base_stat;
-            }
-
-            return {
-                id: dados.id,
-                nome: dados.name,
-                imagem: imagem,
-                tipo: tipo,
-                tipos: tipos,
-                stats: stats
-            };
-        }
-
-        // 2. Carrega todos os Pokémon da lista e monta a tela
-        async function carregarOpcoes() {
+        // 1. Carrega todos os Pokémon na tela diretamente dos dados do PokeApiService
+        function carregarOpcoes() {
             const grid = document.getElementById('pokemon-grid');
 
-            // Dispara a busca de todos os Pokémon da lista
-            const promessas = pokemonDisponiveis.map(id => buscarPokemon(id));
-            const pokemons = await Promise.all(promessas);
+            for (let i = 0; i < listaPokemon.length; i++) {
+                const poke = listaPokemon[i];
+                const id = poke.id_pokedex;
 
-            // Adiciona cada Pokémon no cache e cria seu card na tela
-            for (let i = 0; i < pokemons.length; i++) {
-                const poke = pokemons[i];
-                pokemonStatsCache[poke.id] = {
-                    id: poke.id,
+                pokemonStatsCache[id] = {
+                    id: id,
                     name: poke.nome,
-                    img: poke.imagem,
+                    img: poke.gif,
                     tipo: poke.tipo,
-                    tipos: poke.tipos,
-                    hp: poke.stats.hp,
-                    attack: poke.stats.attack,
-                    defense: poke.stats.defense,
-                    speed: poke.stats.speed
+                    hp: poke.hpMaximo,
+                    attack: poke.ataque,
+                    defense: poke.defesa,
+                    speed: poke.velocidade
                 };
+
                 grid.innerHTML += criarCardHTML(poke);
             }
 
@@ -194,9 +145,11 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             atualizarPainelTime();
         }
 
-        // 3. Monta o card HTML de um Pokémon
+        // 2. Monta o card HTML de cada Pokémon com suas informações e atributos
         function criarCardHTML(poke) {
-            const imagem = poke.imagem;
+            const id = poke.id_pokedex;
+            const nome = poke.nome;
+            const imagem = poke.gif;
             const tipoPrincipal = poke.tipo;
 
             let dadosTipo = MAPA_TIPOS[tipoPrincipal];
@@ -204,48 +157,38 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
                 dadosTipo = { nome: tipoPrincipal, icone: '✨', classe: tipoPrincipal };
             }
 
-            const statsDesejados = ['hp', 'attack', 'defense', 'speed'];
+            const statsLista = [
+                { nome: 'HP', valor: poke.hpMaximo, cor: '#10b981' },
+                { nome: 'Ataque', valor: poke.ataque, cor: '#f97316' },
+                { nome: 'Defesa', valor: poke.defesa, cor: '#0ea5e9' },
+                { nome: 'Velocidade', valor: poke.velocidade, cor: '#f59e0b' }
+            ];
+
             let statsHTML = '';
-
-            for (let i = 0; i < statsDesejados.length; i++) {
-                const nome = statsDesejados[i];
-                const valor = poke.stats[nome];
-
-                if (valor !== undefined) {
-                    const nomePt = traduzirStat(nome);
-
-                    let porc = (valor / 150) * 100;
-                    if (porc > 100) {
-                        porc = 100;
-                    }
-
-                    let corBarra = '#f59e0b'; // amarelo para velocidade
-                    if (nome === 'hp') {
-                        corBarra = '#10b981'; // verde
-                    } else if (nome === 'attack') {
-                        corBarra = '#f97316'; // laranja
-                    } else if (nome === 'defense') {
-                        corBarra = '#0ea5e9'; // azul
-                    }
-
-                    statsHTML += `
-                        <div style="margin-bottom: 8px;">
-                            <div class="stat-row">
-                                <strong>${nomePt}</strong>
-                                <span>${valor}</span>
-                            </div>
-                            <div class="stat-bar-bg">
-                                <div class="stat-bar-fill" style="width: ${porc}%; background: ${corBarra}"></div>
-                            </div>
-                        </div>
-                    `;
+            for (let i = 0; i < statsLista.length; i++) {
+                const s = statsLista[i];
+                let porc = (s.valor / 150) * 100;
+                if (porc > 100) {
+                    porc = 100;
                 }
+
+                statsHTML += `
+                    <div style="margin-bottom: 8px;">
+                        <div class="stat-row">
+                            <strong>${s.nome}</strong>
+                            <span>${s.valor}</span>
+                        </div>
+                        <div class="stat-bar-bg">
+                            <div class="stat-bar-fill" style="width: ${porc}%; background: ${s.cor}"></div>
+                        </div>
+                    </div>
+                `;
             }
 
             // Verifica se este Pokémon já está no time
             let noTime = false;
             for (let i = 0; i < meuTime.length; i++) {
-                if (Number(meuTime[i].id) === Number(poke.id)) {
+                if (Number(meuTime[i].id) === Number(id)) {
                     noTime = true;
                     break;
                 }
@@ -257,22 +200,22 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             const desabilitarDel = noTime ? '' : 'disabled';
 
             return `
-                <div class="pokemon-card card-tipo-${dadosTipo.classe} ${classeCard}" id="card-${poke.id}">
-                    ${imagem ? `<img src="${imagem}" alt="${poke.nome}">` : ''}
-                    <h3 class="card-name">${poke.nome}</h3>
+                <div class="pokemon-card card-tipo-${dadosTipo.classe} ${classeCard}" id="card-${id}">
+                    ${imagem ? `<img src="${imagem}" alt="${nome}">` : ''}
+                    <h3 class="card-name">${nome}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
                         ${statsHTML}
                     </div>
                     <div class="card-botoes">
-                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${poke.id}" onclick="adicionarAoTime(${poke.id}, '${poke.nome}', '${imagem}', '${tipoPrincipal}', event)" ${desabilitarAdd}>${textoBtnAdd}</button>
-                        <button type="button" class="btn-card btn-excluir" id="btn-del-${poke.id}" onclick="removerDoTime(${poke.id}, event)" ${desabilitarDel}>✕ Excluir</button>
+                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${id}" onclick="adicionarAoTime(${id}, '${nome}', '${imagem}', '${tipoPrincipal}', event)" ${desabilitarAdd}>${textoBtnAdd}</button>
+                        <button type="button" class="btn-card btn-excluir" id="btn-del-${id}" onclick="removerDoTime(${id}, event)" ${desabilitarDel}>✕ Excluir</button>
                     </div>
                 </div>
             `;
         }
 
-        // 4. Adiciona o Pokémon selecionado ao time
+        // 3. Adiciona o Pokémon selecionado ao time
         function adicionarAoTime(id, name, img, tipo, event) {
             if (event) {
                 event.stopPropagation();
@@ -322,7 +265,7 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             atualizarPainelTime();
         }
 
-        // 5. Remove um Pokémon do time
+        // 4. Remove um Pokémon do time
         function removerDoTime(id, event) {
             if (event) {
                 event.stopPropagation();
@@ -361,7 +304,7 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             atualizarPainelTime();
         }
 
-        // 6. Atualiza a barra de slots do time no topo da página
+        // 5. Atualiza a barra de slots do time no topo da página
         function atualizarPainelTime() {
             document.getElementById('team-count').innerText = meuTime.length;
             const slots = document.getElementById('team-slots').children;
@@ -387,7 +330,7 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             }
         }
 
-        // 7. Envia o time escolhido e os adversários para o servidor salvar
+        // 6. Envia o time escolhido e os adversários para o servidor salvar
         async function iniciarJogo() {
             const botaoConfirmar = document.getElementById('btn-ready');
             botaoConfirmar.disabled = true;
@@ -400,8 +343,8 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
 
             // Identifica os outros Pokémon que serão os inimigos
             let idsRestantes = [];
-            for (let i = 0; i < pokemonDisponiveis.length; i++) {
-                const id = pokemonDisponiveis[i];
+            for (let i = 0; i < listaPokemon.length; i++) {
+                const id = listaPokemon[i].id_pokedex;
                 if (!idsEscolhidos.includes(id)) {
                     idsRestantes.push(id);
                 }
@@ -480,7 +423,7 @@ if (!empty($_SESSION['meu_time']) && empty($_GET['modificar'])) {
             }
         }
 
-        // Inicia o carregamento dos Pokémon ao abrir a página
+        // Inicia o carregamento dos Pokémon direto dos dados já entregues pelo PHP
         carregarOpcoes();
     </script>
 </body>

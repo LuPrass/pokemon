@@ -1,32 +1,78 @@
 <?php
 require_once __DIR__ . '/../../../Autoload.php';
 
+// 1. Inicia a sessão se ainda não foi iniciada
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 1. Verificações de segurança e acesso
+// 2. Verifica se o usuário está logado
 if (empty($_SESSION['logado'])) {
     header('Location: login.php');
     exit;
 }
 
+// 3. Verifica se o usuário tem permissão de administrador
 $adminsPermitidos = require __DIR__ . '/../../../config/Administradores.php';
 
-if (!in_array($_SESSION['usuario'] ?? '', $adminsPermitidos, true)) {
+$usuarioAtual = '';
+if (isset($_SESSION['usuario'])) {
+    $usuarioAtual = $_SESSION['usuario'];
+}
+
+if (!in_array($usuarioAtual, $adminsPermitidos, true)) {
     header('Location: index.php?rota=menu');
     exit;
 }
 
-// 3. Consultas ao banco de dados
+// 4. Conexão com o banco de dados
 $pdo = Conexao::getConnection();
 
-function buscarLogs(PDO $pdo, string $sql): array {
-    $consulta = $pdo->query($sql);
-    return $consulta->fetchAll(PDO::FETCH_ASSOC);
-}
+// 5. Consulta da lista de usuários cadastrados
+$sqlUsuarios = "SELECT id, nome, dinheiro, data_criacao FROM usuario ORDER BY id ASC";
+$stmtUsuarios = $pdo->query($sqlUsuarios);
+$usuarios = $stmtUsuarios->fetchAll(PDO::FETCH_ASSOC);
 
-$sqlBatalha = "
+// 6. Consulta dos times escalados pelos treinadores
+$sqlTimes = "
+    SELECT 
+        time.id,
+        usuario.nome AS usuario,
+        time.posicao,
+        pokemon.nome AS pokemon,
+        pokemon.tipo,
+        pokemon.nivel,
+        pokemon.hp_atual,
+        pokemon.hp_maximo
+    FROM time
+    INNER JOIN usuario ON usuario.id = time.usuario_id
+    INNER JOIN pokemon ON pokemon.id = time.pokemon_id
+    ORDER BY usuario.nome ASC, time.posicao ASC
+";
+$stmtTimes = $pdo->query($sqlTimes);
+$times = $stmtTimes->fetchAll(PDO::FETCH_ASSOC);
+
+// 7. Consulta do histórico de compras na loja
+$sqlCompras = "
+    SELECT
+        log_loja.id,
+        usuario.nome AS usuario,
+        loja.nome AS item,
+        pokemon.nome AS pokemon,
+        log_loja.preco_pago,
+        log_loja.data_compra
+    FROM log_loja
+    INNER JOIN usuario ON usuario.id = log_loja.usuario_id
+    INNER JOIN loja ON loja.id = log_loja.item_id
+    LEFT JOIN pokemon ON pokemon.id = log_loja.pokemon_id
+    ORDER BY log_loja.id DESC
+    LIMIT 100
+";
+$stmtCompras = $pdo->query($sqlCompras);
+$compras = $stmtCompras->fetchAll(PDO::FETCH_ASSOC);
+
+// 8. Consulta do histórico de batalhas
+$sqlBatalhas = "
     SELECT
         log_batalha.id,
         usuario.nome AS usuario,
@@ -36,37 +82,20 @@ $sqlBatalha = "
         log_batalha.dinheiro_ganho,
         log_batalha.data_batalha
     FROM log_batalha
-    JOIN usuario ON usuario.id = log_batalha.usuario_id
+    INNER JOIN usuario ON usuario.id = log_batalha.usuario_id
     LEFT JOIN pokemon ON pokemon.id = log_batalha.pokemon_id
     ORDER BY log_batalha.id DESC
-    LIMIT 200
+    LIMIT 100
 ";
-
-$sqlLoja = "
-    SELECT
-        log_loja.id,
-        usuario.nome AS usuario,
-        loja.nome AS item,
-        pokemon.nome AS pokemon,
-        log_loja.preco_pago,
-        log_loja.data_compra
-    FROM log_loja
-    JOIN usuario ON usuario.id = log_loja.usuario_id
-    JOIN loja ON loja.id = log_loja.item_id
-    LEFT JOIN pokemon ON pokemon.id = log_loja.pokemon_id
-    ORDER BY log_loja.id DESC
-    LIMIT 200
-";
-
-$logsBatalha = buscarLogs($pdo, $sqlBatalha);
-$logsLoja    = buscarLogs($pdo, $sqlLoja);
+$stmtBatalhas = $pdo->query($sqlBatalhas);
+$batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PokéArena - Logs do Jogo</title>
+    <title>PokéArena - Histórico e Registros</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -75,42 +104,47 @@ $logsLoja    = buscarLogs($pdo, $sqlLoja);
 <body>
 <main class="logs-viewport">
     <div class="logs-container">
+
+        <!-- Cabeçalho da página -->
         <header class="logs-header">
             <div>
                 <span class="logs-eyebrow">PAINEL DE ADMINISTRAÇÃO</span>
-                <h1>📜 Logs e movimentação do jogo</h1>
+                <h1>📜 Histórico e Registros do Jogo</h1>
             </div>
-            <a class="logs-back" href="index.php?rota=menu">← Voltar ao menu</a>
+            <a class="logs-back" href="index.php?rota=menu">← Voltar ao Menu</a>
         </header>
 
-        <section class="logs-section">
-            <h2>⚔️ Batalhas</h2>
-            <?php if (empty($logsBatalha)): ?>
-                <p class="logs-empty">Nenhuma batalha registrada.</p>
+        <!-- Atalhos rápidos para navegar entre as tabelas -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a class="logs-back" href="#sec-usuarios" style="background: #1e293b; box-shadow: none;">👤 Usuários</a>
+            <a class="logs-back" href="#sec-times" style="background: #1e293b; box-shadow: none;">👥 Times</a>
+            <a class="logs-back" href="#sec-compras" style="background: #1e293b; box-shadow: none;">🛒 Compras</a>
+            <a class="logs-back" href="#sec-batalhas" style="background: #1e293b; box-shadow: none;">⚔️ Batalhas</a>
+        </div>
+
+        <!-- 1. Tabela de Usuários -->
+        <section class="logs-section" id="sec-usuarios">
+            <h2>👤 Treinadores / Usuários Cadastrados</h2>
+            <?php if (empty($usuarios)): ?>
+                <p class="logs-empty">Nenhum usuário cadastrado.</p>
             <?php else: ?>
                 <div class="logs-table-wrap">
                     <table class="logs-table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Data</th>
-                                <th>Treinador</th>
-                                <th>Pokémon</th>
-                                <th>Adversário</th>
-                                <th>Resultado</th>
-                                <th>Dinheiro ganho</th>
+                                <th># ID</th>
+                                <th>Nome do Treinador</th>
+                                <th>Saldo (Pokédollars)</th>
+                                <th>Data de Cadastro</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($logsBatalha as $batalha): ?>
+                            <?php foreach ($usuarios as $u): ?>
                                 <tr>
-                                    <td><?= $batalha['id'] ?></td>
-                                    <td><?= $batalha['data_batalha'] ?></td>
-                                    <td><?= $batalha['usuario'] ?></td>
-                                    <td><?= $batalha['pokemon'] ?? '-' ?></td>
-                                    <td><?= $batalha['adversario'] ?></td>
-                                    <td><?= $batalha['resultado'] ?></td>
-                                    <td><?= $batalha['dinheiro_ganho'] ?></td>
+                                    <td><?php echo $u['id']; ?></td>
+                                    <td><b><?php echo htmlspecialchars($u['nome']); ?></b></td>
+                                    <td>P$ <?php echo $u['dinheiro']; ?></td>
+                                    <td><?php echo $u['data_criacao']; ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -119,32 +153,81 @@ $logsLoja    = buscarLogs($pdo, $sqlLoja);
             <?php endif; ?>
         </section>
 
-        <section class="logs-section">
-            <h2>🛒 Compras na PokéMart</h2>
-            <?php if (empty($logsLoja)): ?>
+        <!-- 2. Tabela de Times -->
+        <section class="logs-section" id="sec-times">
+            <h2>👥 Times Escalados</h2>
+            <?php if (empty($times)): ?>
+                <p class="logs-empty">Nenhum Pokémon escalado em times.</p>
+            <?php else: ?>
+                <div class="logs-table-wrap">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Treinador</th>
+                                <th>Vaga / Posição</th>
+                                <th>Pokémon</th>
+                                <th>Tipo</th>
+                                <th>Nível</th>
+                                <th>HP Atual / Máximo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($times as $t): ?>
+                                <tr>
+                                    <td><b><?php echo htmlspecialchars($t['usuario']); ?></b></td>
+                                    <td>Posição <?php echo $t['posicao']; ?></td>
+                                    <td><?php echo htmlspecialchars($t['pokemon']); ?></td>
+                                    <td><?php echo htmlspecialchars($t['tipo']); ?></td>
+                                    <td>Nível <?php echo $t['nivel']; ?></td>
+                                    <td>
+                                        <?php echo $t['hp_atual']; ?> / <?php echo $t['hp_maximo']; ?>
+                                        <?php if ($t['hp_atual'] <= 0): ?>
+                                            <span style="color: #f87171; font-weight: bold;">(Desmaiado)</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <!-- 3. Tabela de Compras -->
+        <section class="logs-section" id="sec-compras">
+            <h2>🛒 Histórico de Compras na Loja</h2>
+            <?php if (empty($compras)): ?>
                 <p class="logs-empty">Nenhuma compra registrada.</p>
             <?php else: ?>
                 <div class="logs-table-wrap">
                     <table class="logs-table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Data</th>
+                                <th># ID</th>
+                                <th>Data da Compra</th>
                                 <th>Treinador</th>
-                                <th>Item</th>
-                                <th>Pokémon alvo</th>
-                                <th>Preço pago</th>
+                                <th>Item Comprado</th>
+                                <th>Pokémon que usou o item</th>
+                                <th>Preço Pago</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($logsLoja as $compra): ?>
+                            <?php foreach ($compras as $c): ?>
                                 <tr>
-                                    <td><?= $compra['id'] ?></td>
-                                    <td><?= $compra['data_compra'] ?></td>
-                                    <td><?= $compra['usuario'] ?></td>
-                                    <td><?= $compra['item'] ?></td>
-                                    <td><?= $compra['pokemon'] ?? 'Guardado na mochila' ?></td>
-                                    <td><?= $compra['preco_pago'] ?></td>
+                                    <td><?php echo $c['id']; ?></td>
+                                    <td><?php echo $c['data_compra']; ?></td>
+                                    <td><?php echo htmlspecialchars($c['usuario']); ?></td>
+                                    <td><b><?php echo htmlspecialchars($c['item']); ?></b></td>
+                                    <td>
+                                        <?php 
+                                        if (!empty($c['pokemon'])) {
+                                            echo htmlspecialchars($c['pokemon']);
+                                        } else {
+                                            echo 'Ainda na mochila';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td>P$ <?php echo $c['preco_pago']; ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -152,6 +235,58 @@ $logsLoja    = buscarLogs($pdo, $sqlLoja);
                 </div>
             <?php endif; ?>
         </section>
+
+        <!-- 4. Tabela de Batalhas -->
+        <section class="logs-section" id="sec-batalhas">
+            <h2>⚔️ Histórico de Batalhas</h2>
+            <?php if (empty($batalhas)): ?>
+                <p class="logs-empty">Nenhuma batalha registrada.</p>
+            <?php else: ?>
+                <div class="logs-table-wrap">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th># ID</th>
+                                <th>Data</th>
+                                <th>Treinador</th>
+                                <th>Pokémon</th>
+                                <th>Adversário</th>
+                                <th>Resultado</th>
+                                <th>Dinheiro Ganho</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($batalhas as $b): ?>
+                                <tr>
+                                    <td><?php echo $b['id']; ?></td>
+                                    <td><?php echo $b['data_batalha']; ?></td>
+                                    <td><?php echo htmlspecialchars($b['usuario']); ?></td>
+                                    <td>
+                                        <?php 
+                                        if (!empty($b['pokemon'])) {
+                                            echo htmlspecialchars($b['pokemon']);
+                                        } else {
+                                            echo '-';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($b['adversario']); ?></td>
+                                    <td>
+                                        <?php if (strtolower($b['resultado']) === 'vitoria'): ?>
+                                            <span style="color: #34d399; font-weight: bold;">Vitória</span>
+                                        <?php else: ?>
+                                            <span style="color: #f87171; font-weight: bold;">Derrota</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>P$ <?php echo $b['dinheiro_ganho']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+
     </div>
 </main>
 </body>

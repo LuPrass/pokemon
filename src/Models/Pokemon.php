@@ -1,6 +1,10 @@
 <?php
 
 class Pokemon {
+    // Requisito: Pokémon herda (trait) os tipos elementais
+    use TipoNormalTrait, TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait;
+    use TipoEletricoTrait, TipoFantasmaTrait, TipoPsiquicoTrait, TipoTerraTrait;
+
     private $id;
     private $usuarioId;
     private $nome;
@@ -138,6 +142,80 @@ class Pokemon {
         $this->modDefesa = max(0.4, $this->modDefesa - 0.2);
     }
 
+    // =========================================================================
+    // Métodos que usam as Traits herdadas (Requisito: "herdar (trait) os tipos")
+    // =========================================================================
+
+    /**
+     * Calcula o multiplicador estático entre dois tipos quaisquer usando as Traits herdadas
+     */
+    public static function calcularMultiplicadorTipos($tipoAtacante, $tipoAlvo) {
+        $atacante = self::normalizarTipoParaTrait($tipoAtacante);
+        $alvo = self::normalizarTipoParaTrait($tipoAlvo);
+
+        switch ($atacante) {
+            case 'fogo':     return self::multiplicadorFogo($alvo);
+            case 'agua':     return self::multiplicadorAgua($alvo);
+            case 'planta':   return self::multiplicadorPlanta($alvo);
+            case 'eletrico': return self::multiplicadorEletrico($alvo);
+            case 'fantasma': return self::multiplicadorFantasma($alvo);
+            case 'psiquico': return self::multiplicadorPsiquico($alvo);
+            case 'terra':    return self::multiplicadorTerra($alvo);
+            case 'normal':   return self::multiplicadorNormal($alvo);
+            default:         return 1;
+        }
+    }
+
+    /**
+     * Retorna a condição de status de um tipo qualquer usando as Traits herdadas
+     */
+    public static function obterStatusPorTipo($tipo) {
+        $t = self::normalizarTipoParaTrait($tipo);
+
+        switch ($t) {
+            case 'fogo':     return self::statusFogo();
+            case 'agua':     return self::statusAgua();
+            case 'planta':   return self::statusPlanta();
+            case 'eletrico': return self::statusEletrico();
+            case 'fantasma': return self::statusFantasma();
+            case 'psiquico': return self::statusPsiquico();
+            case 'terra':    return self::statusTerra();
+            case 'normal':   return self::statusNormal();
+            default:         return 'Normal';
+        }
+    }
+
+    /**
+     * Calcula o multiplicador de dano deste Pokémon contra um tipo alvo usando as Traits herdadas
+     */
+    public function calcularVantagemContra($tipoAlvo) {
+        return self::calcularMultiplicadorTipos($this->tipo, $tipoAlvo);
+    }
+
+    /**
+     * Retorna a condição de status que o tipo deste Pokémon pode infligir usando as Traits herdadas
+     */
+    public function obterStatusDoTipo() {
+        return self::obterStatusPorTipo($this->tipo);
+    }
+
+    private static function normalizarTipoParaTrait($tipo) {
+        $t = strtolower(trim((string)$tipo));
+        $mapa = [
+            'água' => 'agua',
+            'water' => 'agua',
+            'fire' => 'fogo',
+            'grass' => 'planta',
+            'electric' => 'eletrico',
+            'elétrico' => 'eletrico',
+            'ground' => 'terra',
+            'psychic' => 'psiquico',
+            'psíquico' => 'psiquico',
+            'ghost' => 'fantasma'
+        ];
+        return $mapa[$t] ?? $t;
+    }
+
     // Regras do pokémon
     public function estaDesmaiado() {
         return $this->hpAtual <= 0;
@@ -155,6 +233,11 @@ class Pokemon {
         if ($this->hpAtual > $this->hpMaximo) {
             $this->hpAtual = $this->hpMaximo;
         }
+    }
+
+    // Cada vitória em batalha faz o Pokémon subir 1 nível
+    public function subirNivel() {
+        $this->nivel = $this->nivel + 1;
     }
 
     // Evolui o Pokémon usando a Pedra de Evolução

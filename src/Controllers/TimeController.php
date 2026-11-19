@@ -70,6 +70,22 @@ class TimeController extends Controller {
                         ':status_condicao'  => $pk['statusCondicao'] ?? 'Normal'
                     ]);
                     $pokemonId = $pdo->lastInsertId();
+                } else {
+                    // Se já existir, ele começa o novo time renovado (vida cheia, nível inicial e sem status)
+                    $stmtRenovar = $pdo->prepare("
+                        UPDATE pokemon SET nivel = :nivel, hp_maximo = :hp_maximo, hp_atual = :hp_atual, ataque = :ataque,
+                            defesa = :defesa, velocidade = :velocidade, status_condicao = 'Normal', evoluido = 0
+                        WHERE id = :id
+                    ");
+                    $stmtRenovar->execute([
+                        ':nivel'      => $pk['nivel'],
+                        ':hp_maximo'  => $pk['hpMaximo'],
+                        ':hp_atual'   => $pk['hpMaximo'],
+                        ':ataque'     => $pk['ataque'],
+                        ':defesa'     => $pk['defesa'],
+                        ':velocidade' => $pk['velocidade'],
+                        ':id'         => $pokemonId
+                    ]);
                 }
 
                 $pokemonsSalvos[] = $pokemonId;
@@ -106,10 +122,11 @@ class TimeController extends Controller {
             }
             unset($ini);
 
-            // Guarda na sessão para iniciar a arena
+            // Guarda na sessão para iniciar a arena com o time renovado
             $_SESSION['meu_time'] = array_values($meuTime);
             $_SESSION['inimigos_restantes'] = $dados['restantes'] ?? [];
             $_SESSION['inimigos_time'] = array_values($inimigos);
+            unset($_SESSION['combate']); // Inicia nova campanha de combate com os Pokémon 100% prontos e saudáveis
 
             $this->responder([
                 'sucesso'  => true,

@@ -2,8 +2,6 @@
 
 // Regras da batalha entre dois pokémons (não mexe no banco de dados)
 class Batalha {
-    use TipoNormalTrait, TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait;
-    use TipoEletricoTrait, TipoFantasmaTrait, TipoPsiquicoTrait, TipoTerraTrait;
 
     // Frase mostrada quando o pokémon ganha um status
     const FRASES_STATUS = [
@@ -260,37 +258,14 @@ class Batalha {
         }
     }
 
-    // Os traits definem as vantagens de cada tipo; aqui selecionamos o trait certo.
+    // Vantagens de tipo delegadas diretamente para o Pokémon (que herda os traits dos tipos)
     public static function multiplicador($tipoAtacante, $tipoAlvo) {
-        $atacante = self::normalizarTipo($tipoAtacante);
-        $alvo = self::normalizarTipo($tipoAlvo);
-
-        switch ($atacante) {
-            case 'normal': return self::multiplicadorNormal($alvo);
-            case 'fogo': return self::multiplicadorFogo($alvo);
-            case 'agua': return self::multiplicadorAgua($alvo);
-            case 'planta': return self::multiplicadorPlanta($alvo);
-            case 'eletrico': return self::multiplicadorEletrico($alvo);
-            case 'fantasma': return self::multiplicadorFantasma($alvo);
-            case 'psiquico': return self::multiplicadorPsiquico($alvo);
-            case 'terra': return self::multiplicadorTerra($alvo);
-            default: return 1;
-        }
+        return Pokemon::calcularMultiplicadorTipos($tipoAtacante, $tipoAlvo);
     }
 
-    // Também pelos traits: qual status um ataque desse tipo pode causar
+    // Status elemental delegado diretamente para o Pokémon (que herda os traits dos tipos)
     public static function statusDoTipo($tipoAtacante) {
-        switch (self::normalizarTipo($tipoAtacante)) {
-            case 'normal': return self::statusNormal();
-            case 'fogo': return self::statusFogo();
-            case 'agua': return self::statusAgua();
-            case 'planta': return self::statusPlanta();
-            case 'eletrico': return self::statusEletrico();
-            case 'fantasma': return self::statusFantasma();
-            case 'psiquico': return self::statusPsiquico();
-            case 'terra': return self::statusTerra();
-            default: return 'Normal';
-        }
+        return Pokemon::obterStatusPorTipo($tipoAtacante);
     }
 
     // Aceita o tipo em português (banco) ou inglês (PokéAPI)
