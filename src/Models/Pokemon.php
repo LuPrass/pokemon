@@ -231,10 +231,17 @@ class Pokemon {
         }
     }
 
-    public function curar($quantidade) {
-        $this->hpAtual = $this->hpAtual + $quantidade;
-        if ($this->hpAtual > $this->hpMaximo) {
+    // Sobrecarga de método (Requisito POO): cura valor específico ou 100% do HP se omitido
+    public function curar($quantidade = null) {
+        if ($quantidade === null) {
+            // Sem parâmetro: restaura 100% do HP
             $this->hpAtual = $this->hpMaximo;
+        } else {
+            // Com parâmetro: restaura a quantidade informada
+            $this->hpAtual = $this->hpAtual + (int)$quantidade;
+            if ($this->hpAtual > $this->hpMaximo) {
+                $this->hpAtual = $this->hpMaximo;
+            }
         }
     }
 
