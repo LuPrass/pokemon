@@ -117,71 +117,75 @@ foreach (Item::all($pdo) as $item) {
 
     <!-- Script de Compra e Integração com a Mochila -->
     <script>
-        // Dados do Treinador e Saldo Atual
-        let saldoAtual = <?php echo (int)$saldo; ?>;
-        const usuarioId = <?php echo (int)$usuarioId; ?>;
+        // ==============================================================================
+        // Orientação a Objetos em JavaScript (Requisito da disciplina)
+        // ==============================================================================
+        class PokeMart {
+            constructor(usuarioId, saldoInicial) {
+                this.usuarioId = usuarioId;
+                this.saldoAtual = saldoInicial;
+                this.elementoSaldo = document.getElementById('carteira-saldo');
+                this.toastContainer = document.getElementById('toast-container');
+                this.iniciarBotoes();
+            }
 
-        const elementoSaldo = document.getElementById('carteira-saldo');
-        const toastContainer = document.getElementById('toast-container');
+            // Formata valor em padrão Pokédollars brasileiro (ex: 100 -> 100, 1500 -> 1.500)
+            formatarPokedollars(valor) {
+                return new Intl.NumberFormat('pt-BR').format(valor);
+            }
 
-        // Formata valor em padrão Pokédollars brasileiro (ex: 100 -> 100, 1500 -> 1.500)
-        function formatarPokedollars(valor) {
-            return new Intl.NumberFormat('pt-BR').format(valor);
-        }
+            // Exibe notificação toast na tela
+            exibirToast(tipo, titulo, mensagem) {
+                const toast = document.createElement('div');
+                toast.className = `mart-toast ${tipo}`;
 
-        // Exibe notificação toast na tela
-        function exibirToast(tipo, titulo, mensagem) {
-            const toast = document.createElement('div');
-            toast.className = `mart-toast ${tipo}`;
+                const icone = tipo === 'sucesso' ? '✅' : '⚠️';
 
-            const icone = tipo === 'sucesso' ? '✅' : '⚠️';
+                toast.innerHTML = `
+                    <span class="mart-toast-icone">${icone}</span>
+                    <div class="mart-toast-conteudo">
+                        <strong>${titulo}</strong><br>
+                        <span>${mensagem}</span>
+                    </div>
+                    <button type="button" class="mart-toast-fechar" aria-label="Fechar">&times;</button>
+                `;
 
-            toast.innerHTML = `
-                <span class="mart-toast-icone">${icone}</span>
-                <div class="mart-toast-conteudo">
-                    <strong>${titulo}</strong><br>
-                    <span>${mensagem}</span>
-                </div>
-                <button type="button" class="mart-toast-fechar" aria-label="Fechar">&times;</button>
-            `;
-
-            toast.querySelector('.mart-toast-fechar').addEventListener('click', () => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(50px)';
-                setTimeout(() => toast.remove(), 300);
-            });
-
-            toastContainer.appendChild(toast);
-
-            // Auto-remove após 4.5 segundos
-            setTimeout(() => {
-                if (toast.parentElement) {
+                toast.querySelector('.mart-toast-fechar').addEventListener('click', () => {
                     toast.style.opacity = '0';
                     toast.style.transform = 'translateX(50px)';
                     setTimeout(() => toast.remove(), 300);
-                }
-            }, 4500);
-        }
+                });
 
-        // Configura o evento de clique em todos os botões de compra
-        document.querySelectorAll('.btn-comprar').forEach(btn => {
-            btn.addEventListener('click', async () => {
+                this.toastContainer.appendChild(toast);
+
+                // Auto-remove após 4.5 segundos
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translateX(50px)';
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 4500);
+            }
+
+            // Processa a compra assíncrona do item com requisição JSON
+            async comprarItem(btn) {
                 const itemId = parseInt(btn.getAttribute('data-id'), 10);
                 const itemNome = btn.getAttribute('data-nome');
                 const itemPreco = parseInt(btn.getAttribute('data-preco'), 10);
                 const card = document.getElementById(`card-item-${itemId}`);
 
                 // Validação imediata de saldo no Front-End
-                if (saldoAtual < itemPreco) {
+                if (this.saldoAtual < itemPreco) {
                     if (card) {
                         card.classList.remove('shake');
                         void card.offsetWidth; // Força reflow para reiniciar animação
                         card.classList.add('shake');
                     }
-                    exibirToast(
+                    this.exibirToast(
                         'erro',
                         'Saldo Insuficiente!',
-                        `Você possui ₽ ${formatarPokedollars(saldoAtual)}, mas ${itemNome} custa ₽ ${formatarPokedollars(itemPreco)}. Vença batalhas para ganhar mais dinheiro!`
+                        `Você possui ₽ ${this.formatarPokedollars(this.saldoAtual)}, mas ${itemNome} custa ₽ ${this.formatarPokedollars(itemPreco)}. Vença batalhas para ganhar mais dinheiro!`
                     );
                     return;
                 }
@@ -199,7 +203,7 @@ foreach (Item::all($pdo) as $item) {
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
-                            usuario_id: usuarioId,
+                            usuario_id: this.usuarioId,
                             item_id: itemId
                         })
                     });
@@ -211,11 +215,11 @@ foreach (Item::all($pdo) as $item) {
                     }
 
                     // Sucesso na compra! Atualiza o saldo local e na interface
-                    saldoAtual = parseInt(dados.dinheiro, 10);
-                    elementoSaldo.textContent = `₽ ${dados.saldo_formatado || formatarPokedollars(saldoAtual)}`;
+                    this.saldoAtual = parseInt(dados.dinheiro, 10);
+                    this.elementoSaldo.textContent = `₽ ${dados.saldo_formatado || this.formatarPokedollars(this.saldoAtual)}`;
 
                     // Efeito de sucesso na interface
-                    exibirToast(
+                    this.exibirToast(
                         'sucesso',
                         'Compra Concluída!',
                         `Você comprou 1x ${itemNome}! O item já está disponível na sua Mochila.`
@@ -227,13 +231,25 @@ foreach (Item::all($pdo) as $item) {
                         void card.offsetWidth;
                         card.classList.add('shake');
                     }
-                    exibirToast('erro', 'Aviso', erro.message || 'Erro ao processar compra.');
+                    this.exibirToast('erro', 'Aviso', erro.message || 'Erro ao processar compra.');
                 } finally {
                     btn.disabled = false;
                     btn.textContent = textoOriginal;
                 }
-            });
-        });
+            }
+
+            // Inicializa os ouvintes de clique nos botões
+            iniciarBotoes() {
+                document.querySelectorAll('.btn-comprar').forEach(btn => {
+                    btn.addEventListener('click', () => this.comprarItem(btn));
+                });
+            }
+        }
+
+        // Instanciação da classe PokeMart
+        const usuarioId = <?php echo (int)$usuarioId; ?>;
+        const saldoInicial = <?php echo (int)$saldo; ?>;
+        const lojaPokemon = new PokeMart(usuarioId, saldoInicial);
     </script>
 </body>
 </html>
