@@ -19,4 +19,9 @@ class Controller {
         }
         return $dados;
     }
+
+    // Polimorfismo (Requisito POO): método base padrão que pode ser sobrescrito pelos controllers filhos
+    protected function autorizar() {
+        return true; // Por padrão, libera o acesso
+    }
 }

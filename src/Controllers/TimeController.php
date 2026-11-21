@@ -3,13 +3,21 @@
 // Controlador responsável por salvar a escalação do time escolhido pelo usuário
 class TimeController extends Controller {
 
+    // Polimorfismo (Requisito POO): sobrescreve o método autorizar() da classe mãe Controller
+    protected function autorizar() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        return !empty($_SESSION['logado']);
+    }
+
     // Salva o time no banco de dados e guarda na sessão para a batalha
     public function salvarTime() {
         $pdo = null;
 
         try {
-            // 1. Verifica se o usuário está logado
-            if (empty($_SESSION['logado'])) {
+            // 1. Verifica se o usuário está logado usando o método polimórfico
+            if (!$this->autorizar()) {
                 $this->responder(['sucesso' => false, 'mensagem' => 'Faça login antes de salvar seu time.'], 401);
             }
 
