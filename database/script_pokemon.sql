@@ -137,7 +137,7 @@ INSERT INTO loja (nome, descricao, preco, tipo) VALUES
 -- Reviver
 ('Revive', 'Revive um Pokémon desmaiado com metade da vida', 150, 'reviver'),
 -- Evolução (Item obrigatório para evolução conforme requisito)
-('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 400, 'evolucao');
+('Pedra de Evolução', 'Evolui um Pokémon para o seu próximo estágio', 250, 'evolucao');
 
 -- Inserção de Treinadores (Controle de Usuários / Perfis)
 -- Senha de todos os treinadores iniciais: 123456 (armazenada com password_hash)

@@ -28,27 +28,13 @@ if (!in_array($usuarioAtual, $adminsPermitidos, true)) {
 // 4. Conexão com o banco de dados
 $pdo = Conexao::getConnection();
 
-// 5. Consulta da lista de usuários cadastrados
-$sqlUsuarios = "SELECT id, nome, dinheiro, data_criacao FROM usuario ORDER BY id ASC";
+// 5. Consulta estatísticas dos treinadores (usando a View do Banco de Dados)
+$sqlUsuarios = "SELECT * FROM view_estatisticas_treinadores";
 $stmtUsuarios = $pdo->query($sqlUsuarios);
 $usuarios = $stmtUsuarios->fetchAll(PDO::FETCH_ASSOC);
 
-// 6. Consulta dos times escalados pelos treinadores
-$sqlTimes = "
-    SELECT 
-        time.id,
-        usuario.nome AS usuario,
-        time.posicao,
-        pokemon.nome AS pokemon,
-        pokemon.tipo,
-        pokemon.nivel,
-        pokemon.hp_atual,
-        pokemon.hp_maximo
-    FROM time
-    INNER JOIN usuario ON usuario.id = time.usuario_id
-    INNER JOIN pokemon ON pokemon.id = time.pokemon_id
-    ORDER BY usuario.nome ASC, time.posicao ASC
-";
+// 6. Consulta dos times escalados (usando a View do Banco de Dados)
+$sqlTimes = "SELECT * FROM view_time_usuario";
 $stmtTimes = $pdo->query($sqlTimes);
 $times = $stmtTimes->fetchAll(PDO::FETCH_ASSOC);
 
@@ -71,22 +57,8 @@ $sqlCompras = "
 $stmtCompras = $pdo->query($sqlCompras);
 $compras = $stmtCompras->fetchAll(PDO::FETCH_ASSOC);
 
-// 8. Consulta do histórico de batalhas
-$sqlBatalhas = "
-    SELECT
-        log_batalha.id,
-        usuario.nome AS usuario,
-        pokemon.nome AS pokemon,
-        log_batalha.adversario,
-        log_batalha.resultado,
-        log_batalha.dinheiro_ganho,
-        log_batalha.data_batalha
-    FROM log_batalha
-    INNER JOIN usuario ON usuario.id = log_batalha.usuario_id
-    LEFT JOIN pokemon ON pokemon.id = log_batalha.pokemon_id
-    ORDER BY log_batalha.id DESC
-    LIMIT 100
-";
+// 8. Consulta do histórico de batalhas (usando a View do Banco de Dados)
+$sqlBatalhas = "SELECT * FROM view_historico_batalhas LIMIT 100";
 $stmtBatalhas = $pdo->query($sqlBatalhas);
 $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -122,9 +94,9 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
             <a class="logs-back" href="#sec-batalhas" style="background: #1e293b; box-shadow: none;">⚔️ Batalhas</a>
         </div>
 
-        <!-- 1. Tabela de Usuários -->
+        <!-- 1. Tabela de Usuários / Estatísticas -->
         <section class="logs-section" id="sec-usuarios">
-            <h2>👤 Treinadores / Usuários Cadastrados</h2>
+            <h2>👤 Treinadores / Desempenho (View: view_estatisticas_treinadores)</h2>
             <?php if (empty($usuarios)): ?>
                 <p class="logs-empty">Nenhum usuário cadastrado.</p>
             <?php else: ?>
@@ -134,17 +106,21 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
                             <tr>
                                 <th># ID</th>
                                 <th>Nome do Treinador</th>
-                                <th>Saldo (Pokédollars)</th>
-                                <th>Data de Cadastro</th>
+                                <th>Saldo</th>
+                                <th>Vitórias</th>
+                                <th>Derrotas</th>
+                                <th>Total de Batalhas</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($usuarios as $u): ?>
                                 <tr>
-                                    <td><?php echo $u['id']; ?></td>
-                                    <td><b><?php echo htmlspecialchars($u['nome']); ?></b></td>
-                                    <td>P$ <?php echo $u['dinheiro']; ?></td>
-                                    <td><?php echo $u['data_criacao']; ?></td>
+                                    <td><?php echo $u['usuario_id']; ?></td>
+                                    <td><b><?php echo htmlspecialchars($u['usuario']); ?></b></td>
+                                    <td>₽ <?php echo number_format($u['dinheiro'], 0, ',', '.'); ?></td>
+                                    <td style="color: #34d399; font-weight: bold;"><?php echo $u['vitorias']; ?></td>
+                                    <td style="color: #f87171; font-weight: bold;"><?php echo $u['derrotas']; ?></td>
+                                    <td><?php echo $u['total_batalhas']; ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -155,7 +131,7 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
 
         <!-- 2. Tabela de Times -->
         <section class="logs-section" id="sec-times">
-            <h2>👥 Times Escalados</h2>
+            <h2>👥 Times Escalados (View: view_time_usuario)</h2>
             <?php if (empty($times)): ?>
                 <p class="logs-empty">Nenhum Pokémon escalado em times.</p>
             <?php else: ?>
@@ -238,9 +214,9 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
 
         <!-- 4. Tabela de Batalhas -->
         <section class="logs-section" id="sec-batalhas">
-            <h2>⚔️ Histórico de Batalhas</h2>
+            <h2>⚔️ Histórico de Batalhas (View: view_historico_batalhas)</h2>
             <?php if (empty($batalhas)): ?>
-                <p class="logs-empty">Nenhuma batalha registrada.</p>
+                <p class="logs-empty">Nenhum batalha registrada.</p>
             <?php else: ?>
                 <div class="logs-table-wrap">
                     <table class="logs-table">
@@ -258,7 +234,7 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
                         <tbody>
                             <?php foreach ($batalhas as $b): ?>
                                 <tr>
-                                    <td><?php echo $b['id']; ?></td>
+                                    <td><?php echo isset($b['log_id']) ? $b['log_id'] : $b['id']; ?></td>
                                     <td><?php echo $b['data_batalha']; ?></td>
                                     <td><?php echo htmlspecialchars($b['usuario']); ?></td>
                                     <td>
