@@ -28,17 +28,29 @@ if (!in_array($usuarioAtual, $adminsPermitidos, true)) {
 // 4. Conexão com o banco de dados
 $pdo = Conexao::getConnection();
 
-// 5. Consulta estatísticas dos treinadores (usando a View do Banco de Dados)
+// 5. Consulta estatísticas dos treinadores (View: view_estatisticas_treinadores)
 $sqlUsuarios = "SELECT * FROM view_estatisticas_treinadores";
 $stmtUsuarios = $pdo->query($sqlUsuarios);
 $usuarios = $stmtUsuarios->fetchAll(PDO::FETCH_ASSOC);
 
-// 6. Consulta dos times escalados (usando a View do Banco de Dados)
+// 6. Consulta do histórico de atividades/login dos usuários (log_usuario)
+$logUsuarios = [];
+try {
+    $sqlLogUsuarios = "SELECT * FROM log_usuario ORDER BY id DESC LIMIT 100";
+    $stmtLogUsuarios = $pdo->query($sqlLogUsuarios);
+    if ($stmtLogUsuarios) {
+        $logUsuarios = $stmtLogUsuarios->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {
+    $logUsuarios = [];
+}
+
+// 7. Consulta dos times escalados ativos (View: view_time_usuario)
 $sqlTimes = "SELECT * FROM view_time_usuario";
 $stmtTimes = $pdo->query($sqlTimes);
 $times = $stmtTimes->fetchAll(PDO::FETCH_ASSOC);
 
-// Consulta do histórico de montagem de times (log_time)
+// 8. Consulta do histórico permanente de montagem de times (log_time)
 $logTimes = [];
 try {
     $sqlLogTimes = "
@@ -63,7 +75,7 @@ try {
     $logTimes = [];
 }
 
-// 7. Consulta do histórico de compras na loja
+// 9. Consulta do histórico de compras na loja (log_loja)
 $sqlCompras = "
     SELECT
         log_loja.id,
@@ -82,7 +94,7 @@ $sqlCompras = "
 $stmtCompras = $pdo->query($sqlCompras);
 $compras = $stmtCompras->fetchAll(PDO::FETCH_ASSOC);
 
-// 8. Consulta do histórico de batalhas (usando a View do Banco de Dados)
+// 10. Consulta do histórico de batalhas (View: view_historico_batalhas)
 $sqlBatalhas = "SELECT * FROM view_historico_batalhas LIMIT 100";
 $stmtBatalhas = $pdo->query($sqlBatalhas);
 $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
@@ -111,16 +123,17 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
             <a class="logs-back" href="index.php?rota=menu">← Voltar ao Menu</a>
         </header>
 
-        <!-- Atalhos rápidos para navegar entre as tabelas -->
+        <!-- Atalhos rápidos para navegar entre as seções -->
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a class="logs-back" href="#sec-usuarios" style="background: #1e293b; box-shadow: none;">👤 Usuários</a>
+            <a class="logs-back" href="#sec-usuarios" style="background: #1e293b; box-shadow: none;">👤 Desempenho</a>
+            <a class="logs-back" href="#sec-log-usuarios" style="background: #1e293b; box-shadow: none;">🔑 Log de Usuários</a>
             <a class="logs-back" href="#sec-times" style="background: #1e293b; box-shadow: none;">👥 Times Ativos</a>
             <a class="logs-back" href="#sec-log-times" style="background: #1e293b; box-shadow: none;">📜 Log de Times</a>
             <a class="logs-back" href="#sec-compras" style="background: #1e293b; box-shadow: none;">🛒 Compras</a>
             <a class="logs-back" href="#sec-batalhas" style="background: #1e293b; box-shadow: none;">⚔️ Batalhas</a>
         </div>
 
-        <!-- 1. Tabela de Usuários / Estatísticas -->
+        <!-- 1. Tabela de Desempenho dos Treinadores -->
         <section class="logs-section" id="sec-usuarios">
             <h2>👤 Treinadores / Desempenho (View: view_estatisticas_treinadores)</h2>
             <?php if (empty($usuarios)): ?>
@@ -155,7 +168,45 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </section>
 
-        <!-- 2. Tabela de Times -->
+        <!-- 2. Tabela de Log de Acessos dos Usuários -->
+        <section class="logs-section" id="sec-log-usuarios">
+            <h2>🔑 Histórico de Acesso e Atividades de Treinadores (Tabela: log_usuario)</h2>
+            <?php if (empty($logUsuarios)): ?>
+                <p class="logs-empty">Nenhum registro de acesso registrado ainda.</p>
+            <?php else: ?>
+                <div class="logs-table-wrap">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th># ID</th>
+                                <th>Data / Hora</th>
+                                <th>Treinador</th>
+                                <th>Ação / Evento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($logUsuarios as $logUsuario): ?>
+                                <tr>
+                                    <td><?php echo $logUsuario['id']; ?></td>
+                                    <td><?php echo date('d/m/Y H:i:s', strtotime($logUsuario['data_registro'])); ?></td>
+                                    <td><b><?php echo htmlspecialchars($logUsuario['nome_usuario']); ?></b></td>
+                                    <td>
+                                        <?php if ($logUsuario['acao'] === 'Login'): ?>
+                                            <span style="color: #34d399; font-weight: bold;">🟢 Login Realizado</span>
+                                        <?php elseif ($logUsuario['acao'] === 'Logout'): ?>
+                                            <span style="color: #94a3b8; font-weight: bold;">⚪ Logout (Desconectou)</span>
+                                        <?php elseif ($logUsuario['acao'] === 'Cadastro'): ?>
+                                            <span style="color: #60a5fa; font-weight: bold;">⭐ Novo Cadastro</span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <!-- 3. Tabela de Times Ativos -->
         <section class="logs-section" id="sec-times">
             <h2>👥 Times Ativos / Escalações Atuais (View: view_time_usuario)</h2>
             <?php if (empty($times)): ?>
@@ -195,7 +246,7 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </section>
 
-        <!-- 2.1 Histórico de Montagem de Times (log_time) -->
+        <!-- 4. Histórico de Montagem de Times (log_time) -->
         <section class="logs-section" id="sec-log-times">
             <h2>📜 Histórico de Montagem de Times (Tabela: log_time)</h2>
             <?php if (empty($logTimes)): ?>
@@ -214,14 +265,14 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($logTimes as $lt): ?>
+                            <?php foreach ($logTimes as $logTime): ?>
                                 <tr>
-                                    <td><?php echo $lt['id']; ?></td>
-                                    <td><?php echo date('d/m/Y H:i:s', strtotime($lt['data_criacao'])); ?></td>
-                                    <td><b><?php echo htmlspecialchars($lt['usuario']); ?></b></td>
-                                    <td>Posição <?php echo $lt['posicao']; ?></td>
-                                    <td><?php echo htmlspecialchars($lt['pokemon']); ?></td>
-                                    <td><?php echo htmlspecialchars($lt['tipo']); ?></td>
+                                    <td><?php echo $logTime['id']; ?></td>
+                                    <td><?php echo date('d/m/Y H:i:s', strtotime($logTime['data_criacao'])); ?></td>
+                                    <td><b><?php echo htmlspecialchars($logTime['usuario']); ?></b></td>
+                                    <td>Posição <?php echo $logTime['posicao']; ?></td>
+                                    <td><?php echo htmlspecialchars($logTime['pokemon']); ?></td>
+                                    <td><?php echo htmlspecialchars($logTime['tipo']); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -230,9 +281,9 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </section>
 
-        <!-- 3. Tabela de Compras -->
+        <!-- 5. Tabela de Compras -->
         <section class="logs-section" id="sec-compras">
-            <h2>🛒 Histórico de Compras na Loja</h2>
+            <h2>🛒 Histórico de Compras na Loja (Tabela: log_loja)</h2>
             <?php if (empty($compras)): ?>
                 <p class="logs-empty">Nenhuma compra registrada.</p>
             <?php else: ?>
@@ -273,11 +324,11 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </section>
 
-        <!-- 4. Tabela de Batalhas -->
+        <!-- 6. Tabela de Batalhas -->
         <section class="logs-section" id="sec-batalhas">
-            <h2>⚔️ Histórico de Batalhas (View: view_historico_batalhas)</h2>
+            <h2>⚔️ Histórico de Batalhas (View: view_historico_batalhas / log_batalha)</h2>
             <?php if (empty($batalhas)): ?>
-                <p class="logs-empty">Nenhum batalha registrada.</p>
+                <p class="logs-empty">Nenhuma batalha registrada.</p>
             <?php else: ?>
                 <div class="logs-table-wrap">
                     <table class="logs-table">

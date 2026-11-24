@@ -125,6 +125,20 @@ CREATE TABLE log_time (
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Tabela de Log de Usuários / Controle de Acesso (Login, Logout, Cadastro)
+-- Atende ao requisito do PDF: "Criar tabelas de logs de batalhas, perfis ou usuários e loja"
+CREATE TABLE log_usuario (
+    id INT NOT NULL AUTO_INCREMENT,
+    usuario_id INT NULL,
+    nome_usuario VARCHAR(50) NOT NULL,
+    acao VARCHAR(30) NOT NULL,
+    data_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_log_usuario_usuario 
+        FOREIGN KEY (usuario_id) REFERENCES usuario(id) 
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 
 -- ==============================================================================
 -- 2. DML (Data Manipulation Language) - Inserção, Atualização e Deleção
@@ -166,6 +180,13 @@ INSERT INTO time (usuario_id, pokemon_id, posicao) VALUES
 INSERT INTO log_time (usuario_id, pokemon_id, posicao) VALUES
 (1, 1, 1),
 (1, 2, 2);
+
+-- Registro no Log de Usuários (Acessos iniciais dos treinadores)
+INSERT INTO log_usuario (usuario_id, nome_usuario, acao) VALUES
+(1, 'Ash', 'Cadastro'),
+(1, 'Ash', 'Login'),
+(2, 'Misty', 'Login'),
+(3, 'Brock', 'Login');
 
 -- Exemplo de UPDATE (DML): Simulação de dano sofrido em batalha
 UPDATE pokemon 
@@ -354,3 +375,6 @@ SELECT * FROM log_loja;
 
 -- 9. Validação do Log de Times
 SELECT * FROM log_time;
+
+-- 10. Validação do Log de Usuários (Acessos e Atividades)
+SELECT * FROM log_usuario;

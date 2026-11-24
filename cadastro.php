@@ -32,6 +32,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             } else {
                 $id = Usuario::criarConta($pdo, $nome, $senha);
 
+                // Registra o cadastro e login no log de usuários
+                LogUsuario::registrar($id, $nome, 'Cadastro');
+                LogUsuario::registrar($id, $nome, 'Login');
+
                 // Já entra autenticado após o cadastro
                 $_SESSION['logado'] = true;
                 $_SESSION['usuario'] = $nome;

@@ -3,6 +3,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once __DIR__ . '/Autoload.php';
+
+// Registra o logout no log de usuários antes de destruir a sessão
+if (!empty($_SESSION['logado']) && !empty($_SESSION['usuario'])) {
+    $usuarioId = $_SESSION['usuario_id'] ?? null;
+    $usuarioNome = $_SESSION['usuario'] ?? 'Desconhecido';
+    LogUsuario::registrar($usuarioId, $usuarioNome, 'Logout');
+}
 
 // Limpa todas as variáveis de sessão
 $_SESSION = array();

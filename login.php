@@ -38,10 +38,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $_SESSION['logado'] = true;
         $_SESSION['usuario'] = $usuarioNome;
         $_SESSION['usuario_id'] = $usuarioId;
+
+        // Registra o login bem-sucedido no log de usuários
+        LogUsuario::registrar($usuarioId, $usuarioNome, 'Login');
+
         header('Location: index.php?rota=menu');
         exit;
     } elseif (!$erro) {
         $erro = 'Login ou senha inválidos.';
+        LogUsuario::registrar($usuario['id'] ?? null, $login, 'Falha de Login');
     }
 }
 ?>
