@@ -35,6 +35,19 @@ class TimeController extends Controller {
             }
 
             $pdo = Conexao::getConnection();
+
+            // Garante que a tabela de histórico de times (log_time) exista
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS log_time (
+                    id INT NOT NULL AUTO_INCREMENT,
+                    usuario_id INT NOT NULL,
+                    pokemon_id INT NOT NULL,
+                    posicao INT NOT NULL,
+                    data_criacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id)
+                ) ENGINE=InnoDB;
+            ");
+
             $pdo->beginTransaction();
 
             // 3. Remove a escalação anterior desse treinador
@@ -98,13 +111,17 @@ class TimeController extends Controller {
 
                 $pokemonsSalvos[] = $pokemonId;
 
-                // Salva a vaga no time (posição de 1 a 6)
+                // Salva a vaga no time ativo (posição de 1 a 6)
                 $stmtTime = $pdo->prepare("INSERT INTO time (usuario_id, pokemon_id, posicao) VALUES (:usuario_id, :pokemon_id, :posicao)");
                 $stmtTime->execute([
                     ':usuario_id' => $usuarioId,
                     ':pokemon_id' => $pokemonId,
                     ':posicao'    => $posicao
                 ]);
+
+                // Salva no log permanente de times (atende ao requisito de histórico de escalações)
+                $logTime = new LogTime(null, $usuarioId, $pokemonId, $posicao);
+                $logTime->save();
 
                 $posicao++;
             }

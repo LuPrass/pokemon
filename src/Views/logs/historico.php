@@ -38,6 +38,31 @@ $sqlTimes = "SELECT * FROM view_time_usuario";
 $stmtTimes = $pdo->query($sqlTimes);
 $times = $stmtTimes->fetchAll(PDO::FETCH_ASSOC);
 
+// Consulta do histórico de montagem de times (log_time)
+$logTimes = [];
+try {
+    $sqlLogTimes = "
+        SELECT 
+            lt.id,
+            u.nome AS usuario,
+            lt.posicao,
+            p.nome AS pokemon,
+            p.tipo,
+            lt.data_criacao
+        FROM log_time lt
+        INNER JOIN usuario u ON u.id = lt.usuario_id
+        INNER JOIN pokemon p ON p.id = lt.pokemon_id
+        ORDER BY lt.id DESC
+        LIMIT 100
+    ";
+    $stmtLogTimes = $pdo->query($sqlLogTimes);
+    if ($stmtLogTimes) {
+        $logTimes = $stmtLogTimes->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {
+    $logTimes = [];
+}
+
 // 7. Consulta do histórico de compras na loja
 $sqlCompras = "
     SELECT
@@ -89,7 +114,8 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
         <!-- Atalhos rápidos para navegar entre as tabelas -->
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <a class="logs-back" href="#sec-usuarios" style="background: #1e293b; box-shadow: none;">👤 Usuários</a>
-            <a class="logs-back" href="#sec-times" style="background: #1e293b; box-shadow: none;">👥 Times</a>
+            <a class="logs-back" href="#sec-times" style="background: #1e293b; box-shadow: none;">👥 Times Ativos</a>
+            <a class="logs-back" href="#sec-log-times" style="background: #1e293b; box-shadow: none;">📜 Log de Times</a>
             <a class="logs-back" href="#sec-compras" style="background: #1e293b; box-shadow: none;">🛒 Compras</a>
             <a class="logs-back" href="#sec-batalhas" style="background: #1e293b; box-shadow: none;">⚔️ Batalhas</a>
         </div>
@@ -131,7 +157,7 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
 
         <!-- 2. Tabela de Times -->
         <section class="logs-section" id="sec-times">
-            <h2>👥 Times Escalados (View: view_time_usuario)</h2>
+            <h2>👥 Times Ativos / Escalações Atuais (View: view_time_usuario)</h2>
             <?php if (empty($times)): ?>
                 <p class="logs-empty">Nenhum Pokémon escalado em times.</p>
             <?php else: ?>
@@ -161,6 +187,41 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
                                             <span style="color: #f87171; font-weight: bold;">(Desmaiado)</span>
                                         <?php endif; ?>
                                     </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <!-- 2.1 Histórico de Montagem de Times (log_time) -->
+        <section class="logs-section" id="sec-log-times">
+            <h2>📜 Histórico de Montagem de Times (Tabela: log_time)</h2>
+            <?php if (empty($logTimes)): ?>
+                <p class="logs-empty">Nenhum histórico de time registrado ainda.</p>
+            <?php else: ?>
+                <div class="logs-table-wrap">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th># ID</th>
+                                <th>Data / Hora</th>
+                                <th>Treinador</th>
+                                <th>Posição</th>
+                                <th>Pokémon</th>
+                                <th>Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($logTimes as $lt): ?>
+                                <tr>
+                                    <td><?php echo $lt['id']; ?></td>
+                                    <td><?php echo date('d/m/Y H:i:s', strtotime($lt['data_criacao'])); ?></td>
+                                    <td><b><?php echo htmlspecialchars($lt['usuario']); ?></b></td>
+                                    <td>Posição <?php echo $lt['posicao']; ?></td>
+                                    <td><?php echo htmlspecialchars($lt['pokemon']); ?></td>
+                                    <td><?php echo htmlspecialchars($lt['tipo']); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

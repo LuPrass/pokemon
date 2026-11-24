@@ -1,10 +1,4 @@
 -- ==============================================================================
--- PROJETO MONSTROBOLSO - 3º TRIMESTRE
--- Disciplinas: Programação Orientada a Objetos I, Linguagens para a Web II, BD II
--- Banco de Dados: jogo_pokemon (MySQL / MariaDB)
--- ==============================================================================
-
--- ==============================================================================
 -- 1. DDL (Data Definition Language) - Criação do Banco, Tabelas e Restrições
 -- ==============================================================================
 
@@ -12,7 +6,7 @@ DROP DATABASE IF EXISTS jogo_pokemon;
 CREATE DATABASE jogo_pokemon CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE jogo_pokemon;
 
--- Tabela de Perfis/Usuários (Controle de Usuário / Troca de Perfis à la Arnaldo)
+-- Tabela de Perfis/Usuários (Controle de Usuário)
 CREATE TABLE usuario (
     id INT NOT NULL AUTO_INCREMENT,
     nome VARCHAR(50) NOT NULL,
@@ -114,6 +108,23 @@ CREATE TABLE log_loja (
         ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- Tabela de Log de Times / Histórico de Escalações
+-- Mantém o registro permanente de todas as escalações montadas pelos treinadores
+CREATE TABLE log_time (
+    id INT NOT NULL AUTO_INCREMENT,
+    usuario_id INT NOT NULL,
+    pokemon_id INT NOT NULL,
+    posicao INT NOT NULL,
+    data_criacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_log_time_usuario 
+        FOREIGN KEY (usuario_id) REFERENCES usuario(id) 
+        ON DELETE CASCADE,
+    CONSTRAINT fk_log_time_pokemon 
+        FOREIGN KEY (pokemon_id) REFERENCES pokemon(id) 
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 
 -- ==============================================================================
 -- 2. DML (Data Manipulation Language) - Inserção, Atualização e Deleção
@@ -146,16 +157,13 @@ INSERT INTO usuario (nome, senha, dinheiro) VALUES
 ('Misty', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 100),
 ('Brock', '$2y$10$PBkI0K8rSb5uVZp8F8vOOubn8nX8DbfeUZw8ayN8/Ad7H69WGCrQa', 100);
 
--- Inserção dos Pokémons Iniciais (compatíveis com as classes PHP do projeto)
--- 10 variáveis: nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao
-INSERT INTO pokemon (usuario_id, nome, tipo, nivel, hp_maximo, hp_atual, ataque, defesa, velocidade, prioridade, status_condicao, vantagem, desvantagem) VALUES
-(1, 'Charmander', 'Fogo', 5, 39, 39, 52, 43, 65, 0, 'Normal', 'Planta, Gelo, Inseto, Aço', 'Água, Terra, Rocha'),
-(1, 'Pikachu', 'Raio', 5, 35, 35, 55, 40, 90, 0, 'Normal', 'Água, Voador', 'Terra'),
-(2, 'Squirtle', 'Agua', 5, 44, 44, 48, 65, 43, 0, 'Normal', 'Fogo, Terra, Rocha', 'Elétrico, Planta'),
-(3, 'Bulbassauro', 'Planta', 5, 45, 45, 49, 49, 45, 0, 'Normal', 'Água, Terra, Rocha', 'Fogo, Gelo, Veneno, Voador, Inseto');
-
 -- Inserção no Time de Batalha (Ash inicia com Charmander e Pikachu)
 INSERT INTO time (usuario_id, pokemon_id, posicao) VALUES
+(1, 1, 1),
+(1, 2, 2);
+
+-- Registro da escalação no Histórico/Log de Times
+INSERT INTO log_time (usuario_id, pokemon_id, posicao) VALUES
 (1, 1, 1),
 (1, 2, 2);
 
@@ -343,3 +351,6 @@ SELECT * FROM view_estatisticas_treinadores;
 
 -- 8. Validação do Log da Loja
 SELECT * FROM log_loja;
+
+-- 9. Validação do Log de Times
+SELECT * FROM log_time;
