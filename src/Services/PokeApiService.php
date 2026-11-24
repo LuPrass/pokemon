@@ -49,213 +49,304 @@ class PokeApiService {
 
     // Cache em memória (durante a execução da requisição atual)
     private static $cache = [];
-    private static $cacheMoves = [];
     private static $cachePokemon = [];
 
     /**
-     * Busca os detalhes de um movimento específico diretamente na PokéAPI (/api/v2/move/{nome})
-     * com cache em memória e sessão para alto desempenho.
+     * Retorna os 3 movimentos padronizados do jogo (1 Físico, 1 Especial, 1 Status)
+     * determinados pelo tipo elemental do Pokémon, sem requisições lentas de rede.
      */
-    public function buscarMovimentoNaApi(string $nomeMove): ?array {
-        $slug = strtolower(trim(str_replace([' ', '_'], '-', $nomeMove)));
-        if ($slug === '') return null;
+    public static function obterMovimentosPorTipo(string $tipoPokemon = 'normal'): array {
+        $tipoNorm = strtolower(trim($tipoPokemon));
 
-        if (isset(self::$cacheMoves[$slug])) {
-            return self::$cacheMoves[$slug];
+        $sinonimos = [
+            'fogo'      => 'fire',
+            'agua'      => 'water',
+            'água'      => 'water',
+            'planta'    => 'grass',
+            'eletrico'  => 'electric',
+            'elétrico'  => 'electric',
+            'psiquico'  => 'psychic',
+            'psíquico'  => 'psychic',
+            'fantasma'  => 'ghost',
+            'terra'     => 'ground',
+            'pedra'     => 'rock',
+            'inseto'    => 'bug',
+            'gelo'      => 'ice',
+            'dragao'    => 'dragon',
+            'dragão'    => 'dragon'
+        ];
+        if (isset($sinonimos[$tipoNorm])) {
+            $tipoNorm = $sinonimos[$tipoNorm];
         }
 
-        if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['cache_moves'][$slug])) {
-            return self::$cacheMoves[$slug] = $_SESSION['cache_moves'][$slug];
-        }
-
-        $url = "https://pokeapi.co/api/v2/move/" . $slug;
-        $opcoes = [
-            'ssl' => [
-                'verify_peer'      => false,
-                'verify_peer_name' => false
+        $catalogo = [
+            'fire' => [
+                'fisico' => [
+                    'nome'         => 'Investida Feroz',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'normal',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Pancada corporal direta contra o oponente.'
+                ],
+                'especial' => [
+                    'nome'         => 'Lança-Chamas',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'fire',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Jato intenso de chamas que explora fraquezas elementais.'
+                ],
+                'status' => [
+                    'nome'         => 'Fogo-Fátuo',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'fire',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'queimar',
+                    'desc'         => 'Chamas sinistras que causam Queimadura no oponente.'
+                ]
             ],
-            'http' => [
-                'timeout' => 3
+            'water' => [
+                'fisico' => [
+                    'nome'         => 'Pancada Aquática',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'normal',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Golpe físico vigoroso contra o oponente.'
+                ],
+                'especial' => [
+                    'nome'         => 'Hidro Bomba',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'water',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Jato torrencial de água sob alta pressão.'
+                ],
+                'status' => [
+                    'nome'         => 'Gota Congelante',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'water',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'congelar',
+                    'desc'         => 'Resfriamento repentino que congela e paralisa o adversário.'
+                ]
+            ],
+            'grass' => [
+                'fisico' => [
+                    'nome'         => 'Chicote de Vinha',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'grass',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Chicoteia o oponente com vinhas rígidas e resistentes.'
+                ],
+                'especial' => [
+                    'nome'         => 'Folha Navalha',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'grass',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Lança folhas afiadas com o poder elemental da natureza.'
+                ],
+                'status' => [
+                    'nome'         => 'Pó Venenoso',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'grass',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'envenenar',
+                    'desc'         => 'Espalha um pó tóxico que envenena o adversário.'
+                ]
+            ],
+            'electric' => [
+                'fisico' => [
+                    'nome'         => 'Ataque Rápido',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'normal',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 1,
+                    'desc'         => 'Investida relâmpago veloz com prioridade no turno.'
+                ],
+                'especial' => [
+                    'nome'         => 'Choque do Trovão',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'electric',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Descarga elétrica poderosa que atinge o adversário.'
+                ],
+                'status' => [
+                    'nome'         => 'Onda de Trovão',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'electric',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'paralisar',
+                    'desc'         => 'Onda eletrizante que paralisa e corta a velocidade do alvo.'
+                ]
+            ],
+            'psychic' => [
+                'fisico' => [
+                    'nome'         => 'Cabeçada Zen',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'normal',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Golpe físico focado com a força da mente.'
+                ],
+                'especial' => [
+                    'nome'         => 'Raio Psíquico',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'psychic',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Rajada de energia mental devastadora.'
+                ],
+                'status' => [
+                    'nome'         => 'Hipnose',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'psychic',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'dormir',
+                    'desc'         => 'Induz o oponente a um sono profundo e o impede de agir.'
+                ]
+            ],
+            'ghost' => [
+                'fisico' => [
+                    'nome'         => 'Golpe Sombrio',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'ghost',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Ataque físico das sombras que surpreende o oponente.'
+                ],
+                'especial' => [
+                    'nome'         => 'Bola Sombria',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'ghost',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Dispara uma esfera de energia espectral concentrada.'
+                ],
+                'status' => [
+                    'nome'         => 'Olhar Assustador',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'ghost',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'reduzir_def',
+                    'desc'         => 'Um olhar aterrorizante que reduz drasticamente a defesa do oponente.'
+                ]
+            ],
+            'ground' => [
+                'fisico' => [
+                    'nome'         => 'Mordida Pesada',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'ground',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Mordida vigorosa com todo o peso do solo.'
+                ],
+                'especial' => [
+                    'nome'         => 'Tiro de Lama',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'ground',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Dispara terra e lama elemental em alta velocidade.'
+                ],
+                'status' => [
+                    'nome'         => 'Ataque de Areia',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'ground',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'reduzir_atk',
+                    'desc'         => 'Joga areia no adversário para enfraquecer o seu poder de ataque.'
+                ]
+            ],
+            'normal' => [
+                'fisico' => [
+                    'nome'         => 'Investida',
+                    'damage_class' => 'physical',
+                    'categoria'    => 'physical',
+                    'tipo'         => 'normal',
+                    'poder'        => 40,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Ataque corporal direto com toda a força física.'
+                ],
+                'especial' => [
+                    'nome'         => 'Hiper Raio',
+                    'damage_class' => 'special',
+                    'categoria'    => 'special',
+                    'tipo'         => 'normal',
+                    'poder'        => 60,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'desc'         => 'Rajada concentrada de pura energia neutra.'
+                ],
+                'status' => [
+                    'nome'         => 'Rosnado Intimidador',
+                    'damage_class' => 'status',
+                    'categoria'    => 'status',
+                    'tipo'         => 'normal',
+                    'poder'        => 0,
+                    'precisao'     => 100,
+                    'prioridade'   => 0,
+                    'efeito'       => 'reduzir_atk',
+                    'desc'         => 'Rosnado ameaçador que reduz o ataque do oponente.'
+                ]
             ]
         ];
-        $contexto = stream_context_create($opcoes);
-        $json = @file_get_contents($url, false, $contexto);
 
-        if ($json === false) {
-            return null;
-        }
-
-        $dados = json_decode($json, true);
-        if (!is_array($dados)) return null;
-
-        $classeDano = $dados['damage_class']['name'] ?? 'physical';
-        $moveFormatado = [
-            'nome'         => ucwords(str_replace('-', ' ', $dados['name'] ?? $slug)),
-            'damage_class' => $classeDano,
-            'categoria'    => $classeDano,
-            'tipo'         => $dados['type']['name'] ?? 'normal',
-            'poder'        => (int)($dados['power'] ?? ($classeDano === 'status' ? 0 : 40)),
-            'precisao'     => (int)($dados['accuracy'] ?? 100),
-            'prioridade'   => (int)($dados['priority'] ?? 0),
-            'efeito'       => self::extrairEfeitoMove($dados),
-            'desc'         => self::extrairDescricaoMove($dados)
-        ];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION['cache_moves'][$slug] = $moveFormatado;
-        }
-
-        return self::$cacheMoves[$slug] = $moveFormatado;
-    }
-
-    /**
-     * Determina o efeito de batalha para golpes de status a partir dos dados da PokéAPI
-     */
-    public static function extrairEfeitoMove(array $dadosMove): string {
-        $nome = strtolower($dadosMove['name'] ?? '');
-
-        $movesCura = ['recover', 'rest', 'soft-boiled', 'roost', 'synthesis', 'morning-sun', 'moonlight', 'slack-off', 'milk-drink', 'heal-order', 'swallow', 'wish'];
-        if (in_array($nome, $movesCura) || (!empty($dadosMove['meta']['healing']) && $dadosMove['meta']['healing'] > 0)) {
-            return 'curar_proprio';
-        }
-
-        foreach (($dadosMove['stat_changes'] ?? []) as $sc) {
-            $statName = $sc['stat']['name'] ?? '';
-            $change = (int)($sc['change'] ?? 0);
-            if ($statName === 'attack' && $change < 0) return 'reduzir_atk';
-            if ($statName === 'defense' && $change < 0) return 'reduzir_def';
-            if ($statName === 'accuracy' && $change < 0) return 'reduzir_precisao';
-        }
-
-        $ailment = strtolower($dadosMove['meta']['ailment']['name'] ?? '');
-        if ($ailment === 'paralysis') return 'paralisar';
-        if ($ailment === 'sleep') return 'dormir';
-        if ($ailment === 'poison') return 'envenenar';
-        if ($ailment === 'burn') return 'queimar';
-        if ($ailment === 'freeze') return 'congelar';
-
-        if (in_array($nome, ['thunder-wave', 'glare', 'stun-spore', 'nuzzle', 'zap-cannon'])) {
-            return 'paralisar';
-        }
-        if (in_array($nome, ['hypnosis', 'sleep-powder', 'spore', 'lovely-kiss', 'sing'])) {
-            return 'dormir';
-        }
-        if (in_array($nome, ['poison-powder', 'toxic', 'poison-gas'])) {
-            return 'envenenar';
-        }
-        if (in_array($nome, ['will-o-wisp'])) {
-            return 'queimar';
-        }
-        if (in_array($nome, ['leer', 'tail-whip', 'screech', 'tickle', 'acid-spray'])) {
-            return 'reduzir_def';
-        }
-        if (in_array($nome, ['sand-attack', 'smokescreen', 'flash', 'kinesis', 'mud-slap'])) {
-            return 'reduzir_precisao';
-        }
-
-        return 'reduzir_atk';
-    }
-
-    /**
-     * Extrai descrição curta do movimento a partir das entradas de texto
-     */
-    public static function extrairDescricaoMove(array $dadosMove): string {
-        foreach (($dadosMove['flavor_text_entries'] ?? []) as $entry) {
-            if (($entry['language']['name'] ?? '') === 'en') {
-                return preg_replace('/\s+/', ' ', trim($entry['flavor_text']));
-            }
-        }
-        return 'Movimento carregado da PokéAPI.';
-    }
-
-    /**
-     * Carrega dinamicamente 3 categorias de movimentos para o Pokémon (1 Físico, 1 Especial, 1 Status)
-     */
-    public function carregarMovimentosDaApi(array $movesDoPokemon, string $tipoPokemon = 'normal'): array {
-        $movimentos = [];
-
-        foreach ($movesDoPokemon as $m) {
-            if (isset($movimentos['fisico'], $movimentos['especial'], $movimentos['status'])) {
-                break;
-            }
-
-            $slug = $m['move']['name'] ?? null;
-            if (!$slug) continue;
-
-            $detalhes = $this->buscarMovimentoNaApi($slug);
-            if (!$detalhes) continue;
-
-            $cat = strtolower($detalhes['damage_class'] ?? $detalhes['categoria'] ?? 'physical');
-            if ($cat === 'physical' && !isset($movimentos['fisico'])) {
-                $movimentos['fisico'] = $detalhes;
-            } elseif ($cat === 'special' && !isset($movimentos['especial'])) {
-                $movimentos['especial'] = $detalhes;
-            } elseif ($cat === 'status' && !isset($movimentos['status'])) {
-                $movimentos['status'] = $detalhes;
-            }
-        }
-
-        if (!isset($movimentos['especial'])) {
-            $tipoNorm = strtolower(trim($tipoPokemon));
-            $nomeEspec = 'Swift';
-            $tipoEspec = 'normal';
-            if (in_array($tipoNorm, ['fogo', 'fire'])) { $nomeEspec = 'Ember'; $tipoEspec = 'fire'; }
-            elseif (in_array($tipoNorm, ['agua', 'water'])) { $nomeEspec = 'Water Gun'; $tipoEspec = 'water'; }
-            elseif (in_array($tipoNorm, ['planta', 'grass'])) { $nomeEspec = 'Vine Whip'; $tipoEspec = 'grass'; }
-            elseif (in_array($tipoNorm, ['eletrico', 'electric'])) { $nomeEspec = 'Thundershock'; $tipoEspec = 'electric'; }
-            elseif (in_array($tipoNorm, ['psiquico', 'psychic'])) { $nomeEspec = 'Confusion'; $tipoEspec = 'psychic'; }
-            elseif (in_array($tipoNorm, ['fantasma', 'ghost'])) { $nomeEspec = 'Shadow Ball'; $tipoEspec = 'ghost'; }
-
-            $movimentos['especial'] = [
-                'nome'         => $nomeEspec,
-                'damage_class' => 'special',
-                'categoria'    => 'special',
-                'tipo'         => $tipoEspec,
-                'poder'        => 40,
-                'precisao'     => 100,
-                'efeito'       => null,
-                'desc'         => 'Ataque de energia elemental à distância.'
-            ];
-        }
-
-        if (!isset($movimentos['status'])) {
-            // O golpe de status padrão combina com o tipo do pokémon
-            $tipoNorm = strtolower(trim($tipoPokemon));
-            $movimentos['status'] = [
-                'nome'         => 'Growl',
-                'damage_class' => 'status',
-                'categoria'    => 'status',
-                'tipo'         => 'normal',
-                'poder'        => 0,
-                'precisao'     => 100,
-                'efeito'       => 'reduzir_atk',
-                'desc'         => 'Rosnado intimidador que diminui o Ataque do oponente.'
-            ];
-
-            if (in_array($tipoNorm, ['fogo', 'fire'])) {
-                $movimentos['status']['nome'] = 'Will-O-Wisp';
-                $movimentos['status']['tipo'] = 'fire';
-                $movimentos['status']['efeito'] = 'queimar';
-                $movimentos['status']['desc'] = 'Chamas sinistras que queimam o oponente.';
-            } elseif (in_array($tipoNorm, ['eletrico', 'electric'])) {
-                $movimentos['status']['nome'] = 'Thunder Wave';
-                $movimentos['status']['tipo'] = 'electric';
-                $movimentos['status']['efeito'] = 'paralisar';
-                $movimentos['status']['desc'] = 'Onda elétrica que paralisa o oponente.';
-            } elseif (in_array($tipoNorm, ['planta', 'grass'])) {
-                $movimentos['status']['nome'] = 'Poison Powder';
-                $movimentos['status']['tipo'] = 'poison';
-                $movimentos['status']['efeito'] = 'envenenar';
-                $movimentos['status']['desc'] = 'Pó tóxico que envenena o oponente.';
-            } elseif (in_array($tipoNorm, ['psiquico', 'psychic'])) {
-                $movimentos['status']['nome'] = 'Hypnosis';
-                $movimentos['status']['tipo'] = 'psychic';
-                $movimentos['status']['efeito'] = 'dormir';
-                $movimentos['status']['desc'] = 'Hipnose que faz o oponente dormir.';
-            }
-        }
-
-        return $movimentos;
+        return $catalogo[$tipoNorm] ?? $catalogo['normal'];
     }
 
     /**
@@ -311,7 +402,7 @@ class PokeApiService {
                 'speed'     => $baseStats['speed'] ?? 0,
             ],
             'imagem'        => $imagemSprite,
-            'movimentos'    => $this->carregarMovimentosDaApi($dados['moves'] ?? [], $tipoPrincipal)
+            'movimentos'    => self::obterMovimentosPorTipo($tipoPrincipal)
         ];
 
         $chavesCache = array_unique([$chave, (string)$dados['id'], strtolower($dados['name'])]);
@@ -403,17 +494,19 @@ class PokeApiService {
     }
 
     /**
-     * Carrega os movimentos de um Pokémon buscando diretamente na PokéAPI por ID ou nome
+     * Retorna os movimentos de um Pokémon por ID ou pelo seu tipo elemental
      */
     public static function obterMovimentosPokemon($idOuNome): array {
         $api = new self();
         $poke = $api->buscarPokemon((string)$idOuNome);
-        return $poke['movimentos'] ?? [];
+        if ($poke && !empty($poke['movimentos'])) {
+            return $poke['movimentos'];
+        }
+        return self::obterMovimentosPorTipo('normal');
     }
 
     public static function obterMovimentosPadrao($idOuNome, string $nome = '', string $tipoPokemon = 'normal'): array {
-        $api = new self();
-        return $api->carregarMovimentosDaApi([], $tipoPokemon);
+        return self::obterMovimentosPorTipo($tipoPokemon);
     }
 
     /**

@@ -53,11 +53,8 @@ if (isset($dadosUser['dinheiro'])) {
 function prepararPokemon($pokemon) {
     $pokemon = Pokemon::normalizar($pokemon);
 
-    if (empty($pokemon['movimentos']) && !empty($pokemon['id'])) {
-        $pokemon['movimentos'] = PokeApiService::obterMovimentosPokemon((int)$pokemon['id']);
-    }
-    if (empty($pokemon['movimentos'])) {
-        $pokemon['movimentos'] = PokeApiService::obterMovimentosPadrao(0, $pokemon['nome'], $pokemon['tipo']);
+    if (empty($pokemon['movimentos']) || !isset($pokemon['movimentos']['fisico'], $pokemon['movimentos']['especial'], $pokemon['movimentos']['status'])) {
+        $pokemon['movimentos'] = PokeApiService::obterMovimentosPorTipo($pokemon['tipo'] ?? 'normal');
     }
     return $pokemon;
 }

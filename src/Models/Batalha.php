@@ -43,18 +43,6 @@ class Batalha {
         $this->turnos[] = $texto;
     }
 
-    // Golpe básico padrão caso lute de forma automática
-    private function golpePadrao(Pokemon $pokemon) {
-        return [
-            'nome'         => 'Investida',
-            'tipo'         => strtolower($pokemon->getTipo()),
-            'poder'        => 40,
-            'categoria'    => 'physical',
-            'damage_class' => 'physical',
-            'prioridade'   => 0
-        ];
-    }
-
     // Faz a luta inteira de uma vez, usando um golpe simples para cada lado
     public function lutar() {
         if ($this->jogador->estaDesmaiado()) {
@@ -174,98 +162,94 @@ class Batalha {
     }
 
     private function atacar(Pokemon $atacante, Pokemon $defensor, array $golpe) {
-        $nomeGolpe = 'Ataque';
-        if (!empty($golpe['nome'])) {
-            $nomeGolpe = $golpe['nome'];
-        }
+        $nomeGolpe = !empty($golpe['nome']) ? $golpe['nome'] : 'Ataque';
         $this->mensagem($atacante->getNome() . " usou " . $nomeGolpe . "!");
 
-        // Golpe de status não causa dano
+        // 1. Identifica a categoria do movimento (fisico, especial ou status)
         $categoria = 'physical';
         if (!empty($golpe['damage_class'])) {
-            $categoria = $golpe['damage_class'];
+            $categoria = strtolower($golpe['damage_class']);
         } elseif (!empty($golpe['categoria'])) {
-            $categoria = $golpe['categoria'];
+            $categoria = strtolower($golpe['categoria']);
         }
 
-        if ($categoria == 'status') {
+        // 2. Golpe de Status: não causa dano direto, aplica a condição tática
+        if ($categoria === 'status') {
             $this->usarGolpeDeStatus($atacante, $defensor, $golpe);
             return;
         }
 
-        // Vantagem de tipo vem dos traits
-        $tipoGolpe = $atacante->getTipo();
-        if (!empty($golpe['tipo'])) {
-            $tipoGolpe = $golpe['tipo'];
-        }
+        // 3. Golpe Físico ou Especial: calcula dano e vantagens elementais
+        $tipoGolpe = strtolower($golpe['tipo'] ?? $atacante->getTipo());
+        $multiplicador = ($categoria === 'special') ? self::multiplicador($tipoGolpe, $defensor->getTipo()) : 1.0;
 
-        $multiplicador = self::multiplicador($tipoGolpe, $defensor->getTipo());
         if ($multiplicador == 0) {
             $this->mensagem("Não afetou " . $defensor->getNome() . "...");
             return;
         }
 
-        $dano = $this->calcularDano($atacante, $defensor, $golpe, $multiplicador);
+        $dano = $this->calcularDano($atacante, $defensor, $categoria, $multiplicador);
         $defensor->receberDano($dano);
         $this->mensagem("Causou " . $dano . " de dano em " . $defensor->getNome() .
             " (HP: " . $defensor->getHpAtual() . "/" . $defensor->getHpMaximo() . ")");
 
-        if ($multiplicador > 1) {
-            $this->mensagem("É super eficaz!");
-        } elseif ($multiplicador < 1) {
-            $this->mensagem("Não é muito eficaz.");
+        if ($multiplicador > 1.0) {
+            $this->mensagem("💥 É super eficaz!");
+        } elseif ($multiplicador < 1.0 && $categoria === 'special') {
+            $this->mensagem("🛡️ Não é muito eficaz.");
         }
 
         if ($defensor->estaDesmaiado()) {
-            $this->mensagem($defensor->getNome() . " desmaiou!");
+            $this->mensagem("💀 " . $defensor->getNome() . " desmaiou!");
             return;
-        }
-
-        // Se o golpe for elemental, ele sempre aplica o status correspondente do seu tipo
-        $status = self::statusDoTipo($tipoGolpe);
-        if ($status != 'Normal') {
-            $this->aplicarStatus($defensor, $status);
         }
     }
 
-    // Dano = (poder x ataque) / (defesa x 5), vezes a vantagem de tipo
-    private function calcularDano(Pokemon $atacante, Pokemon $defensor, array $golpe, $multiplicador) {
-        $poder = 40;
-        if (isset($golpe['poder']) && (int)$golpe['poder'] > 0) {
-            $poder = (int)$golpe['poder'];
-        }
-
-        // O ataque e a defesa já vêm com os efeitos dos status calculados
+    /**
+     * Cálculo de dano direto e legível:
+     * - Físico: Ataque do atacante menos metade da Defesa do defensor.
+     * - Especial: Poder elemental baseado no Ataque e multiplicado pela vantagem do Trait.
+     */
+    private function calcularDano(Pokemon $atacante, Pokemon $defensor, string $categoria, float $multiplicador): int {
         $ataque = $atacante->getAtaqueAtual();
         $defesa = max(1, $defensor->getDefesaAtual());
 
-        $dano = round(($poder * $ataque) / ($defesa * 5) * $multiplicador);
-        return max(1, (int)$dano);
+        if ($categoria === 'special') {
+            $base = max(10, (int)round($ataque - ($defesa * 0.3)));
+            $dano = round($base * $multiplicador);
+        } else {
+            $dano = round($ataque - ($defesa * 0.5));
+        }
+
+        return (int)max(8, $dano);
     }
 
     private function usarGolpeDeStatus(Pokemon $atacante, Pokemon $defensor, array $golpe) {
-        $efeito = 'reduzir_atk';
-        if (!empty($golpe['efeito'])) {
-            $efeito = $golpe['efeito'];
-        }
+        $efeito = $golpe['efeito'] ?? 'reduzir_atk';
         $nomeDefensor = $defensor->getNome();
 
-        if ($efeito == 'reduzir_atk') {
+        if ($efeito === 'reduzir_atk') {
             $defensor->reduzirAtaque();
-            $this->mensagem("O Ataque de " . $nomeDefensor . " caiu!");
-        } elseif ($efeito == 'reduzir_def') {
+            $this->mensagem("🔻 O Ataque de " . $nomeDefensor . " caiu!");
+        } elseif ($efeito === 'reduzir_def') {
             $defensor->reduzirDefesa();
-            $this->mensagem("A Defesa de " . $nomeDefensor . " caiu!");
-        } elseif ($efeito == 'curar_proprio') {
+            $this->mensagem("🔻 A Defesa de " . $nomeDefensor . " caiu!");
+        } elseif ($efeito === 'curar_proprio') {
             $hpAntes = $atacante->getHpAtual();
             $atacante->curar(max(10, (int)round($atacante->getHpMaximo() * 0.35)));
-            $this->mensagem($atacante->getNome() . " recuperou " . ($atacante->getHpAtual() - $hpAntes) . " HP.");
+            $this->mensagem("💖 " . $atacante->getNome() . " recuperou " . ($atacante->getHpAtual() - $hpAntes) . " HP.");
         } elseif (isset(self::EFEITOS_STATUS[$efeito])) {
-            if (!$this->aplicarStatus($defensor, self::EFEITOS_STATUS[$efeito])) {
-                $this->mensagem("Mas não teve efeito.");
+            $statusNome = self::EFEITOS_STATUS[$efeito];
+            if (!$this->aplicarStatus($defensor, $statusNome)) {
+                $this->mensagem("Mas não teve efeito (" . $nomeDefensor . " já está " . strtolower($defensor->getStatusCondicao()) . ").");
             }
         } else {
-            $this->mensagem("Mas não teve efeito.");
+            $statusDoTipo = self::statusDoTipo($atacante->getTipo());
+            if ($statusDoTipo !== 'Normal' && $this->aplicarStatus($defensor, $statusDoTipo)) {
+                // Mensagem emitida por aplicarStatus
+            } else {
+                $this->mensagem("Mas não teve efeito.");
+            }
         }
     }
 

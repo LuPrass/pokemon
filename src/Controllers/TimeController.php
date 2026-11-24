@@ -118,7 +118,7 @@ class TimeController extends Controller {
                 if (isset($pokemonsSalvos[$i])) {
                     $poke['pokemon_db_id'] = $pokemonsSalvos[$i];
                 }
-                $poke['movimentos'] = PokeApiService::obterMovimentosPadrao($poke['id'] ?? 0, $poke['nome'], $poke['tipo']);
+                $poke['movimentos'] = PokeApiService::obterMovimentosPorTipo($poke['tipo'] ?? 'normal');
             }
             unset($poke);
 
@@ -126,7 +126,7 @@ class TimeController extends Controller {
             $inimigos = $dados['inimigos'] ?? [];
             foreach ($inimigos as &$ini) {
                 $ini = Pokemon::normalizar($ini);
-                $ini['movimentos'] = PokeApiService::obterMovimentosPadrao($ini['id'] ?? 0, $ini['nome'], $ini['tipo']);
+                $ini['movimentos'] = PokeApiService::obterMovimentosPorTipo($ini['tipo'] ?? 'normal');
             }
             unset($ini);
 
