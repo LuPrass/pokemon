@@ -85,10 +85,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
             exit;
         }
 
+        // Pega o ID da Pokédex (ex: 1 para Bulbasaur, 4 para Charmander)
+        $idPokedex = (int)($pkSessao['id'] ?? $pkSessao['id_pokedex'] ?? 0);
+
         // Instancia o Pokemon para aplicar a evolução oficial
         $pokeObj = Pokemon::fromArray($pkSessao);
         try {
-            $pokeObj->evoluir();
+            $pokeObj->evoluir($idPokedex);
         } catch (Exception $e) {
             $_SESSION['msg_erro'] = $e->getMessage();
             header("Location: index.php?rota=mochila");
@@ -99,6 +102,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
         $dadosAtualizados = $pokeObj->paraArray();
         foreach ($dadosAtualizados as $campo => $valor) {
             $pkSessao[$campo] = $valor;
+        }
+
+        // Se a evolução trouxe um GIF novo da PokéAPI, atualiza a imagem da sessão
+        if (!empty($pokeObj->getGif())) {
+            $pkSessao['img'] = $pokeObj->getGif();
         }
 
         $novoHp = $pokeObj->getHpAtual();
@@ -121,7 +129,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
         }
 
         $sucessoUso = true;
-        $msgResultado = "✨ Incrível! {$nomePoke} evoluiu para {$pokeObj->getNome()}! Seus atributos aumentaram!";
+        $msgResultado = "✨ Incrível! {$nomePoke} consumiu a Pedra de Evolução e evoluiu para {$pokeObj->getNome()}! Seus atributos aumentaram!";
     } elseif ($tipoItem === 'reviver') {
         if ($hpAtual > 0) {
             $_SESSION['msg_erro'] = "{$nomePoke} não está desmaiado! Revive só pode ser usado em Pokémon desmaiados.";
@@ -220,6 +228,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
             if ($idCombate === $pokemonDbId || $indicePkSessao === 0) {
                 $_SESSION['combate']['pokemon_jogador']['hpAtual'] = $novoHp;
                 $_SESSION['combate']['pokemon_jogador']['statusCondicao'] = $novoStatus;
+
+                if ($tipoItem === 'evolucao') {
+                    $_SESSION['combate']['pokemon_jogador']['evoluido'] = 1;
+                    $_SESSION['combate']['pokemon_jogador']['nome'] = $pokeObj->getNome();
+                    $_SESSION['combate']['pokemon_jogador']['hpMaximo'] = $pokeObj->getHpMaximo();
+                    $_SESSION['combate']['pokemon_jogador']['ataque'] = $pokeObj->getAtaqueAtual();
+                    $_SESSION['combate']['pokemon_jogador']['defesa'] = $pokeObj->getDefesaAtual();
+                    $_SESSION['combate']['pokemon_jogador']['velocidade'] = $pokeObj->getVelocidade();
+                    if (!empty($pokeObj->getGif())) {
+                        $_SESSION['combate']['pokemon_jogador']['img'] = $pokeObj->getGif();
+                    }
+                }
             }
         }
 

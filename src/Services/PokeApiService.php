@@ -7,8 +7,43 @@
  */
 class PokeApiService {
 
-    // IDs da Pokédex dos 15 Pokémons disponíveis no catálogo do jogo
-    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92, 152, 155, 158];
+    // IDs da Pokédex dos Pokémons iniciais e evoluídos
+    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92, 152, 155, 158, 2, 253, 5, 256, 8, 259, 26, 180, 134, 143, 64, 93, 153, 156, 159];
+
+    // Mapeamento: ID do Pokémon base => ID da sua evolução correspondente
+    const EVOLUCOES = [
+        1   => 2,   // Bulbasaur  -> Ivysaur
+        252 => 253, // Treecko    -> Grovyle
+        4   => 5,   // Charmander -> Charmeleon
+        255 => 256, // Torchic    -> Combusken
+        7   => 8,   // Squirtle   -> Wartortle
+        258 => 259, // Mudkip     -> Marshtomp
+        25  => 26,  // Pikachu    -> Raichu
+        179 => 180, // Mareep     -> Flaaffy
+        133 => 134, // Eevee      -> Vaporeon
+        143 => 143, // Snorlax    -> Snorlax
+        63  => 64,  // Abra       -> Kadabra
+        92  => 93,  // Gastly     -> Haunter
+        152 => 153, // Chikorita  -> Bayleef
+        155 => 156, // Cyndaquil  -> Quilava
+        158 => 159  // Totodile   -> Croconaw
+    ];
+
+    /**
+     * Retorna o ID da evolução de um Pokémon a partir do seu ID base
+     */
+    public static function obterIdEvolucao($idPokedex): ?int {
+        $idInt = (int)$idPokedex;
+        if (isset(self::EVOLUCOES[$idInt])) {
+            return self::EVOLUCOES[$idInt];
+        }
+        // Se buscar pela posição no array IDS (a evolução está 15 posições à frente)
+        $pos = array_search($idInt, self::IDS);
+        if ($pos !== false && $pos < 15 && isset(self::IDS[$pos + 15])) {
+            return self::IDS[$pos + 15];
+        }
+        return null;
+    }
 
     private $urlBase = "https://pokeapi.co/api/v2/pokemon/";
 
@@ -160,20 +195,6 @@ class PokeApiService {
             }
         }
 
-        // Fallbacks caso a requisição falhe ou o Pokémon não possua a categoria em níveis baixos
-        if (!isset($movimentos['fisico'])) {
-            $movimentos['fisico'] = [
-                'nome'         => 'Tackle',
-                'damage_class' => 'physical',
-                'categoria'    => 'physical',
-                'tipo'         => 'normal',
-                'poder'        => 40,
-                'precisao'     => 100,
-                'efeito'       => null,
-                'desc'         => 'Investida física corporal direta.'
-            ];
-        }
-
         if (!isset($movimentos['especial'])) {
             $tipoNorm = strtolower(trim($tipoPokemon));
             $nomeEspec = 'Swift';
@@ -290,8 +311,6 @@ class PokeApiService {
                 'speed'     => $baseStats['speed'] ?? 0,
             ],
             'imagem'        => $imagemSprite,
-            'imagemCostas'  => $dados['sprites']['back_default'] ?? '',
-            'imagemArtwork' => $imagemSprite,
             'movimentos'    => $this->carregarMovimentosDaApi($dados['moves'] ?? [], $tipoPrincipal)
         ];
 
@@ -398,11 +417,13 @@ class PokeApiService {
     }
 
     /**
-     * Lista todos os Pokémons disponíveis no catálogo
+     * Lista os 15 Pokémons iniciais disponíveis no catálogo do jogo
      */
     public static function listar(): array {
         $lista = [];
-        foreach (self::IDS as $id) {
+        // Pega os 15 primeiros Pokémon da lista para a escolha no Team Builder
+        $iniciais = array_slice(self::IDS, 0, 15);
+        foreach ($iniciais as $id) {
             $pokemon = self::buscarPorId($id);
             if ($pokemon !== null) {
                 $lista[] = $pokemon;

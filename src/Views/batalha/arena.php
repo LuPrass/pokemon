@@ -71,6 +71,10 @@ function escolherGolpeDoInimigo($pokemon) {
 
 // Obtém a imagem/sprite oficial do Pokémon
 function obterImagemPokemon($pokemon) {
+    // Se o Pokémon evoluiu e tem imagem atualizada, usa ela diretamente
+    if (!empty($pokemon['evoluido']) && !empty($pokemon['img'])) {
+        return $pokemon['img'];
+    }
     $id = (int)$pokemon['id'];
     if ($id > 0) {
         $sprite = PokeApiService::buscarPorId($id);

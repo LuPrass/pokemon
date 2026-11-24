@@ -18,6 +18,7 @@ class Pokemon {
     private $prioridade;
     private $statusCondicao;
     private $evoluido = 0; // 0 = estágio base, 1 = já evoluiu com a Pedra de Evolução
+    private $gif = ''; // Armazena a URL do GIF animado da PokéAPI
     private $modAtaque = 1.0; // cai quando o adversário usa um golpe que reduz o ataque
     private $modDefesa = 1.0; // cai quando o adversário usa um golpe que reduz a defesa
     private $pdo;
@@ -36,7 +37,11 @@ class Pokemon {
         $this->prioridade = $prioridade;
         $this->statusCondicao = $statusCondicao;
         $this->evoluido = (int)$evoluido;
-        $this->pdo = Conexao::getConnection();
+        try {
+            $this->pdo = Conexao::getConnection();
+        } catch (Throwable $e) {
+            $this->pdo = null;
+        }
     }
 
     // Getters and setters for the properties
@@ -94,6 +99,14 @@ class Pokemon {
 
     public function setEvoluido($evoluido) {
         $this->evoluido = (int)$evoluido;
+    }
+
+    public function getGif() {
+        return $this->gif;
+    }
+
+    public function setGif($gif) {
+        $this->gif = (string)$gif;
     }
 
     public function setUsuarioId($usuarioId) {
@@ -250,22 +263,49 @@ class Pokemon {
         $this->nivel = $this->nivel + 1;
     }
 
-    // Evolui o Pokémon usando a Pedra de Evolução
-    // Regra: só pode evoluir uma única vez. Ganha bônus de atributos (+30% vida e ataque).
-    public function evoluir() {
+    // Evolui o Pokémon usando a Pedra de Evolução e a PokéAPI
+    // Regra: só pode evoluir uma única vez.
+    public function evoluir($idPokedex = null) {
         if ($this->evoluido == 1) {
             throw new Exception($this->nome . ' já atingiu sua evolução e não pode evoluir novamente!');
         }
 
+        // 1. Descobre o ID da evolução na PokéAPI através do mapeamento
+        $idEvolucao = PokeApiService::obterIdEvolucao($idPokedex ?? $this->id);
+
+        if ($idEvolucao) {
+            $api = new PokeApiService();
+            $dadosEvo = $api->buscarPokemon($idEvolucao);
+
+            if ($dadosEvo) {
+                // Atualiza o nome oficial, GIF e atributos vindos diretamente da PokéAPI!
+                $this->nome = ucfirst($dadosEvo['nome']);
+                $this->gif = $dadosEvo['imagem'];
+                $this->hpMaximo = (int)$dadosEvo['hp'];
+                $this->hpAtual = (int)$dadosEvo['hp']; // restaura a vida cheia ao evoluir
+                $this->ataque = (int)$dadosEvo['ataque'];
+                $this->defesa = (int)$dadosEvo['defesa'];
+                $this->velocidade = (int)$dadosEvo['velocidade'];
+                $this->nivel += 5; // sobe 5 níveis ao evoluir
+                $this->evoluido = 1;
+
+                return true;
+            }
+        }
+
+        // Fallback clássico caso a PokéAPI esteja sem conexão
         $this->evoluido = 1;
-        $this->nivel += 5; // sobe 5 níveis ao evoluir
+        $this->nivel += 5;
         $this->hpMaximo = (int)round($this->hpMaximo * 1.3);
-        $this->hpAtual = $this->hpMaximo; // restaura a vida cheia ao evoluir
+        $this->hpAtual = $this->hpMaximo;
         $this->ataque = (int)round($this->ataque * 1.3);
         $this->defesa = (int)round($this->defesa * 1.2);
         $this->velocidade = (int)round($this->velocidade * 1.2);
 
-        // Se o nome ainda não tiver o indicador, adiciona para ficar claro
+        if ($idEvolucao && empty($this->gif)) {
+            $this->gif = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$idEvolucao}.gif";
+        }
+
         if (strpos($this->nome, ' (Evoluído)') === false) {
             $this->nome = $this->nome . ' (Evoluído)';
         }
@@ -436,6 +476,13 @@ class Pokemon {
             $dados['nome'], $dados['tipo'], $dados['nivel'], $dados['hpMaximo'], $dados['hpAtual'],
             $dados['ataque'], $dados['defesa'], $dados['velocidade'], $dados['prioridade'], $dados['statusCondicao'], $dados['evoluido']);
         $pokemon->setModificadores($dados['modAtaque'], $dados['modDefesa']);
+
+        if (!empty($dados['gif'])) {
+            $pokemon->setGif($dados['gif']);
+        } elseif (!empty($dados['img'])) {
+            $pokemon->setGif($dados['img']);
+        }
+
         return $pokemon;
     }
 
@@ -446,7 +493,7 @@ class Pokemon {
             $status = $this->statusCondicao;
         }
 
-        return [
+        $dados = [
             'nome' => $this->nome,
             'nivel' => $this->nivel,
             'hpMaximo' => $this->hpMaximo,
@@ -460,6 +507,13 @@ class Pokemon {
             'modAtaque' => $this->modAtaque,
             'modDefesa' => $this->modDefesa
         ];
+
+        if (!empty($this->gif)) {
+            $dados['img'] = $this->gif;
+            $dados['gif'] = $this->gif;
+        }
+
+        return $dados;
     }
 
     public static function all(PDO $pdo) {
