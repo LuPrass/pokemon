@@ -479,9 +479,6 @@ class PokeApiService {
             'prioridade'     => 0,
             'statusCondicao' => 'Normal',
             'baseStats'      => $baseStats,
-            'imagemArtwork'  => $info['imagemArtwork'],
-            'imagemFrente'   => $info['imagem'],
-            'imagemCostas'   => $info['imagemCostas'],
             'gif'            => $info['imagem'],
             'movimentos'     => $info['movimentos'] ?? []
         ];

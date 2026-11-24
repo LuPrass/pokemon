@@ -895,3 +895,12 @@ html, body {
     border: 1px solid #94a3b8;
     color: #cbd5e1;
 }
+
+.btn-mochila {
+    background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.42);
+}
+
+.btn-mochila:hover {
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
+}

@@ -149,6 +149,21 @@ function todosPokemonDesmaiados($time) {
     return true;
 }
 
+// Verifica se o jogador tem como reanimar a equipe:
+// ou possui um Revive na mochila, ou possui pelo menos 150 Pokédollars para comprar um no PokéMart
+function podeReviverAlgumPokemon($usuarioDinheiro) {
+    if (!empty($_SESSION['mochila']) && is_array($_SESSION['mochila'])) {
+        foreach ($_SESSION['mochila'] as $it) {
+            $nomeItem = strtolower(trim($it['nome'] ?? ''));
+            $tipoItem = strtolower(trim($it['tipo'] ?? ''));
+            if (($nomeItem === 'revive' || $tipoItem === 'reviver') && ($it['quantidade'] ?? 0) > 0) {
+                return true;
+            }
+        }
+    }
+    return ((int)$usuarioDinheiro >= 150);
+}
+
 // Mapeamento das condições de status para exibição visual
 $mapaBadgesStatus = [
     'Queimado'   => ['classe' => 'badge-queimado',   'texto' => '🔥 Queimado'],
@@ -358,10 +373,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Verifica se ainda tem algum outro Pokémon vivo no time
             if (todosPokemonDesmaiados($meuTime)) {
-                // Se não tem nenhum vivo e não tem dinheiro para curar, encerra o jogo
-                if ($usuarioDinheiro < 25) {
+                // Se não tem nenhum vivo e não possui Revive nem saldo para comprar um (150 Pokédollars), Game Over definitivo!
+                if (!podeReviverAlgumPokemon($usuarioDinheiro)) {
                     unset($_SESSION['combate'], $_SESSION['meu_time'], $_SESSION['inimigos_time'], $_SESSION['batalha_iniciada']);
-                    $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui saldo suficiente para curá-los! Monte um novo time para recomeçar.";
+                    $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui um Revive ou saldo suficiente (₽ 150) para comprar um no PokéMart! Monte um novo time para recomeçar.";
                     header("Location: index.php?rota=menu");
                     exit;
                 } else {
@@ -418,7 +433,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($novo->estaDesmaiado()) {
                     registrarLogBatalha($pdo, $usuarioId, $meuTime[$novoIdx]['pokemon_db_id'], $combate['inimigo_atual']['nome'], 'derrota', 0);
                     if (todosPokemonDesmaiados($meuTime)) {
-                        $combate['status'] = 'derrota_sem_pokemon';
+                        if (!podeReviverAlgumPokemon($usuarioDinheiro)) {
+                            unset($_SESSION['combate'], $_SESSION['meu_time'], $_SESSION['inimigos_time'], $_SESSION['batalha_iniciada']);
+                            $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui um Revive ou saldo suficiente (₽ 150) para comprar um no PokéMart! Monte um novo time para recomeçar.";
+                            header("Location: index.php?rota=menu");
+                            exit;
+                        } else {
+                            $combate['status'] = 'derrota_sem_pokemon';
+                        }
                     }
                 }
             }
@@ -484,13 +506,22 @@ $combate = $_SESSION['combate'];
 
 // Se todo mundo estava desmaiado mas o jogador curou na Mochila, retoma a batalha
 if (isset($combate['status']) && $combate['status'] === 'derrota_sem_pokemon') {
+    $temVivo = false;
     foreach ($meuTime as $pkVivo) {
         if ($pkVivo['hpAtual'] > 0) {
             $_SESSION['combate']['status'] = 'em_combate';
             $_SESSION['combate']['menu_aberto'] = 'principal';
             $combate = $_SESSION['combate'];
+            $temVivo = true;
             break;
         }
+    }
+    // Se ainda está todo mundo desmaiado e o jogador não tem Revive nem ₽ 150 para comprar um
+    if (!$temVivo && !podeReviverAlgumPokemon($usuarioDinheiro)) {
+        unset($_SESSION['combate'], $_SESSION['meu_time'], $_SESSION['inimigos_time'], $_SESSION['batalha_iniciada']);
+        $_SESSION['aviso_derrota'] = "FIM DE JOGO: Todos os seus Pokémon desmaiaram e você não possui um Revive ou saldo suficiente (₽ 150) para comprar um no PokéMart! Monte um novo time para recomeçar.";
+        header("Location: index.php?rota=menu");
+        exit;
     }
 }
 
@@ -721,7 +752,7 @@ $imgIni = obterImagemPokemon($pokemonInimigo);
 
                             <?php elseif ($menuAberto === 'principal'): ?>
 
-                                <!-- Menu Principal: Lutar, Trocar e Fugir -->
+                                <!-- Menu Principal: Lutar, Mochila, Trocar e Fugir -->
                                 <div class="acoes-grid">
                                     <form method="POST" style="margin:0;">
                                         <input type="hidden" name="acao" value="abrir_menu">
@@ -729,13 +760,15 @@ $imgIni = obterImagemPokemon($pokemonInimigo);
                                         <button type="submit" class="btn-acao btn-lutar">⚔️ Lutar</button>
                                     </form>
 
+                                    <a href="index.php?rota=mochila" class="btn-acao btn-mochila">🎒 Mochila</a>
+
                                     <form method="POST" style="margin:0;">
                                         <input type="hidden" name="acao" value="abrir_menu">
                                         <input type="hidden" name="menu_alvo" value="trocar">
                                         <button type="submit" class="btn-acao btn-trocar">🔄 Trocar</button>
                                     </form>
 
-                                    <form method="POST" style="grid-column: span 2; margin:0;">
+                                    <form method="POST" style="margin:0;">
                                         <input type="hidden" name="acao" value="fugir">
                                         <button type="submit" class="btn-acao btn-fugir" onclick="return confirm('Deseja fugir do combate?');">🏃 Fugir</button>
                                     </form>
