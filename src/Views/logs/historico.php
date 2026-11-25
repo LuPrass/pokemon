@@ -197,6 +197,7 @@ $batalhas = $stmtBatalhas->fetchAll(PDO::FETCH_ASSOC);
                                             <span style="color: #94a3b8; font-weight: bold;">⚪ Logout (Desconectou)</span>
                                         <?php elseif ($logUsuario['acao'] === 'Cadastro'): ?>
                                             <span style="color: #60a5fa; font-weight: bold;">⭐ Novo Cadastro</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
