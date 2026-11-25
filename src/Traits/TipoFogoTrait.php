@@ -1,14 +1,31 @@
 <?php
 
-// Vantagens e desvantagens de um pokémon do tipo FOGO
+/**
+ * Trait TipoFogoTrait
+ * Regras do Tipo FOGO:
+ * - Bate em: Planta (x2)
+ * - Apanha para: Água e Terra (toma x2 de Água e Terra)
+ * - Resistência: Planta e Fogo (toma x0.5 de Planta e Fogo)
+ * - Status elemental: Queimado
+ */
 trait TipoFogoTrait {
     public static function multiplicadorFogo($tipoAlvo) {
-        if ($tipoAlvo === 'planta') return 2;
-        if ($tipoAlvo === 'agua' || $tipoAlvo === 'fogo') return 0.5;
-        return 1;
+        $tipoAlvo = strtolower(trim((string)$tipoAlvo));
+
+        // Vantagem (dá o dobro de dano x2 em Planta)
+        if ($tipoAlvo === 'planta' || $tipoAlvo === 'grass') {
+            return 2.0;
+        }
+
+        // Resistência do alvo (Fogo e Água resistem a Fogo -> tomam x0.5)
+        if ($tipoAlvo === 'fogo' || $tipoAlvo === 'fire' || $tipoAlvo === 'agua' || $tipoAlvo === 'água' || $tipoAlvo === 'water') {
+            return 0.5;
+        }
+
+        // Dano neutro contra Terra e Elétrico
+        return 1.0;
     }
 
-    // Status que um ataque de fogo pode causar em quem recebe
     public static function statusFogo() {
         return 'Queimado';
     }
