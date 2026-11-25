@@ -7,26 +7,29 @@
  */
 class PokeApiService {
 
-    // IDs da Pokédex dos Pokémons iniciais e evoluídos
-    const IDS = [1, 252, 4, 255, 7, 258, 25, 179, 133, 143, 63, 92, 152, 155, 158, 2, 253, 5, 256, 8, 259, 26, 180, 134, 143, 64, 93, 153, 156, 159];
+    // IDs da Pokédex dos Pokémons iniciais e evoluídos (3 de cada um dos 5 tipos)
+    const IDS = [
+        1, 252, 152, 4, 255, 155, 7, 258, 158, 27, 50, 104, 25, 179, 100,
+        2, 253, 153, 5, 256, 156, 8, 259, 159, 28, 51, 105, 26, 180, 101
+    ];
 
     // Mapeamento: ID do Pokémon base => ID da sua evolução correspondente
     const EVOLUCOES = [
-        1   => 2,   // Bulbasaur  -> Ivysaur
-        252 => 253, // Treecko    -> Grovyle
-        4   => 5,   // Charmander -> Charmeleon
-        255 => 256, // Torchic    -> Combusken
-        7   => 8,   // Squirtle   -> Wartortle
-        258 => 259, // Mudkip     -> Marshtomp
-        25  => 26,  // Pikachu    -> Raichu
-        179 => 180, // Mareep     -> Flaaffy
-        133 => 134, // Eevee      -> Vaporeon
-        143 => 143, // Snorlax    -> Snorlax
-        63  => 64,  // Abra       -> Kadabra
-        92  => 93,  // Gastly     -> Haunter
-        152 => 153, // Chikorita  -> Bayleef
-        155 => 156, // Cyndaquil  -> Quilava
-        158 => 159  // Totodile   -> Croconaw
+        1   => 2,   // Bulbasaur  -> Ivysaur   (Planta)
+        252 => 253, // Treecko    -> Grovyle   (Planta)
+        152 => 153, // Chikorita  -> Bayleef   (Planta)
+        4   => 5,   // Charmander -> Charmeleon (Fogo)
+        255 => 256, // Torchic    -> Combusken  (Fogo)
+        155 => 156, // Cyndaquil  -> Quilava    (Fogo)
+        7   => 8,   // Squirtle   -> Wartortle  (Água)
+        258 => 259, // Mudkip     -> Marshtomp  (Água)
+        158 => 159, // Totodile   -> Croconaw   (Água)
+        27  => 28,  // Sandshrew  -> Sandslash  (Terra)
+        50  => 51,  // Diglett    -> Dugtrio    (Terra)
+        104 => 105, // Cubone     -> Marowak    (Terra)
+        25  => 26,  // Pikachu    -> Raichu     (Elétrico)
+        179 => 180, // Mareep     -> Flaaffy    (Elétrico)
+        100 => 101  // Voltorb    -> Electrode  (Elétrico)
     ];
 
     /**
@@ -85,7 +88,7 @@ class PokeApiService {
                     'nome'         => 'Investida Feroz',
                     'damage_class' => 'physical',
                     'categoria'    => 'physical',
-                    'tipo'         => 'normal',
+                    'tipo'         => 'fire',
                     'poder'        => 40,
                     'precisao'     => 100,
                     'prioridade'   => 0,
@@ -118,7 +121,7 @@ class PokeApiService {
                     'nome'         => 'Pancada Aquática',
                     'damage_class' => 'physical',
                     'categoria'    => 'physical',
-                    'tipo'         => 'normal',
+                    'tipo'         => 'water',
                     'poder'        => 40,
                     'precisao'     => 100,
                     'prioridade'   => 0,
@@ -184,7 +187,7 @@ class PokeApiService {
                     'nome'         => 'Ataque Rápido',
                     'damage_class' => 'physical',
                     'categoria'    => 'physical',
-                    'tipo'         => 'normal',
+                    'tipo'         => 'electric',
                     'poder'        => 40,
                     'precisao'     => 100,
                     'prioridade'   => 1,
