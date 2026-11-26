@@ -54,7 +54,7 @@ function prepararPokemon($pokemon) {
     $pokemon = Pokemon::normalizar($pokemon);
 
     if (empty($pokemon['movimentos']) || !isset($pokemon['movimentos']['fisico'], $pokemon['movimentos']['especial'], $pokemon['movimentos']['status'])) {
-        $pokemon['movimentos'] = PokeApiService::obterMovimentosPorTipo($pokemon['tipo'] ?? 'normal');
+        $pokemon['movimentos'] = PokeApiService::obterMovimentosPorTipo($pokemon['tipo']);
     }
     return $pokemon;
 }

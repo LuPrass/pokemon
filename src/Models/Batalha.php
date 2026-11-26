@@ -43,6 +43,11 @@ class Batalha {
         $this->turnos[] = $texto;
     }
 
+    private function golpePadrao(Pokemon $pokemon): array {
+        $movs = PokeApiService::obterMovimentosPorTipo($pokemon->getTipo());
+        return $movs['fisico'] ?? reset($movs);
+    }
+
     // Faz a luta inteira de uma vez, usando um golpe simples para cada lado
     public function lutar() {
         if ($this->jogador->estaDesmaiado()) {
@@ -175,6 +180,12 @@ class Batalha {
 
         // 2. Golpe de Status: não causa dano direto, aplica a condição tática
         if ($categoria === 'status') {
+            $tipoGolpe = strtolower($golpe['tipo'] ?? $atacante->getTipo());
+            $multiplicador = self::multiplicador($tipoGolpe, $defensor->getTipo());
+            if ($multiplicador <= 0.0) {
+                $this->mensagem("🚫 Não afetou " . $defensor->getNome() . " (Imune)!");
+                return;
+            }
             $this->usarGolpeDeStatus($atacante, $defensor, $golpe);
             return;
         }

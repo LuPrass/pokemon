@@ -288,24 +288,7 @@ class Pokemon {
             }
         }
 
-        // Fallback clássico caso a PokéAPI esteja sem conexão
-        $this->evoluido = 1;
-        $this->nivel += 5;
-        $this->hpMaximo = (int)round($this->hpMaximo * 1.3);
-        $this->hpAtual = $this->hpMaximo;
-        $this->ataque = (int)round($this->ataque * 1.3);
-        $this->defesa = (int)round($this->defesa * 1.2);
-        $this->velocidade = (int)round($this->velocidade * 1.2);
-
-        if ($idEvolucao && empty($this->gif)) {
-            $this->gif = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{$idEvolucao}.gif";
-        }
-
-        if (strpos($this->nome, ' (Evoluído)') === false) {
-            $this->nome = $this->nome . ' (Evoluído)';
-        }
-
-        return true;
+        throw new Exception("Não foi possível evoluir {$this->nome}. A PokéAPI não retornou dados para a evolução.");
     }
 
     public function save() {

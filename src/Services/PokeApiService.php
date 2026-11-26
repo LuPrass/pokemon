@@ -58,25 +58,22 @@ class PokeApiService {
      * Retorna os 3 movimentos padronizados do jogo (1 Físico, 1 Especial, 1 Status)
      * determinados pelo tipo elemental do Pokémon, sem requisições lentas de rede.
      */
-    public static function obterMovimentosPorTipo(string $tipoPokemon = 'normal'): array {
+    public static function obterMovimentosPorTipo(string $tipoPokemon): array {
         $tipoNorm = strtolower(trim($tipoPokemon));
 
         $sinonimos = [
             'fogo'      => 'fire',
+            'fire'      => 'fire',
             'agua'      => 'water',
             'água'      => 'water',
+            'water'     => 'water',
             'planta'    => 'grass',
+            'grass'     => 'grass',
+            'terra'     => 'ground',
+            'ground'    => 'ground',
             'eletrico'  => 'electric',
             'elétrico'  => 'electric',
-            'psiquico'  => 'psychic',
-            'psíquico'  => 'psychic',
-            'fantasma'  => 'ghost',
-            'terra'     => 'ground',
-            'pedra'     => 'rock',
-            'inseto'    => 'bug',
-            'gelo'      => 'ice',
-            'dragao'    => 'dragon',
-            'dragão'    => 'dragon'
+            'electric'  => 'electric'
         ];
         if (isset($sinonimos[$tipoNorm])) {
             $tipoNorm = $sinonimos[$tipoNorm];
@@ -215,72 +212,6 @@ class PokeApiService {
                     'desc'         => 'Onda eletrizante que paralisa e corta a velocidade do alvo.'
                 ]
             ],
-            'psychic' => [
-                'fisico' => [
-                    'nome'         => 'Cabeçada Zen',
-                    'damage_class' => 'physical',
-                    'categoria'    => 'physical',
-                    'tipo'         => 'normal',
-                    'poder'        => 40,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'desc'         => 'Golpe físico focado com a força da mente.'
-                ],
-                'especial' => [
-                    'nome'         => 'Raio Psíquico',
-                    'damage_class' => 'special',
-                    'categoria'    => 'special',
-                    'tipo'         => 'psychic',
-                    'poder'        => 60,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'desc'         => 'Rajada de energia mental devastadora.'
-                ],
-                'status' => [
-                    'nome'         => 'Hipnose',
-                    'damage_class' => 'status',
-                    'categoria'    => 'status',
-                    'tipo'         => 'psychic',
-                    'poder'        => 0,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'efeito'       => 'dormir',
-                    'desc'         => 'Induz o oponente a um sono profundo e o impede de agir.'
-                ]
-            ],
-            'ghost' => [
-                'fisico' => [
-                    'nome'         => 'Golpe Sombrio',
-                    'damage_class' => 'physical',
-                    'categoria'    => 'physical',
-                    'tipo'         => 'ghost',
-                    'poder'        => 40,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'desc'         => 'Ataque físico das sombras que surpreende o oponente.'
-                ],
-                'especial' => [
-                    'nome'         => 'Bola Sombria',
-                    'damage_class' => 'special',
-                    'categoria'    => 'special',
-                    'tipo'         => 'ghost',
-                    'poder'        => 60,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'desc'         => 'Dispara uma esfera de energia espectral concentrada.'
-                ],
-                'status' => [
-                    'nome'         => 'Olhar Assustador',
-                    'damage_class' => 'status',
-                    'categoria'    => 'status',
-                    'tipo'         => 'ghost',
-                    'poder'        => 0,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'efeito'       => 'reduzir_def',
-                    'desc'         => 'Um olhar aterrorizante que reduz drasticamente a defesa do oponente.'
-                ]
-            ],
             'ground' => [
                 'fisico' => [
                     'nome'         => 'Mordida Pesada',
@@ -313,43 +244,10 @@ class PokeApiService {
                     'efeito'       => 'reduzir_atk',
                     'desc'         => 'Joga areia no adversário para enfraquecer o seu poder de ataque.'
                 ]
-            ],
-            'normal' => [
-                'fisico' => [
-                    'nome'         => 'Investida',
-                    'damage_class' => 'physical',
-                    'categoria'    => 'physical',
-                    'tipo'         => 'normal',
-                    'poder'        => 40,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'desc'         => 'Ataque corporal direto com toda a força física.'
-                ],
-                'especial' => [
-                    'nome'         => 'Hiper Raio',
-                    'damage_class' => 'special',
-                    'categoria'    => 'special',
-                    'tipo'         => 'normal',
-                    'poder'        => 60,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'desc'         => 'Rajada concentrada de pura energia neutra.'
-                ],
-                'status' => [
-                    'nome'         => 'Rosnado Intimidador',
-                    'damage_class' => 'status',
-                    'categoria'    => 'status',
-                    'tipo'         => 'normal',
-                    'poder'        => 0,
-                    'precisao'     => 100,
-                    'prioridade'   => 0,
-                    'efeito'       => 'reduzir_atk',
-                    'desc'         => 'Rosnado ameaçador que reduz o ataque do oponente.'
-                ]
             ]
         ];
 
-        return $catalogo[$tipoNorm] ?? $catalogo['normal'];
+        return $catalogo[$tipoNorm] ?? [];
     }
 
     /**
@@ -383,7 +281,7 @@ class PokeApiService {
             }
         }
 
-        $tipoPrincipal = $dados['types'][0]['type']['name'] ?? 'normal';
+        $tipoPrincipal = $dados['types'][0]['type']['name'] ?? '';
         $imagemSprite = $dados['sprites']['other']['showdown']['front_default']
             ?? $dados['sprites']['front_default']
             ?? '';
@@ -502,10 +400,13 @@ class PokeApiService {
         if ($poke && !empty($poke['movimentos'])) {
             return $poke['movimentos'];
         }
-        return self::obterMovimentosPorTipo('normal');
+        if ($poke && !empty($poke['tipo'])) {
+            return self::obterMovimentosPorTipo($poke['tipo']);
+        }
+        return [];
     }
 
-    public static function obterMovimentosPadrao($idOuNome, string $nome = '', string $tipoPokemon = 'normal'): array {
+    public static function obterMovimentosPadrao($idOuNome, string $nome = '', string $tipoPokemon = ''): array {
         return self::obterMovimentosPorTipo($tipoPokemon);
     }
 
