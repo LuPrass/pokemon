@@ -237,7 +237,9 @@ if (empty($_SESSION['combate']) || !isset($_SESSION['combate']['batalha_atual'])
             $idsEscolhidos[] = (int)$p['id'];
         }
 
-        foreach (PokeApiService::IDS as $idCatalogo) {
+        // Pega apenas entre os 15 iniciais do catálogo os 9 restantes que não estão no nosso time
+        $iniciais = array_slice(PokeApiService::IDS, 0, 15);
+        foreach ($iniciais as $idCatalogo) {
             if (!in_array($idCatalogo, $idsEscolhidos)) {
                 $info = PokeApiService::buscarPorId($idCatalogo);
                 if ($info) {

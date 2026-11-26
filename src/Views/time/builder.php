@@ -94,22 +94,13 @@ $catalogoPokemon = PokeApiService::listar();
         // Guarda os dados carregados para reutilizar sem recarregar a tela
         const pokemonStatsCache = {};
 
-        // Mapeamento dos tipos para português, ícone e classe CSS
+        // Mapeamento dos 5 tipos para português, ícone e classe CSS
         const MAPA_TIPOS = {
             'grass':    { nome: 'Planta',   icone: '🌿', classe: 'grass' },
             'fire':     { nome: 'Fogo',     icone: '🔥', classe: 'fire' },
             'water':    { nome: 'Água',     icone: '💧', classe: 'water' },
-            'electric': { nome: 'Elétrico', icone: '⚡', classe: 'electric' },
-            'normal':   { nome: 'Normal',   icone: '⚪', classe: 'normal' },
-            'psychic':  { nome: 'Psíquico', icone: '🔮', classe: 'psychic' },
-            'ghost':    { nome: 'Fantasma', icone: '👻', classe: 'ghost' },
-            'poison':   { nome: 'Venenoso', icone: '☠️', classe: 'poison' },
             'ground':   { nome: 'Terra',    icone: '🏜️', classe: 'ground' },
-            'rock':     { nome: 'Pedra',    icone: '🪨', classe: 'rock' },
-            'bug':      { nome: 'Inseto',   icone: '🐛', classe: 'bug' },
-            'dragon':   { nome: 'Dragão',   icone: '🐉', classe: 'dragon' },
-            'ice':      { nome: 'Gelo',     icone: '❄️', classe: 'ice' },
-            'fighting': { nome: 'Lutador',  icone: '🥊', classe: 'fighting' }
+            'electric': { nome: 'Elétrico', icone: '⚡', classe: 'electric' }
         };
 
         // 1. Carrega todos os Pokémon na tela diretamente dos dados do PokeApiService
@@ -200,7 +191,6 @@ $catalogoPokemon = PokeApiService::listar();
             const desabilitarDel = noTime ? '' : 'disabled';
 
             return `
-                <div class="pokemon-card card-tipo-${dadosTipo.classe} ${classeCard}" id="card-${id}">
                     ${imagem ? `<img src="${imagem}" alt="${nome}">` : ''}
                     <h3 class="card-name">${nome}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
