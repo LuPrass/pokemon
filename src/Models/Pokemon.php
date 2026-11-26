@@ -2,8 +2,7 @@
 
 class Pokemon {
     // Requisito: Pokémon herda (trait) os tipos elementais
-    use TipoNormalTrait, TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait;
-    use TipoEletricoTrait, TipoFantasmaTrait, TipoPsiquicoTrait, TipoTerraTrait;
+    use TipoFogoTrait, TipoAguaTrait, TipoPlantaTrait, TipoTerraTrait, TipoEletricoTrait;
 
     private $id;
     private $usuarioId;
@@ -170,12 +169,9 @@ class Pokemon {
             case 'fogo':     return self::multiplicadorFogo($alvo);
             case 'agua':     return self::multiplicadorAgua($alvo);
             case 'planta':   return self::multiplicadorPlanta($alvo);
-            case 'eletrico': return self::multiplicadorEletrico($alvo);
-            case 'fantasma': return self::multiplicadorFantasma($alvo);
-            case 'psiquico': return self::multiplicadorPsiquico($alvo);
             case 'terra':    return self::multiplicadorTerra($alvo);
-            case 'normal':   return self::multiplicadorNormal($alvo);
-            default:         return 1;
+            case 'eletrico': return self::multiplicadorEletrico($alvo);
+            default:         return 1.0;
         }
     }
 
@@ -189,11 +185,8 @@ class Pokemon {
             case 'fogo':     return self::statusFogo();
             case 'agua':     return self::statusAgua();
             case 'planta':   return self::statusPlanta();
-            case 'eletrico': return self::statusEletrico();
-            case 'fantasma': return self::statusFantasma();
-            case 'psiquico': return self::statusPsiquico();
             case 'terra':    return self::statusTerra();
-            case 'normal':   return self::statusNormal();
+            case 'eletrico': return self::statusEletrico();
             default:         return 'Normal';
         }
     }
@@ -215,16 +208,18 @@ class Pokemon {
     private static function normalizarTipoParaTrait($tipo) {
         $t = strtolower(trim((string)$tipo));
         $mapa = [
-            'água' => 'agua',
-            'water' => 'agua',
-            'fire' => 'fogo',
-            'grass' => 'planta',
+            'água'     => 'agua',
+            'water'    => 'agua',
+            'agua'     => 'agua',
+            'fire'     => 'fogo',
+            'fogo'     => 'fogo',
+            'grass'    => 'planta',
+            'planta'   => 'planta',
             'electric' => 'eletrico',
             'elétrico' => 'eletrico',
-            'ground' => 'terra',
-            'psychic' => 'psiquico',
-            'psíquico' => 'psiquico',
-            'ghost' => 'fantasma'
+            'eletrico' => 'eletrico',
+            'ground'   => 'terra',
+            'terra'    => 'terra'
         ];
         if (isset($mapa[$t])) {
             return $mapa[$t];

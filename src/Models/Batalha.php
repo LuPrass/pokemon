@@ -179,12 +179,12 @@ class Batalha {
             return;
         }
 
-        // 3. Golpe Físico ou Especial: calcula dano e vantagens elementais
+        // 3. Golpe Físico ou Especial: calcula dano e vantagens elementais da tabela
         $tipoGolpe = strtolower($golpe['tipo'] ?? $atacante->getTipo());
-        $multiplicador = ($categoria === 'special') ? self::multiplicador($tipoGolpe, $defensor->getTipo()) : 1.0;
+        $multiplicador = self::multiplicador($tipoGolpe, $defensor->getTipo());
 
-        if ($multiplicador == 0) {
-            $this->mensagem("Não afetou " . $defensor->getNome() . "...");
+        if ($multiplicador <= 0.0) {
+            $this->mensagem("🚫 Não afetou " . $defensor->getNome() . " (Imune)!");
             return;
         }
 
@@ -194,9 +194,9 @@ class Batalha {
             " (HP: " . $defensor->getHpAtual() . "/" . $defensor->getHpMaximo() . ")");
 
         if ($multiplicador > 1.0) {
-            $this->mensagem("💥 É super eficaz!");
-        } elseif ($multiplicador < 1.0 && $categoria === 'special') {
-            $this->mensagem("🛡️ Não é muito eficaz.");
+            $this->mensagem("💥 É super eficaz! (" . $multiplicador . "x de dano)");
+        } elseif ($multiplicador < 1.0) {
+            $this->mensagem("🛡️ Não é muito eficaz... (" . $multiplicador . "x de dano)");
         }
 
         if ($defensor->estaDesmaiado()) {
@@ -216,10 +216,11 @@ class Batalha {
 
         if ($categoria === 'special') {
             $base = max(10, (int)round($ataque - ($defesa * 0.3)));
-            $dano = round($base * $multiplicador);
         } else {
-            $dano = round($ataque - ($defesa * 0.5));
+            $base = max(10, (int)round($ataque - ($defesa * 0.5)));
         }
+
+        $dano = round($base * $multiplicador);
 
         return (int)max(8, $dano);
     }
