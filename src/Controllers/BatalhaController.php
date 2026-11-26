@@ -51,8 +51,7 @@ class BatalhaController extends Controller {
                 'dinheiroGanho' => $dinheiro,
                 'turnos' => $batalha->getTurnos(),
                 'hpRestante' => $jogador->getHpAtual(),
-                'imagemInimigo' => $info['imagem'],
-                'imagemJogadorCostas' => $info['imagemCostas']
+                'gif' => $info['gif'] ?? $info['imagem']
             ]);
         } catch (Exception $e) {
             if ($pdo && $pdo->inTransaction()) {

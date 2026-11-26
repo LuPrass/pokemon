@@ -282,9 +282,7 @@ class PokeApiService {
         }
 
         $tipoPrincipal = $dados['types'][0]['type']['name'] ?? '';
-        $imagemSprite = $dados['sprites']['other']['showdown']['front_default']
-            ?? $dados['sprites']['front_default']
-            ?? '';
+        $gif = $dados['sprites']['other']['showdown']['front_default'] ?? '';
 
         // Pega as informações formatadas para o jogo
         $pokemon = [
@@ -302,7 +300,7 @@ class PokeApiService {
                 'defense'   => $baseStats['defense'] ?? 0,
                 'speed'     => $baseStats['speed'] ?? 0,
             ],
-            'imagem'        => $imagemSprite,
+            'gif'           => $gif,
             'movimentos'    => self::obterMovimentosPorTipo($tipoPrincipal)
         ];
 
@@ -348,9 +346,7 @@ class PokeApiService {
         }
 
         if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['catalogo_pokeapi'][$id])) {
-            $pokemon = $_SESSION['catalogo_pokeapi'][$id];
-            $pokemon['gif'] = $pokemon['imagemFrente'] ?? '';
-            return self::$cache[$id] = $pokemon;
+            return self::$cache[$id] = $_SESSION['catalogo_pokeapi'][$id];
         }
 
         $api  = new self();
@@ -380,7 +376,7 @@ class PokeApiService {
             'prioridade'     => 0,
             'statusCondicao' => 'Normal',
             'baseStats'      => $baseStats,
-            'gif'            => $info['imagem'],
+            'gif'            => $info['gif'],
             'movimentos'     => $info['movimentos'] ?? []
         ];
 

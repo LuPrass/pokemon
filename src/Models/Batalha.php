@@ -237,6 +237,12 @@ class Batalha {
     }
 
     private function usarGolpeDeStatus(Pokemon $atacante, Pokemon $defensor, array $golpe) {
+        $tipoGolpe = strtolower($golpe['tipo'] ?? $atacante->getTipo());
+        if (self::multiplicador($tipoGolpe, $defensor->getTipo()) <= 0.0) {
+            $this->mensagem("🚫 Não afetou " . $defensor->getNome() . " (Imune)!");
+            return;
+        }
+
         $efeito = $golpe['efeito'] ?? 'reduzir_atk';
         $nomeDefensor = $defensor->getNome();
 

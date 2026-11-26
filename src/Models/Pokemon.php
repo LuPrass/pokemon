@@ -275,7 +275,7 @@ class Pokemon {
             if ($dadosEvo) {
                 // Atualiza o nome oficial, GIF e atributos vindos diretamente da PokéAPI!
                 $this->nome = ucfirst($dadosEvo['nome']);
-                $this->gif = $dadosEvo['imagem'];
+                $this->gif = $dadosEvo['gif'];
                 $this->hpMaximo = (int)$dadosEvo['hp'];
                 $this->hpAtual = (int)$dadosEvo['hp']; // restaura a vida cheia ao evoluir
                 $this->ataque = (int)$dadosEvo['ataque'];
@@ -457,8 +457,6 @@ class Pokemon {
 
         if (!empty($dados['gif'])) {
             $pokemon->setGif($dados['gif']);
-        } elseif (!empty($dados['img'])) {
-            $pokemon->setGif($dados['img']);
         }
 
         return $pokemon;
@@ -487,7 +485,6 @@ class Pokemon {
         ];
 
         if (!empty($this->gif)) {
-            $dados['img'] = $this->gif;
             $dados['gif'] = $this->gif;
         }
 

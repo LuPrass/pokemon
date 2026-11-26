@@ -104,9 +104,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
             $pkSessao[$campo] = $valor;
         }
 
-        // Se a evolução trouxe um GIF novo da PokéAPI, atualiza a imagem da sessão
+        // Se a evolução trouxe um GIF novo da PokéAPI, atualiza o GIF da sessão
         if (!empty($pokeObj->getGif())) {
-            $pkSessao['img'] = $pokeObj->getGif();
+            $pkSessao['gif'] = $pokeObj->getGif();
         }
 
         $novoHp = $pokeObj->getHpAtual();
@@ -237,7 +237,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['acao'] ?? '') === 
                     $_SESSION['combate']['pokemon_jogador']['defesa'] = $pokeObj->getDefesaAtual();
                     $_SESSION['combate']['pokemon_jogador']['velocidade'] = $pokeObj->getVelocidade();
                     if (!empty($pokeObj->getGif())) {
-                        $_SESSION['combate']['pokemon_jogador']['img'] = $pokeObj->getGif();
+                        $_SESSION['combate']['pokemon_jogador']['gif'] = $pokeObj->getGif();
                     }
                 }
             }

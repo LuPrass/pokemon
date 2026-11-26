@@ -66,21 +66,17 @@ function escolherGolpeDoInimigo($pokemon) {
     return $golpes[$indiceSorteado];
 }
 
-// Obtém a imagem/sprite oficial do Pokémon
-function obterImagemPokemon($pokemon) {
-    // Se o Pokémon evoluiu e tem imagem atualizada, usa ela diretamente
-    if (!empty($pokemon['evoluido']) && !empty($pokemon['img'])) {
-        return $pokemon['img'];
+// Obtém o GIF oficial do Pokémon
+function obterGifPokemon($pokemon) {
+    if (!empty($pokemon['gif'])) {
+        return $pokemon['gif'];
     }
-    $id = (int)$pokemon['id'];
+    $id = (int)($pokemon['id'] ?? $pokemon['id_pokedex'] ?? 0);
     if ($id > 0) {
-        $sprite = PokeApiService::buscarPorId($id);
-        if (!empty($sprite['gif'])) {
-            return $sprite['gif'];
+        $poke = PokeApiService::buscarPorId($id);
+        if (!empty($poke['gif'])) {
+            return $poke['gif'];
         }
-    }
-    if (!empty($pokemon['img'])) {
-        return $pokemon['img'];
     }
     return '';
 }
@@ -553,9 +549,9 @@ $movimentosJog = $pokemonJogador['movimentos'];
 $barraJog = calcularBarraHp($hpAtualJog, $hpMaxJog);
 $barraIni = calcularBarraHp($hpAtualIni, $hpMaxIni);
 
-// Imagens dos Pokémon
-$imgJog = obterImagemPokemon($pokemonJogador);
-$imgIni = obterImagemPokemon($pokemonInimigo);
+// GIFs dos Pokémon
+$gifJog = obterGifPokemon($pokemonJogador);
+$gifIni = obterGifPokemon($pokemonInimigo);
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -628,8 +624,8 @@ $imgIni = obterImagemPokemon($pokemonInimigo);
                         </div>
 
                         <div class="sprite-box">
-                            <?php if (!empty($imgIni)): ?>
-                                <img src="<?php echo htmlspecialchars($imgIni); ?>" alt="<?php echo htmlspecialchars($nomeIni); ?>">
+                            <?php if (!empty($gifIni)): ?>
+                                <img src="<?php echo htmlspecialchars($gifIni); ?>" alt="<?php echo htmlspecialchars($nomeIni); ?>">
                             <?php endif; ?>
                             <div class="sombra"></div>
                         </div>
@@ -638,8 +634,8 @@ $imgIni = obterImagemPokemon($pokemonInimigo);
                     <!-- LADO DO JOGADOR -->
                     <div class="lado lado-jogador">
                         <div class="sprite-box">
-                            <?php if (!empty($imgJog)): ?>
-                                <img src="<?php echo htmlspecialchars($imgJog); ?>" alt="<?php echo htmlspecialchars($nomeJog); ?>">
+                            <?php if (!empty($gifJog)): ?>
+                                <img src="<?php echo htmlspecialchars($gifJog); ?>" alt="<?php echo htmlspecialchars($nomeJog); ?>">
                             <?php endif; ?>
                             <div class="sombra"></div>
                         </div>
@@ -791,14 +787,18 @@ $imgIni = obterImagemPokemon($pokemonInimigo);
                                                     $poderGolpe = (int)$mov['poder'];
                                                     $tipoInimigo = strtolower($pokemonInimigo['tipo']);
 
+                                                    $mult = Batalha::multiplicador($tipoGolpe, $tipoInimigo);
+
                                                     // Indicador visual de eficácia
-                                                    if ($catGolpe === 'status') {
+                                                    if ($mult <= 0.0) {
+                                                        $badgeTexto = 'x0';
+                                                        $badgeClasse = 'eficacia-imune';
+                                                        $badgeDesc = 'Imune (Sem efeito / 0 dano)';
+                                                    } elseif ($catGolpe === 'status') {
                                                         $badgeTexto = 'Efeito';
                                                         $badgeClasse = 'eficacia-status';
                                                         $badgeDesc = 'Movimento de Status';
                                                     } else {
-                                                        $mult = Batalha::multiplicador($tipoGolpe, $tipoInimigo);
-
                                                         if ($mult >= 2.0) {
                                                             $badgeTexto = 'x' . (int)$mult;
                                                             $badgeClasse = 'eficacia-super';
@@ -807,14 +807,10 @@ $imgIni = obterImagemPokemon($pokemonInimigo);
                                                             $badgeTexto = 'x1';
                                                             $badgeClasse = 'eficacia-neutro';
                                                             $badgeDesc = 'Dano Normal (1x)';
-                                                        } elseif ($mult > 0.0) {
+                                                        } else {
                                                             $badgeTexto = 'x0.5';
                                                             $badgeClasse = 'eficacia-pouco';
                                                             $badgeDesc = 'Pouco Efetivo (0.5x)';
-                                                        } else {
-                                                            $badgeTexto = 'x0';
-                                                            $badgeClasse = 'eficacia-imune';
-                                                            $badgeDesc = 'Imune (0 dano)';
                                                         }
                                                     }
                                                 ?>

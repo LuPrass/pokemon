@@ -229,7 +229,7 @@ html, body {
 .team-slots {
     display: flex;
     justify-content: center;
-    gap: 32px;
+    gap: 20px;
     flex-wrap: wrap;
     margin-bottom: 20px;
     align-items: flex-end;
@@ -251,6 +251,7 @@ html, body {
     transition: all 0.2s ease;
 }
 
+.slot.filled,
 .slot:has(img) {
     background: rgba(26, 34, 54, 0.95);
     border: 2px solid #10b981;

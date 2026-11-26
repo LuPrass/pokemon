@@ -97,10 +97,17 @@ $catalogoPokemon = PokeApiService::listar();
         // Mapeamento dos 5 tipos para português, ícone e classe CSS
         const MAPA_TIPOS = {
             'grass':    { nome: 'Planta',   icone: '🌿', classe: 'grass' },
+            'planta':   { nome: 'Planta',   icone: '🌿', classe: 'grass' },
             'fire':     { nome: 'Fogo',     icone: '🔥', classe: 'fire' },
+            'fogo':     { nome: 'Fogo',     icone: '🔥', classe: 'fire' },
             'water':    { nome: 'Água',     icone: '💧', classe: 'water' },
+            'agua':     { nome: 'Água',     icone: '💧', classe: 'water' },
+            'água':     { nome: 'Água',     icone: '💧', classe: 'water' },
             'ground':   { nome: 'Terra',    icone: '🏜️', classe: 'ground' },
-            'electric': { nome: 'Elétrico', icone: '⚡', classe: 'electric' }
+            'terra':    { nome: 'Terra',    icone: '🏜️', classe: 'ground' },
+            'electric': { nome: 'Elétrico', icone: '⚡', classe: 'electric' },
+            'eletrico': { nome: 'Elétrico', icone: '⚡', classe: 'electric' },
+            'elétrico': { nome: 'Elétrico', icone: '⚡', classe: 'electric' }
         };
 
         // 1. Carrega todos os Pokémon na tela diretamente dos dados do PokeApiService
@@ -114,7 +121,7 @@ $catalogoPokemon = PokeApiService::listar();
                 pokemonStatsCache[id] = {
                     id: id,
                     name: poke.nome,
-                    img: poke.gif,
+                    gif: poke.gif,
                     tipo: poke.tipo,
                     hp: poke.hpMaximo,
                     attack: poke.ataque,
@@ -125,11 +132,11 @@ $catalogoPokemon = PokeApiService::listar();
                 grid.innerHTML += criarCardHTML(poke);
             }
 
-            // Se já tínhamos um time salvo na sessão, atualiza as imagens
+            // Se já tínhamos um time salvo na sessão, atualiza os GIFs
             for (let i = 0; i < meuTime.length; i++) {
                 const id = Number(meuTime[i].id);
                 if (pokemonStatsCache[id]) {
-                    meuTime[i].img = pokemonStatsCache[id].img;
+                    meuTime[i].gif = pokemonStatsCache[id].gif;
                 }
             }
 
@@ -140,7 +147,7 @@ $catalogoPokemon = PokeApiService::listar();
         function criarCardHTML(poke) {
             const id = poke.id_pokedex;
             const nome = poke.nome;
-            const imagem = poke.gif;
+            const gif = poke.gif;
             const tipoPrincipal = poke.tipo;
 
             let dadosTipo = MAPA_TIPOS[tipoPrincipal];
@@ -191,14 +198,15 @@ $catalogoPokemon = PokeApiService::listar();
             const desabilitarDel = noTime ? '' : 'disabled';
 
             return `
-                    ${imagem ? `<img src="${imagem}" alt="${nome}">` : ''}
+                <div class="pokemon-card ${classeCard}" id="card-${id}">
+                    ${gif ? `<img src="${gif}" alt="${nome}">` : ''}
                     <h3 class="card-name">${nome}</h3>
                     <div class="badge-tipo-pill badge-pill-${dadosTipo.classe}">${dadosTipo.icone} ${dadosTipo.nome}</div>
                     <div class="stats-container">
                         ${statsHTML}
                     </div>
                     <div class="card-botoes">
-                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${id}" onclick="adicionarAoTime(${id}, '${nome}', '${imagem}', '${tipoPrincipal}', event)" ${desabilitarAdd}>${textoBtnAdd}</button>
+                        <button type="button" class="btn-card btn-adicionar" id="btn-add-${id}" onclick="adicionarAoTime(${id}, '${nome}', '${gif}', '${tipoPrincipal}', event)" ${desabilitarAdd}>${textoBtnAdd}</button>
                         <button type="button" class="btn-card btn-excluir" id="btn-del-${id}" onclick="removerDoTime(${id}, event)" ${desabilitarDel}>✕ Excluir</button>
                     </div>
                 </div>
@@ -206,7 +214,7 @@ $catalogoPokemon = PokeApiService::listar();
         }
 
         // 3. Adiciona o Pokémon selecionado ao time
-        function adicionarAoTime(id, name, img, tipo, event) {
+        function adicionarAoTime(id, name, gif, tipo, event) {
             if (event) {
                 event.stopPropagation();
             }
@@ -228,7 +236,7 @@ $catalogoPokemon = PokeApiService::listar();
             meuTime.push({
                 id: id,
                 name: name,
-                img: img,
+                gif: gif,
                 tipo: tipo,
                 hp: stats.hp,
                 attack: stats.attack,
@@ -302,11 +310,13 @@ $catalogoPokemon = PokeApiService::listar();
             for (let i = 0; i < 6; i++) {
                 if (i < meuTime.length) {
                     const pokemon = meuTime[i];
+                    slots[i].classList.add('filled');
                     slots[i].innerHTML = `
-                        <img src="${pokemon.img}" alt="${pokemon.name}">
+                        <img src="${pokemon.gif}" alt="${pokemon.name}">
                         <span class="slot-nome">${pokemon.name}</span>
                     `;
                 } else {
+                    slots[i].classList.remove('filled');
                     slots[i].innerHTML = '';
                 }
             }
@@ -348,7 +358,7 @@ $catalogoPokemon = PokeApiService::listar();
                 inimigosCompletos.push({
                     id: id,
                     nome: p.name,
-                    img: p.img,
+                    gif: p.gif,
                     tipo: p.tipo,
                     nivel: 5,
                     hpMaximo: p.hp,
@@ -372,7 +382,7 @@ $catalogoPokemon = PokeApiService::listar();
                 timeParaSalvar.push({
                     id: p.id,
                     nome: p.name,
-                    img: p.img,
+                    gif: p.gif,
                     tipo: p.tipo,
                     nivel: 5,
                     hpMaximo: stats.hp,
